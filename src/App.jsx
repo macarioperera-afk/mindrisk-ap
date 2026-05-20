@@ -225,6 +225,26 @@ export default function App(){
   const[mindLoading,setMindLoading]=useState(false);
   const[checkedIn,setCheckedIn]=useState(false);
   const[warningDismissed,setWarningDismissed]=useState(false);
+  const[selectedRules,setSelectedRules]=useState(()=>{try{return JSON.parse(localStorage.getItem('ttp_selected_rules')||'["r1","r2","r3","r4","r5"]');}catch(e){return["r1","r2","r3","r4","r5"];}});
+  const toggleRule=(key)=>{
+    setSelectedRules(prev=>{
+      const next=prev.includes(key)?prev.filter(k=>k!==key):[...prev,key].slice(0,5);
+      localStorage.setItem('ttp_selected_rules',JSON.stringify(next));
+      return next;
+    });
+  };
+  const ALL_RULES=[
+    {k:"r1",l:"Max 2 Trades pro Tag",icon:"🔢"},
+    {k:"r2",l:"Nur 16:15–17:30 Uhr traden",icon:"⏰"},
+    {k:"r3",l:"SL immer vor Entry setzen",icon:"🛡"},
+    {k:"r4",l:"TP immer vor Entry setzen",icon:"🎯"},
+    {k:"r5",l:"Kein Trade nach 2 Verlusten",icon:"🛑"},
+    {k:"r6",l:"15 Min Pause zwischen Trades",icon:"⏸"},
+    {k:"r7",l:"Nur MNQ – kein NQ",icon:"📊"},
+    {k:"r8",l:"Kein Impuls-Trade – nur Setup",icon:"🧠"},
+    {k:"r9",l:"Erst Check-in bevor traden",icon:"✅"},
+    {k:"r10",l:"Daily DD $1.000 → Rechner aus",icon:"💻"},
+  ];
   const doMindCheckIn=async()=>{
     if(!mindCheckIn.mood||!mindCheckIn.energy||!mindCheckIn.stress){showToast("Bitte alle 3 bewerten!");return;}
     setMindLoading(true);
@@ -825,8 +845,7 @@ const sendAiMessage=async()=>{
         setAiMessages(p=>[...p,{role:"assistant",content:"🔴 JSON Fehler: "+rawText.slice(0,200)}]);
         return;
       }
-      if(!data.message){
-        setAiMessages(p=>[...p,{role:"assistant",content:"🔴 Kein message Feld: "+JSON.stringify(data).slice(0,200)}]);
+      if(!data.message){        setAiMessages(p=>[...p,{role:"assistant",content:"🔴 Kein message Feld: "+JSON.stringify(data).slice(0,200)}]);
         return;
       }
       const assistantMsg={role:"assistant",content:data.message,ts:new Date().toISOString()};
@@ -836,7 +855,8 @@ const sendAiMessage=async()=>{
         localStorage.setItem('ttp_chat_history',JSON.stringify(forStorage));
         return updated;
       });
-      // Auto-save key insights (not every message, only meaningful ones)      const msg=data.message;
+      // Auto-save key insights (not every message, only meaningful ones)
+      const msg=data.message;
       const isKeyInsight=msg.length>80&&(
         msg.includes("Problem")||msg.includes("Muster")||msg.includes("Stärke")||
         msg.includes("solltest")||msg.includes("wichtig")||msg.includes("achte")||
@@ -1672,9 +1692,9 @@ const sendAiMessage=async()=>{
                   <div style={{marginBottom:6}}>
                     <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
                       <span style={{color:"#8b96b0",fontSize:10}}>Monatsfortschritt</span>
-                      <span style={{color:monthPct>=100?G:P,fontWeight:700,fontSize:10}}>{monthPct}% ({monthPnl>=0?"+":""}${Math.round(monthPnl)} von ${monthNeeded} nötig)</span>
-                    </div>
-                    <div style={{height:6,borderRadius:3,background:"#1e2540",overflow:"hidden"}}>                      <div style={{height:"100%",borderRadius:3,width:monthPct+"%",background:"linear-gradient(90deg,"+B+","+P+")",transition:"width .4s"}}/>
+                      <span style={{color:monthPct>=100?G:P,fontWeight:700,fontSize:10}}>{monthPct}% ({monthPnl>=0?"+":""}${Math.round(monthPnl)} von ${monthNeeded} nötig)</span>                    </div>
+                    <div style={{height:6,borderRadius:3,background:"#1e2540",overflow:"hidden"}}>
+                      <div style={{height:"100%",borderRadius:3,width:monthPct+"%",background:"linear-gradient(90deg,"+B+","+P+")",transition:"width .4s"}}/>
                     </div>
                   </div>
                   {(monatExp||isDesktop)&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #1e1428"}}>
@@ -1866,24 +1886,26 @@ const sendAiMessage=async()=>{
 
 
 
-          {/* MEINE REGELN */}
+          {/* MEINE REGELN - Dynamic */}
           <Card style={{borderColor:"rgba(245,158,11,0.3)"}}>
-            <div style={{fontWeight:800,fontSize:15,color:"#f0f4ff",marginBottom:4}}>📋 Meine Trading-Regeln</div>
-            <div style={{color:"#f59e0b",fontSize:9,fontWeight:600,letterSpacing:"0.5px",marginBottom:10}}>MEIN SYSTEM</div>
-            {[
-              "1 MNQ – kein NQ bis profitabel",
-              "Max 2 Trades pro Tag",
-              "Nur 16:15–17:30 Uhr handeln",
-              "SL: 40 Ticks ($20) – immer gesetzt",
-              "TP: 80 Ticks ($40) – immer gesetzt",
-              "15 Min Pause zwischen Trades",
-              "Bei 3. Trade: morgen gesperrt",
-              "Nach 2 Verlusten: Rechner aus",
-            ].map((r,i)=>(
-              <div key={i} style={{padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",color:"#cbd5e1",fontSize:12,display:"flex",gap:8}}>
-                <span style={{color:"#f59e0b",fontWeight:700,flexShrink:0}}>{i+1}.</span>{r}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div>
+                <div style={{fontWeight:800,fontSize:15,color:"#f0f4ff"}}>📋 Meine Regeln</div>
+                <div style={{color:"#f59e0b",fontSize:9,fontWeight:600}}>MEIN SYSTEM – {selectedRules.length} AKTIV</div>
               </div>
-            ))}
+              <button onClick={()=>setSettingsOpen(true)} style={{fontSize:10,color:"#6366f1",background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:6,padding:"3px 8px"}}>✏️ Bearbeiten</button>
+            </div>
+            {selectedRules.length===0?(
+              <div style={{color:"#4b5568",fontSize:12,textAlign:"center",padding:"12px 0"}}>Keine Regeln ausgewählt. ☰ → Regeln → auswählen</div>
+            ):(
+              ALL_RULES.filter(r=>selectedRules.includes(r.k)).map((r,i)=>(
+                <div key={r.k} style={{padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)",color:"#cbd5e1",fontSize:12,display:"flex",gap:8,alignItems:"center"}}>
+                  <span style={{fontSize:16,flexShrink:0}}>{r.icon}</span>
+                  <span style={{flex:1}}>{r.l}</span>
+                  <span style={{color:"#f59e0b",fontWeight:800,fontSize:11}}>{i+1}</span>
+                </div>
+              ))
+            )}
           </Card>
 
           {/* TRADING PROBLEME */}
@@ -2347,6 +2369,11 @@ const sendAiMessage=async()=>{
               </div>}
 
               {settingsSection==="rules"&&sec.id==="rules"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#0d1320",display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{color:"#8b96b0",fontSize:10,marginBottom:6}}>Wähle max. 5 Regeln für MIND Tab:</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+                  {ALL_RULES.map(r=>{const on=selectedRules.includes(r.k);const disabled=!on&&selectedRules.length>=5;return(<button key={r.k} onClick={()=>!disabled&&toggleRule(r.k)} style={{padding:"5px 8px",borderRadius:16,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3,background:on?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(on?"#6366f1":"rgba(255,255,255,0.1)"),color:on?"#a5b4fc":disabled?"#2d3548":"#6b7a9a",opacity:disabled?0.4:1}}>{r.icon} {r.l}</button>);})}
+                </div>
+                <div style={{color:"#4b5568",fontSize:9,marginBottom:8}}>{selectedRules.length}/5 gewählt – erscheinen im MIND Tab</div>
                 <Field label="MAX TRADES / TAG"><input type="number" value={settings.maxTrades} onChange={e=>saveSettings({...settings,maxTrades:parseInt(e.target.value)||2})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 <Field label="PFLICHTPAUSE (MIN)"><input type="number" value={settings.pauseMins} onChange={e=>saveSettings({...settings,pauseMins:parseInt(e.target.value)||15})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
