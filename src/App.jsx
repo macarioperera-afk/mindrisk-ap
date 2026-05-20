@@ -224,6 +224,7 @@ export default function App(){
   const[mindMsg,setMindMsg]=useState('');
   const[mindLoading,setMindLoading]=useState(false);
   const[checkedIn,setCheckedIn]=useState(false);
+  const[warningDismissed,setWarningDismissed]=useState(false);
   const doMindCheckIn=async()=>{
     if(!mindCheckIn.mood||!mindCheckIn.energy||!mindCheckIn.stress){showToast("Bitte alle 3 bewerten!");return;}
     setMindLoading(true);
@@ -247,6 +248,7 @@ export default function App(){
       setMindMsg(d.message||statusText);
     }catch(e){setMindMsg(statusText);}
     setCheckedIn(true);
+    setWarningDismissed(false);
     setMindLoading(false);
   };
   const[problems,setProblems]=useState(()=>{try{return JSON.parse(localStorage.getItem('ttp_problems')||'{}');}catch{return{};}});
@@ -834,9 +836,9 @@ const sendAiMessage=async()=>{
         localStorage.setItem('ttp_chat_history',JSON.stringify(forStorage));
         return updated;
       });
-      // Auto-save key insights (not every message, only meaningful ones)
-      const msg=data.message;
-      const isKeyInsight=msg.length>80&&(        msg.includes("Problem")||msg.includes("Muster")||msg.includes("Stärke")||
+      // Auto-save key insights (not every message, only meaningful ones)      const msg=data.message;
+      const isKeyInsight=msg.length>80&&(
+        msg.includes("Problem")||msg.includes("Muster")||msg.includes("Stärke")||
         msg.includes("solltest")||msg.includes("wichtig")||msg.includes("achte")||
         msg.includes("morgen")||msg.includes("heute")
       );
@@ -1672,9 +1674,9 @@ const sendAiMessage=async()=>{
                       <span style={{color:"#8b96b0",fontSize:10}}>Monatsfortschritt</span>
                       <span style={{color:monthPct>=100?G:P,fontWeight:700,fontSize:10}}>{monthPct}% ({monthPnl>=0?"+":""}${Math.round(monthPnl)} von ${monthNeeded} nötig)</span>
                     </div>
-                    <div style={{height:6,borderRadius:3,background:"#1e2540",overflow:"hidden"}}>
-                      <div style={{height:"100%",borderRadius:3,width:monthPct+"%",background:"linear-gradient(90deg,"+B+","+P+")",transition:"width .4s"}}/>
-                    </div>                  </div>
+                    <div style={{height:6,borderRadius:3,background:"#1e2540",overflow:"hidden"}}>                      <div style={{height:"100%",borderRadius:3,width:monthPct+"%",background:"linear-gradient(90deg,"+B+","+P+")",transition:"width .4s"}}/>
+                    </div>
+                  </div>
                   {(monatExp||isDesktop)&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #1e1428"}}>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
                       {[
@@ -1775,7 +1777,7 @@ const sendAiMessage=async()=>{
         {/* REGELN TAB */}
         {tab==="mind"&&<div style={{display:"flex",flexDirection:"column",gap:12,width:"100%"}}>
           {/* COACH WARNING POPUP */}
-          {checkedIn&&mindLight!=='green'&&<div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCheckedIn(true)}>
+          {checkedIn&&mindLight!=='green'&&!warningDismissed&&<div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setWarningDismissed(true)}>
             <div style={{background:"linear-gradient(145deg,#1a0a08,#120d0a)",border:"2px solid "+(mindLight==='red'?R:Y),borderRadius:16,padding:24,maxWidth:340,width:"100%",boxShadow:"0 0 40px "+(mindLight==='red'?"rgba(239,68,68,0.4)":"rgba(245,158,11,0.4)")}}>
               <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>{mindLight==='red'?"🛑":"⚠️"}</div>
               <div style={{fontWeight:800,fontSize:18,color:mindLight==='red'?R:Y,textAlign:"center",marginBottom:12}}>
@@ -1790,7 +1792,7 @@ const sendAiMessage=async()=>{
                   {mindLight==='red'?"Kein Trade heute. Nutze die Zeit für Reflexion und Analyse. Morgen ist auch ein Tag.":"Wenn du tradest: max 1 Trade, halbe Lots-Size, strengere Regeln."}
                 </div>
               </div>
-              <button onClick={()=>setCheckedIn(c=>c)} style={{width:"100%",padding:"12px",borderRadius:10,fontWeight:700,fontSize:13,background:mindLight==='red'?"rgba(239,68,68,0.15)":"rgba(245,158,11,0.15)",color:mindLight==='red'?R:Y,border:"1px solid "+(mindLight==='red'?"rgba(239,68,68,0.3)":"rgba(245,158,11,0.3)")}}>
+              <button onClick={()=>setWarningDismissed(true)} style={{width:"100%",padding:"12px",borderRadius:10,fontWeight:700,fontSize:13,background:mindLight==='red'?"rgba(239,68,68,0.15)":"rgba(245,158,11,0.15)",color:mindLight==='red'?R:Y,border:"1px solid "+(mindLight==='red'?"rgba(239,68,68,0.3)":"rgba(245,158,11,0.3)")}}>
                 Verstanden
               </button>
             </div>
