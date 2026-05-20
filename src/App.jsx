@@ -834,8 +834,8 @@ const sendAiMessage=async()=>{
       if(isKeyInsight){
         const short=msg.replace(/[🔴✅⚠️📌💡🎯]/g,'').slice(0,120).trim();
         saveCoachMemory("💬 "+short);
-      }    }catch(err){
-      setAiMessages(p=>[...p,{role:"assistant",content:"🔴 Netzwerk Fehler: "+err.message}]);
+      }
+    }catch(err){      setAiMessages(p=>[...p,{role:"assistant",content:"🔴 Netzwerk Fehler: "+err.message}]);
     }finally{setAiLoading(false);}
   };
 
@@ -889,7 +889,7 @@ const sendAiMessage=async()=>{
   const chiOpen=chiH>=8&&chiH<15;
   const NAVS=[
   {k:"dash",lb:"Dashboard",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><polyline points="2,17 8,10 13,14 22,5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="8" cy="10" r="1.5" fill="currentColor"/><circle cx="13" cy="14" r="1.5" fill="currentColor"/><line x1="2" y1="21" x2="22" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/></svg>},
-  {k:"mind",lb:"Mind",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2 L14.5 9H22L16 13.5L18.5 21L12 16.5L5.5 21L8 13.5L2 9H9.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" fill="none"/><polyline points="8,12 11,15 16,9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>},
+  {k:"mind",lb:"Mind",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-1.96-3 2.5 2.5 0 0 1 0-5A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 1.96-3 2.5 2.5 0 0 0 0-5A2.5 2.5 0 0 0 14.5 2Z"/></svg>},
   {k:"log",lb:"Loggen",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>},
   {k:"analyse",lb:"Analyse",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 20 Q7 12 10 15 Q13 18 16 8 Q18 2 21 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/><circle cx="21" cy="4" r="2" fill="currentColor" opacity="0.8"/><circle cx="10" cy="15" r="1.5" fill="currentColor" opacity="0.6"/></svg>},
   {k:"hist",lb:"History",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="2" rx="1" fill="currentColor" opacity="0.9"/><rect x="3" y="9" width="14" height="2" rx="1" fill="currentColor" opacity="0.7"/><rect x="3" y="14" width="16" height="2" rx="1" fill="currentColor" opacity="0.5"/><rect x="3" y="19" width="10" height="2" rx="1" fill="currentColor" opacity="0.35"/></svg>},
@@ -1670,9 +1670,9 @@ const sendAiMessage=async()=>{
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
                       {[
                         {l:"HANDELSTAGE NOCH",v:dLeft2+" Tage",c:dLeft2>5?G:dLeft2>2?Y:R,s:"diesen Monat"},
-                        {l:"GEWINN/TAG NÖTIG",v:missing<=0?"✅ Erreicht":"$"+dailyNeed,c:missing<=0?G:dailyNeed<100?G:Y,s:"um Ziel zu erreichen"},                        {l:"GEWINN/TRADE NÖTIG",v:missing<=0?"✅":"$"+tradeNeed,c:missing<=0?G:tradeNeed<50?G:Y,s:"bei 2 Trades/Tag"},
-                        {l:"MAX. TRADES NOCH",v:dLeft2*DAILY_LIMIT,c:"#f0f4ff",s:dLeft2+" Tage × "+DAILY_LIMIT},
-                        {l:"DIESEN MONAT P&L",v:(monthPnl>=0?"+":"")+"$"+monthPnl,c:pc(monthPnl),s:"seit Monatsstart"},
+                        {l:"GEWINN/TAG NÖTIG",v:missing<=0?"✅ Erreicht":"$"+dailyNeed,c:missing<=0?G:dailyNeed<100?G:Y,s:"um Ziel zu erreichen"},
+                        {l:"GEWINN/TRADE NÖTIG",v:missing<=0?"✅":"$"+tradeNeed,c:missing<=0?G:tradeNeed<50?G:Y,s:"bei 2 Trades/Tag"},
+                        {l:"MAX. TRADES NOCH",v:dLeft2*DAILY_LIMIT,c:"#f0f4ff",s:dLeft2+" Tage × "+DAILY_LIMIT},                        {l:"DIESEN MONAT P&L",v:(monthPnl>=0?"+":"")+"$"+monthPnl,c:pc(monthPnl),s:"seit Monatsstart"},
                         {l:"REGELQUOTE",v:disc+"%",c:sc(disc),s:"Ziel: "+goals.disc+"%"},
                       ].map(s=>(
                         <div key={s.l} style={{background:"#0f1428",borderRadius:7,padding:"7px 8px",border:"1px solid #1e1428"}}>
@@ -1764,6 +1764,27 @@ const sendAiMessage=async()=>{
 
         {/* REGELN TAB */}
         {tab==="mind"&&<div style={{display:"flex",flexDirection:"column",gap:12,width:"100%"}}>
+          {/* COACH WARNING POPUP */}
+          {checkedIn&&mindLight!=='green'&&<div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCheckedIn(true)}>
+            <div style={{background:"linear-gradient(145deg,#1a0a08,#120d0a)",border:"2px solid "+(mindLight==='red'?R:Y),borderRadius:16,padding:24,maxWidth:340,width:"100%",boxShadow:"0 0 40px "+(mindLight==='red'?"rgba(239,68,68,0.4)":"rgba(245,158,11,0.4)")}}>
+              <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>{mindLight==='red'?"🛑":"⚠️"}</div>
+              <div style={{fontWeight:800,fontSize:18,color:mindLight==='red'?R:Y,textAlign:"center",marginBottom:12}}>
+                {mindLight==='red'?"Heute nicht traden!":"Vorsicht heute"}
+              </div>
+              <div style={{color:"#a8b8d0",fontSize:13,lineHeight:1.6,marginBottom:16,textAlign:"center"}}>{mindMsg}</div>
+              <div style={{background:mindLight==='red'?"rgba(239,68,68,0.1)":"rgba(245,158,11,0.1)",borderRadius:10,padding:"10px 14px",marginBottom:16}}>
+                <div style={{color:mindLight==='red'?R:Y,fontWeight:700,fontSize:12,marginBottom:4}}>
+                  {mindLight==='red'?"Coach Empfehlung:":"Coach Empfehlung:"}
+                </div>
+                <div style={{color:"#a8b8d0",fontSize:12}}>
+                  {mindLight==='red'?"Kein Trade heute. Nutze die Zeit für Reflexion und Analyse. Morgen ist auch ein Tag.":"Wenn du tradest: max 1 Trade, halbe Lots-Size, strengere Regeln."}
+                </div>
+              </div>
+              <button onClick={()=>setCheckedIn(c=>c)} style={{width:"100%",padding:"12px",borderRadius:10,fontWeight:700,fontSize:13,background:mindLight==='red'?"rgba(239,68,68,0.15)":"rgba(245,158,11,0.15)",color:mindLight==='red'?R:Y,border:"1px solid "+(mindLight==='red'?"rgba(239,68,68,0.3)":"rgba(245,158,11,0.3)")}}>
+                Verstanden
+              </button>
+            </div>
+          </div>}
 
           {/* AI COACH CHECK-IN */}
           <Card style={{borderColor:"rgba(99,102,241,0.4)",background:"linear-gradient(145deg,#0f1428,#0d1020)"}}>
@@ -1831,24 +1852,7 @@ const sendAiMessage=async()=>{
             {Object.values(form.rules||{}).every(Boolean)&&<div style={{marginTop:10,background:"rgba(99,102,241,0.12)",borderRadius:8,padding:"8px 12px",color:"#a5b4fc",fontSize:12,fontWeight:700,textAlign:"center"}}>✅ Alle Punkte gecheckt – Bereit!</div>}
           </Card>}
 
-          {/* EMOTIONSTRACKER */}
-          <Card style={{borderColor:"rgba(168,85,247,0.3)"}}>
-            <div style={{fontWeight:800,fontSize:15,color:"#f0f4ff",marginBottom:4}}>🎭 Mein Zustand heute</div>
-            <div style={{color:P,fontSize:9,fontWeight:600,letterSpacing:"0.5px",marginBottom:10}}>WIE FÜHLST DU DICH GERADE?</div>
-            {[{id:"focus",l:"Fokus",icons:["😵","😕","😐","🙂","🔥"]},{id:"stress",l:"Stress",icons:["😌","🙂","😐","😰","🤯"]},{id:"energy",l:"Energie",icons:["💤","😴","😐","⚡","🚀"]}].map(t=>(
-              <div key={t.id} style={{marginBottom:12}}>
-                <div style={{color:"#8b96b0",fontSize:10,marginBottom:6}}>{t.l}</div>
-                <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
-                  {t.icons.map((icon,i)=>(
-                    <button key={i} onClick={()=>setTodayJ(p=>({...p,[t.id]:i+1}))} style={{fontSize:22,background:todayJ[t.id]===i+1?"rgba(168,85,247,0.2)":"transparent",border:"1px solid "+(todayJ[t.id]===i+1?"#a855f7":"rgba(255,255,255,0.05)"),borderRadius:8,padding:"4px 8px",flex:1,transition:"all .15s"}}>{icon}</button>
-                  ))}
-                </div>
-              </div>
-            ))}
-            {todayJ.focus&&<div style={{background:"rgba(168,85,247,0.08)",borderRadius:8,padding:"8px 10px",fontSize:11,color:"#94a3b8"}}>
-              {todayJ.stress>=4?"⚠️ Hoher Stress erkannt. Heute besonders aufpassen.":todayJ.focus<=2?"⚡ Fokus gering. Ggf. heute nicht traden.":"✅ Zustand ok für Trading."}
-            </div>}
-          </Card>
+
 
           {/* MEINE REGELN */}
           <Card style={{borderColor:"rgba(245,158,11,0.3)"}}>
