@@ -227,16 +227,26 @@ export default function App(){
   const doMindCheckIn=async()=>{
     if(!mindCheckIn.mood||!mindCheckIn.energy||!mindCheckIn.stress){showToast("Bitte alle 3 bewerten!");return;}
     setMindLoading(true);
-    const prompt="Jeronimo macht seinen Pre-Trade Check. Zustand: Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5, Stress "+mindCheckIn.stress+"/5. Heutige Trades: "+todT.length+", P&L heute: "+(todPnl>=0?"+":"")+"$"+todPnl+". Gib ihm: 1) Eine kurze Einschätzung (1 Satz), 2) Ampel-Status: GRÜN/GELB/ROT mit kurzem Grund, 3) Einen motivierenden Satz. Max 3 Sätze total.";
+    // Client-side light calculation (not from AI)
+    const focusBad=mindCheckIn.mood<3;
+    const energyBad=mindCheckIn.energy<3;
+    const stressBad=mindCheckIn.stress>3;
+    const badCount=[focusBad,energyBad,stressBad].filter(Boolean).length;
+    const light=badCount>=2?'red':badCount===1?'yellow':'green';
+    setMindLight(light);
+    // AI just gives motivating message
+    const statusText=light==='red'?'Heute ist nicht dein Tag für Trades':light==='yellow'?'Heute mit Vorsicht':' Du bist bereit';
+    const prompt=light==='red'
+      ?"Jeronimo macht seinen Check-in. Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5, Stress "+mindCheckIn.stress+"/5. Empfehle ihm heute NICHT zu traden. Gib ihm 2-3 kurze motivierende Sätze: dass jeder Tag Chancen hat, dass Pause manchmal der beste Trade ist, und was er stattdessen tun kann (Analyse, Lernen). Klingt ermutigend, nicht negativ."
+      :light==='yellow'
+      ?"Jeronimo Check-in: Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5, Stress "+mindCheckIn.stress+"/5. Gib Rat: wenn er tradet dann max 1 Trade mit weniger Risiko. 2 motivierende Sätze."
+      :"Jeronimo Check-in: alles gut! Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5. Gib ihm einen kurzen motivierenden Satz für den Trading-Tag.";
     try{
       const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:coachProfile||'',coachMemory:coachMemory.slice(0,3).map(m=>m.note).join(' | ')}})});
       const d=await res.json();
-      const msg=d.message||'';
-      setMindMsg(msg);
-      const light=msg.includes('ROT')||msg.toLowerCase().includes('nicht traden')?'red':msg.includes('GELB')||msg.toLowerCase().includes('vorsicht')?'yellow':'green';
-      setMindLight(light);
-      setCheckedIn(true);
-    }catch(e){setMindMsg("Fehler beim Check-in");}
+      setMindMsg(d.message||statusText);
+    }catch(e){setMindMsg(statusText);}
+    setCheckedIn(true);
     setMindLoading(false);
   };
   const[problems,setProblems]=useState(()=>{try{return JSON.parse(localStorage.getItem('ttp_problems')||'{}');}catch{return{};}});
@@ -826,8 +836,7 @@ const sendAiMessage=async()=>{
       });
       // Auto-save key insights (not every message, only meaningful ones)
       const msg=data.message;
-      const isKeyInsight=msg.length>80&&(
-        msg.includes("Problem")||msg.includes("Muster")||msg.includes("Stärke")||
+      const isKeyInsight=msg.length>80&&(        msg.includes("Problem")||msg.includes("Muster")||msg.includes("Stärke")||
         msg.includes("solltest")||msg.includes("wichtig")||msg.includes("achte")||
         msg.includes("morgen")||msg.includes("heute")
       );
@@ -835,7 +844,8 @@ const sendAiMessage=async()=>{
         const short=msg.replace(/[🔴✅⚠️📌💡🎯]/g,'').slice(0,120).trim();
         saveCoachMemory("💬 "+short);
       }
-    }catch(err){      setAiMessages(p=>[...p,{role:"assistant",content:"🔴 Netzwerk Fehler: "+err.message}]);
+    }catch(err){
+      setAiMessages(p=>[...p,{role:"assistant",content:"🔴 Netzwerk Fehler: "+err.message}]);
     }finally{setAiLoading(false);}
   };
 
@@ -1664,15 +1674,15 @@ const sendAiMessage=async()=>{
                     </div>
                     <div style={{height:6,borderRadius:3,background:"#1e2540",overflow:"hidden"}}>
                       <div style={{height:"100%",borderRadius:3,width:monthPct+"%",background:"linear-gradient(90deg,"+B+","+P+")",transition:"width .4s"}}/>
-                    </div>
-                  </div>
+                    </div>                  </div>
                   {(monatExp||isDesktop)&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #1e1428"}}>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
                       {[
                         {l:"HANDELSTAGE NOCH",v:dLeft2+" Tage",c:dLeft2>5?G:dLeft2>2?Y:R,s:"diesen Monat"},
                         {l:"GEWINN/TAG NÖTIG",v:missing<=0?"✅ Erreicht":"$"+dailyNeed,c:missing<=0?G:dailyNeed<100?G:Y,s:"um Ziel zu erreichen"},
                         {l:"GEWINN/TRADE NÖTIG",v:missing<=0?"✅":"$"+tradeNeed,c:missing<=0?G:tradeNeed<50?G:Y,s:"bei 2 Trades/Tag"},
-                        {l:"MAX. TRADES NOCH",v:dLeft2*DAILY_LIMIT,c:"#f0f4ff",s:dLeft2+" Tage × "+DAILY_LIMIT},                        {l:"DIESEN MONAT P&L",v:(monthPnl>=0?"+":"")+"$"+monthPnl,c:pc(monthPnl),s:"seit Monatsstart"},
+                        {l:"MAX. TRADES NOCH",v:dLeft2*DAILY_LIMIT,c:"#f0f4ff",s:dLeft2+" Tage × "+DAILY_LIMIT},
+                        {l:"DIESEN MONAT P&L",v:(monthPnl>=0?"+":"")+"$"+monthPnl,c:pc(monthPnl),s:"seit Monatsstart"},
                         {l:"REGELQUOTE",v:disc+"%",c:sc(disc),s:"Ziel: "+goals.disc+"%"},
                       ].map(s=>(
                         <div key={s.l} style={{background:"#0f1428",borderRadius:7,padding:"7px 8px",border:"1px solid #1e1428"}}>
@@ -2190,16 +2200,7 @@ const sendAiMessage=async()=>{
           </Card>
 
           {/* PSYCHOLOGIE JOURNAL */}
-          <Card style={{borderColor:P+"33"}}>
-            <div style={{fontWeight:700,marginBottom:10,fontSize:14,color:"#f0f4ff"}}>Tages-Reflexion</div>
-            {[{id:"good",label:"Was lief gut?",p:"Setup, Disziplin..."},{id:"bad",label:"Was verbessern?",p:"Impuls, zu früh..."},{id:"emotion",label:"Emotionaler Zustand?",p:"Ruhig, fokussiert..."}].map(q=>(
-              <div key={q.id} style={{marginBottom:8}}>
-                <label style={{color:"#8b96b0",fontSize:10,display:"block",marginBottom:3}}>{q.label}</label>
-                <textarea rows={2} value={todayJ[q.id]||""} onChange={e=>setTodayJ(p=>({...p,[q.id]:e.target.value}))} placeholder={q.p} style={{resize:"vertical"}}/>
-              </div>
-            ))}
-            <button onClick={()=>{const u={...journal,[todayISO()]:{...todayJ}};setJournal(u);localStorage.setItem("ttp_journal",JSON.stringify(u));showToast("Reflexion gespeichert!");}} style={{background:P,color:"#fff",padding:10,width:"100%",fontWeight:700,borderRadius:10,fontSize:13}}>Speichern</button>
-          </Card>
+          
         </div>}
 
         {tab==="hist"&&<div style={{display:"flex",flexDirection:"column",gap:10,width:"100%"}}>
