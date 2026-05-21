@@ -172,6 +172,7 @@ export default function App(){
   const[aiImagePreview,setAiImagePreview]=useState(null);
   const[isRecording,setIsRecording]=useState(false);
   const[aiAutoShown,setAiAutoShown]=useState({});
+  const[showMoreButtons,setShowMoreButtons]=useState(false);
   const[checks,setChecks]=useState(()=>{
     try{
       const saved=JSON.parse(localStorage.getItem('ttp_checks')||'{}');
@@ -1694,8 +1695,7 @@ const sendAiMessage=async()=>{
                       <span style={{color:"#8b96b0",fontSize:10}}>Monatsfortschritt</span>
                       <span style={{color:monthPct>=100?G:P,fontWeight:700,fontSize:10}}>{monthPct}% ({monthPnl>=0?"+":""}${Math.round(monthPnl)} von ${monthNeeded} nötig)</span>                    </div>
                     <div style={{height:6,borderRadius:3,background:"#1e2540",overflow:"hidden"}}>
-                      <div style={{height:"100%",borderRadius:3,width:monthPct+"%",background:"linear-gradient(90deg,"+B+","+P+")",transition:"width .4s"}}/>
-                    </div>
+                      <div style={{height:"100%",borderRadius:3,width:monthPct+"%",background:"linear-gradient(90deg,"+B+","+P+")",transition:"width .4s"}}/>                    </div>
                   </div>
                   {(monatExp||isDesktop)&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #1e1428"}}>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
@@ -2493,12 +2493,18 @@ const sendAiMessage=async()=>{
               )}
               <div ref={aiMessagesEndRef}/>
             </div>
-            <div style={{padding:"6px 12px",borderTop:"1px solid #2d3548",display:"flex",gap:6,flexWrap:"wrap"}}>
-              <button onClick={()=>triggerAiPopup("daily_motivation")} style={{background:"rgba(0,211,149,0.15)",color:G,fontSize:10,padding:"4px 10px",borderRadius:20,border:"1px solid "+G+"44",fontWeight:700}}>☀️ Tages-Briefing</button>
-              {["Soll ich traden?","Analysiere meine Schwächen","Beste Handelszeit?","Diese Woche?"].map(q=>(
-                <button key={q} onClick={()=>{setAiInput(q);}} style={{background:"rgba(99,102,241,0.15)",color:B,fontSize:10,padding:"4px 10px",borderRadius:20,border:"1px solid "+B+"44",fontWeight:600}}>{q}</button>
-              ))}
-              {t09.length>0&&<button onClick={()=>{const last=t09[t09.length-1];setAiInput("Analysiere: "+last.contract+" "+last.dir+" "+(last.pnl>=0?"+":"")+"$"+last.pnl.toFixed(2)+" um "+last.time+" am "+last.date);}} style={{background:"rgba(0,211,149,0.15)",color:G,fontSize:10,padding:"4px 10px",borderRadius:20,border:"1px solid "+G+"44",fontWeight:600}}>📊 Letzter Trade</button>}
+            <div style={{padding:"6px 12px",borderTop:"1px solid #2d3548"}}>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>triggerAiPopup("daily_motivation")} style={{background:"rgba(0,211,149,0.15)",color:G,fontSize:10,padding:"5px 10px",borderRadius:20,border:"1px solid "+G+"44",fontWeight:700,flex:1}}>☀️ Tages-Briefing</button>
+                <button onClick={()=>setAiInput("Soll ich traden?")} style={{background:"rgba(99,102,241,0.15)",color:B,fontSize:10,padding:"5px 10px",borderRadius:20,border:"1px solid "+B+"44",fontWeight:600,flex:1}}>Soll ich traden?</button>
+                <button onClick={()=>setShowMoreButtons(p=>!p)} style={{background:"rgba(255,255,255,0.05)",color:"#6b7a9a",fontSize:16,padding:"4px 10px",borderRadius:20,border:"1px solid #2d3548",flexShrink:0,lineHeight:1}}>{showMoreButtons?"▲":"···"}</button>
+              </div>
+              {showMoreButtons&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:5}}>
+                {["Analysiere meine Schwächen","Beste Handelszeit?","Diese Woche?"].map(q=>(
+                  <button key={q} onClick={()=>{setAiInput(q);setShowMoreButtons(false);}} style={{background:"rgba(99,102,241,0.15)",color:B,fontSize:10,padding:"4px 10px",borderRadius:20,border:"1px solid "+B+"44",fontWeight:600}}>{q}</button>
+                ))}
+                {t09.length>0&&<button onClick={()=>{const last=t09[t09.length-1];setAiInput("Analysiere: "+last.contract+" "+last.dir+" "+(last.pnl>=0?"+":"")+last.pnl.toFixed(2)+"$ um "+last.time+" am "+last.date);setShowMoreButtons(false);}} style={{background:"rgba(0,211,149,0.15)",color:G,fontSize:10,padding:"4px 10px",borderRadius:20,border:"1px solid "+G+"44",fontWeight:600}}>📊 Letzter Trade</button>}
+              </div>}
             </div>
             <>
             {aiImagePreview&&<div style={{padding:"6px 12px",borderTop:"1px solid #2d3548",display:"flex",alignItems:"center",gap:8}}>
@@ -2506,33 +2512,31 @@ const sendAiMessage=async()=>{
               <div style={{fontSize:11,color:"#a8b8d0",flex:1}}>📊 Chart wird mitgeschickt...</div>
               <button onClick={()=>{setAiImage(null);setAiImagePreview(null);}} style={{background:"none",color:"#ef4444",fontSize:18,padding:"2px 6px"}}>×</button>
             </div>}
-            <div style={{padding:"8px 12px",borderTop:"1px solid #2d3548",display:"flex",gap:6,alignItems:"center"}}>
+            <div style={{padding:"8px 12px",borderTop:"1px solid #2d3548"}}>
               <input type="file" id="chartUpload" accept="image/*" onChange={handleImageSelect} style={{display:"none"}}/>
-              <button onClick={()=>document.getElementById("chartUpload").click()}
-                style={{background:"#131d30",border:"1px solid #2d3548",color:"#a8b8d0",padding:"7px 9px",borderRadius:10,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}
-                title="Chart Screenshot hochladen">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                  <circle cx="12" cy="13" r="4"/>
-                </svg>
-              </button>
-              <button onClick={startVoice}
-                style={{background:isRecording?"rgba(239,68,68,0.3)":"#131d30",border:"1px solid "+(isRecording?"#ef4444":"#1e2d48"),color:isRecording?"#ef4444":"#a8b8d0",padding:"7px 9px",borderRadius:10,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}
-                title="Spracheingabe">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="23"/>
-                  <line x1="8" y1="23" x2="16" y2="23"/>
-                </svg>
-              </button>
-              <textarea value={aiInput} onChange={e=>setAiInput(e.target.value)}
-                onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&(e.preventDefault(),sendAiMessage())}
-                placeholder={isRecording?"🎤 Höre zu...":"Frag deinen Coach..."}
-                rows={2}
-                style={{flex:1,fontSize:13,padding:"10px 14px",borderRadius:16,background:"#0d1320",border:"1px solid #2d3548",resize:"none",lineHeight:1.4,maxHeight:80,overflowY:"auto",color:"#f0f4ff",fontFamily:"inherit"}}/>
-              <button id="aiSendBtn" onClick={sendAiMessage} disabled={aiLoading||(!aiInput.trim()&&!aiImage)}
-                style={{background:"linear-gradient(135deg,"+B+","+P+")",color:"#fff",padding:"8px 12px",borderRadius:20,fontSize:14,fontWeight:700,opacity:aiLoading||(!aiInput.trim()&&!aiImage)?0.4:1,flexShrink:0}}>→</button>
+              <div style={{display:"flex",gap:8,marginBottom:8}}>
+                <button onClick={()=>document.getElementById("chartUpload").click()}
+                  style={{background:"#131d30",border:"1px solid #2d3548",color:"#a8b8d0",padding:"9px 0",borderRadius:10,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:11,fontWeight:600}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  Chart
+                </button>
+                <button onClick={startVoice}
+                  style={{background:isRecording?"rgba(239,68,68,0.3)":"#131d30",border:"1px solid "+(isRecording?"#ef4444":"#1e2d48"),color:isRecording?"#ef4444":"#a8b8d0",padding:"9px 0",borderRadius:10,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:11,fontWeight:600}}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                  {isRecording?"Aufnahme":"Sprechen"}
+                </button>
+                <button onClick={()=>{setAiMessages([]);localStorage.removeItem('ttp_chat_history');}}
+                  style={{background:"#131d30",border:"1px solid #2d3548",color:"#4b5568",padding:"9px 12px",borderRadius:10,fontSize:13,flexShrink:0}}>🗑</button>
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+                <textarea value={aiInput} onChange={e=>setAiInput(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&(e.preventDefault(),sendAiMessage())}
+                  placeholder={isRecording?"🎤 Höre zu...":"Frag deinen Coach..."}
+                  rows={3}
+                  style={{flex:1,fontSize:14,padding:"12px 14px",borderRadius:14,background:"#0d1320",border:"1px solid #2d3548",resize:"none",lineHeight:1.5,maxHeight:110,overflowY:"auto",color:"#f0f4ff",fontFamily:"inherit"}}/>
+                <button id="aiSendBtn" onClick={sendAiMessage} disabled={aiLoading||(!aiInput.trim()&&!aiImage)}
+                  style={{background:"linear-gradient(135deg,"+B+","+P+")",color:"#fff",padding:"13px 15px",borderRadius:14,fontSize:16,fontWeight:700,opacity:aiLoading||(!aiInput.trim()&&!aiImage)?0.4:1,flexShrink:0}}>→</button>
+              </div>
             </div>
             </>
           </div>
@@ -2541,3 +2545,4 @@ const sendAiMessage=async()=>{
     </div>
   );
 }
+
