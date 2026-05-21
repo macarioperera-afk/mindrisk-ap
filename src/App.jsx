@@ -1146,13 +1146,10 @@ const sendAiMessage=async()=>{
                     <span style={{color:"#6b7a9a",fontSize:9,fontWeight:700,letterSpacing:"0.5px"}}>TTP EOD TRAILING DD</span>
                     <span style={{color:isLocked?G:Y,fontSize:9,fontWeight:700}}>{isLocked?"⊠ DD eingefroren $"+ddLockAt.toLocaleString():"⚠️ DD läuft mit"}</span>
                   </div>
-                  <div style={{position:"relative",height:18,borderRadius:9,overflow:"hidden",marginBottom:4}}>
-                    <div style={{position:"absolute",left:0,width:lockLinePct+"%",height:"100%",background:"linear-gradient(90deg,#7f1d1d,#dc2626)",opacity:0.9}}/>
-                    <div style={{position:"absolute",left:lockLinePct+"%",width:(profitLinePct-lockLinePct)+"%",height:"100%",background:"linear-gradient(90deg,#f59e0b,#fbbf24)"}}/>
-                    <div style={{position:"absolute",left:profitLinePct+"%",right:0,height:"100%",background:"linear-gradient(90deg,#16a34a,#22c55e)"}}/>
-                    <div style={{position:"absolute",left:markerPct+"%",top:0,bottom:0,width:3,background:"#fff",transform:"translateX(-50%)",boxShadow:"0 0 8px rgba(255,255,255,0.9)",zIndex:2}}/>
-                    <div style={{position:"absolute",left:lockLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.3)"}}/>
-                    <div style={{position:"absolute",left:profitLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.3)"}}/>
+                  <div style={{position:"relative",height:12,borderRadius:6,overflow:"hidden",marginBottom:4,background:"rgba(255,255,255,0.05)"}}>
+                    <div style={{position:"absolute",left:0,width:markerPct+"%",height:"100%",borderRadius:6,background:ddAbstand<500?"linear-gradient(90deg,#ef4444,#dc2626)":ddAbstand<1000?"linear-gradient(90deg,#f59e0b,#fbbf24)":"linear-gradient(90deg,#6366f1,#a855f7)",transition:"width .6s ease",boxShadow:ddAbstand<500?"0 0 12px rgba(239,68,68,0.5)":ddAbstand<1000?"0 0 12px rgba(245,158,11,0.4)":"0 0 12px rgba(99,102,241,0.3)"}}/>
+                    <div style={{position:"absolute",left:lockLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.15)"}}/>
+                    <div style={{position:"absolute",left:profitLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.15)"}}/>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:"#4b5568",marginBottom:6}}>
                     <span style={{color:R}}>${ddInitial.toLocaleString()}<br/>Max DD</span>
@@ -1398,97 +1395,6 @@ const sendAiMessage=async()=>{
 
 
           {/* TRADING PROBLEME CARD */}
-          <Card style={{borderColor:"rgba(245,158,11,0.2)",background:"linear-gradient(145deg,#1a1508 0%,#0f1010 100%)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,cursor:"pointer"}} onClick={()=>setProbExp(p=>!p)}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:14,height:14,borderRadius:"50%",background:"radial-gradient(circle,#fcd34d,#f59e0b 60%,#92400e)",animation:"livingOrb 2s ease-in-out infinite",boxShadow:"0 0 10px rgba(245,158,11,0.6)",flexShrink:0}}/>
-                <div>
-                  <div style={{fontWeight:800,fontSize:15,color:"#f0f4ff"}}>Meine Trading-Probleme</div>
-                  <div style={{color:"#f59e0b",fontSize:9,fontWeight:600,letterSpacing:"0.5px"}}>PERSÖNLICHE KI-DIAGNOSE</div>
-                </div>
-              </div>
-              <span style={{color:"#f59e0b",fontSize:11,fontWeight:600}}>{probExp?"▲":"▼"}</span>
-            </div>
-            {(()=>{
-              const PROBS=[
-                {k:"overtrading",l:"Overtrading",d:"Zu viele Trades pro Tag"},
-                {k:"fomo",l:"FOMO",d:"Fear of Missing Out"},
-                {k:"revenge",l:"Revenge Trading",d:"Nach Verlust sofort wieder einsteigen"},
-                {k:"early_exit",l:"Zu früh aussteigen",d:"TP nicht abwarten"},
-                {k:"no_sl",l:"SL nicht einhalten",d:"Stop Loss verschoben oder ignoriert"},
-                {k:"outside_window",l:"Falsche Zeiten",d:"Außerhalb des Zeitfensters traden"},
-                {k:"impulse",l:"Impuls-Trading",d:"Kein Setup, einfach rein"},
-                {k:"fear",l:"Angst vor Verlusten",d:"Zögern bei guten Setups"},
-              ];
-              const selected=Object.keys(problems).filter(k=>problems[k]);
-              return(
-                <div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
-                    {PROBS.map(p=>(
-                      <button key={p.k} onClick={()=>saveProblems({...problems,[p.k]:!problems[p.k]})}
-                        title={p.d}
-                        style={{padding:"5px 10px",borderRadius:20,fontSize:11,fontWeight:600,
-                          background:problems[p.k]?"rgba(245,158,11,0.25)":"rgba(255,255,255,0.04)",
-                          border:"1px solid "+(problems[p.k]?"rgba(245,158,11,0.6)":"rgba(255,255,255,0.1)"),
-                          color:problems[p.k]?"#fcd34d":"#6b7a9a",
-                          transition:"all .2s"}}>
-                        {problems[p.k]?"✓ ":""}{p.l}
-                      </button>
-                    ))}
-                  </div>
-                  {selected.length>0&&(
-                    <button onClick={analyzeProblems} disabled={probLoading}
-                      style={{width:"100%",padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,
-                        background:"linear-gradient(135deg,rgba(245,158,11,0.2),rgba(239,68,68,0.1))",
-                        border:"1px solid rgba(245,158,11,0.3)",color:probLoading?"#6b7280":"#fcd34d",marginBottom:8}}>
-                      {probLoading?"🤖 Analysiere...":"🤖 KI-Diagnose starten ("+selected.length+" Probleme)"}
-                    </button>
-                  )}
-                  {probAnalysis&&(
-                    <div style={{background:"rgba(245,158,11,0.06)",borderRadius:10,padding:12,border:"1px solid rgba(245,158,11,0.15)"}}>
-                      <div style={{color:"#f59e0b",fontSize:11,fontWeight:700,marginBottom:6}}>🎯 Dein persönlicher Plan:</div>
-                      <div style={{color:"#a8b8d0",fontSize:11,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{probAnalysis}</div>
-                    </div>
-                  )}
-                  {!probAnalysis&&selected.length===0&&(
-                    <div style={{color:"#4a5568",fontSize:11,textAlign:"center",padding:"4px 0"}}>
-                      Wähle deine Probleme → KI gibt dir einen konkreten Plan
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </Card>
-          </Card>
-            </div>
-          </div>
-        ):(
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-
-          {dailyDDHit&&<div style={{background:"rgba(239,68,68,0.15)",border:"2px solid rgba(239,68,68,0.6)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M4.93 4.93l14.14 14.14"/></svg>
-            <div><div style={{color:"#fca5a5",fontWeight:800,fontSize:14}}>Daily DD erreicht! -${Math.round(dailyLoss)} / $1.000 Limit</div><div style={{color:"#fca5a5",fontSize:11}}>Für heute KEIN weiterer Trade. Rechner aus, Coach fragen.</div></div>
-          </div>}
-          {!dailyDDHit&&todayBlocked&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.4)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-            <div><div style={{color:R,fontWeight:700,fontSize:13}}>Heute gesperrt (Overtrading gestern)</div><div style={{color:"#fca5a5",fontSize:11}}>Morgen wieder. Heute: analysieren.</div></div>
-          </div>}
-          {overtradingToday&&!todayBlocked&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.4)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center"}}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-            <div><div style={{color:R,fontWeight:700,fontSize:13}}>3 Trades – Morgen gesperrt!</div><div style={{color:"#fca5a5",fontSize:11}}>Rechner aus.</div></div>
-          </div>}
-          {atLimit&&!overtradingToday&&!todayBlocked&&<div style={{background:O+"22",border:"1px solid "+O,borderRadius:10,padding:"10px 14px",display:"flex",gap:10,alignItems:"center"}}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M4.93 4.93l14.14 14.14"/></svg><div><div style={{color:O,fontWeight:800}}>2 Trades – Tageslimit!</div><div style={{color:"#fdba74",fontSize:11}}>Kein 3. Trade!</div></div>
-          </div>}
-          {inPause&&<div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.15),rgba(239,68,68,0.08))",border:"2px solid rgba(245,158,11,0.6)",borderRadius:14,padding:"16px 18px",display:"flex",gap:14,alignItems:"center",animation:"glowPulse 2s ease infinite"}}>
-            <span style={{fontSize:24}}>⏸</span>
-            <div style={{flex:1}}>
-              <div style={{color:Y,fontWeight:700,fontSize:13,marginBottom:4}}>Pflichtpause</div>
-              <div style={{color:Y,fontWeight:800,fontSize:36,lineHeight:1}}>{pStr}</div>
-              <div style={{color:"#fbbf24",fontSize:11,marginTop:5}}>Kein Impuls-Trade – warte den Timer ab</div>
-            </div>
-          </div>}
-
 
           <Card style={{borderColor:B+"44"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
@@ -1523,13 +1429,10 @@ const sendAiMessage=async()=>{
                     <span style={{color:"#6b7a9a",fontSize:9,fontWeight:700,letterSpacing:"0.5px"}}>TTP EOD TRAILING DD</span>
                     <span style={{color:isLocked?G:Y,fontSize:9,fontWeight:700}}>{isLocked?"⊠ DD eingefroren $"+ddLockAt.toLocaleString():"⚠️ DD läuft mit"}</span>
                   </div>
-                  <div style={{position:"relative",height:18,borderRadius:9,overflow:"hidden",marginBottom:4}}>
-                    <div style={{position:"absolute",left:0,width:lockLinePct+"%",height:"100%",background:"linear-gradient(90deg,#7f1d1d,#dc2626)",opacity:0.9}}/>
-                    <div style={{position:"absolute",left:lockLinePct+"%",width:(profitLinePct-lockLinePct)+"%",height:"100%",background:"linear-gradient(90deg,#f59e0b,#fbbf24)"}}/>
-                    <div style={{position:"absolute",left:profitLinePct+"%",right:0,height:"100%",background:"linear-gradient(90deg,#16a34a,#22c55e)"}}/>
-                    <div style={{position:"absolute",left:markerPct+"%",top:0,bottom:0,width:3,background:"#fff",transform:"translateX(-50%)",boxShadow:"0 0 8px rgba(255,255,255,0.9)",zIndex:2}}/>
-                    <div style={{position:"absolute",left:lockLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.3)"}}/>
-                    <div style={{position:"absolute",left:profitLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.3)"}}/>
+                  <div style={{position:"relative",height:12,borderRadius:6,overflow:"hidden",marginBottom:4,background:"rgba(255,255,255,0.05)"}}>
+                    <div style={{position:"absolute",left:0,width:markerPct+"%",height:"100%",borderRadius:6,background:ddAbstand<500?"linear-gradient(90deg,#ef4444,#dc2626)":ddAbstand<1000?"linear-gradient(90deg,#f59e0b,#fbbf24)":"linear-gradient(90deg,#6366f1,#a855f7)",transition:"width .6s ease",boxShadow:ddAbstand<500?"0 0 12px rgba(239,68,68,0.5)":ddAbstand<1000?"0 0 12px rgba(245,158,11,0.4)":"0 0 12px rgba(99,102,241,0.3)"}}/>
+                    <div style={{position:"absolute",left:lockLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.15)"}}/>
+                    <div style={{position:"absolute",left:profitLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.15)"}}/>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:"#4b5568",marginBottom:6}}>
                     <span style={{color:R}}>${ddInitial.toLocaleString()}<br/>Max DD</span>
@@ -1773,95 +1676,7 @@ const sendAiMessage=async()=>{
 
 
           {/* TRADING PROBLEME CARD */}
-          <Card style={{borderColor:"rgba(245,158,11,0.2)",background:"linear-gradient(145deg,#1a1508 0%,#0f1010 100%)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,cursor:"pointer"}} onClick={()=>setProbExp(p=>!p)}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:14,height:14,borderRadius:"50%",background:"radial-gradient(circle,#fcd34d,#f59e0b 60%,#92400e)",animation:"livingOrb 2s ease-in-out infinite",boxShadow:"0 0 10px rgba(245,158,11,0.6)",flexShrink:0}}/>
-                <div>
-                  <div style={{fontWeight:800,fontSize:15,color:"#f0f4ff"}}>Meine Trading-Probleme</div>
-                  <div style={{color:"#f59e0b",fontSize:9,fontWeight:600,letterSpacing:"0.5px"}}>PERSÖNLICHE KI-DIAGNOSE</div>
-                </div>
-              </div>
-              <span style={{color:"#f59e0b",fontSize:11,fontWeight:600}}>{probExp?"▲":"▼"}</span>
-            </div>
-            {(()=>{
-              const PROBS=[
-                {k:"overtrading",l:"Overtrading",d:"Zu viele Trades pro Tag"},
-                {k:"fomo",l:"FOMO",d:"Fear of Missing Out"},
-                {k:"revenge",l:"Revenge Trading",d:"Nach Verlust sofort wieder einsteigen"},
-                {k:"early_exit",l:"Zu früh aussteigen",d:"TP nicht abwarten"},
-                {k:"no_sl",l:"SL nicht einhalten",d:"Stop Loss verschoben oder ignoriert"},
-                {k:"outside_window",l:"Falsche Zeiten",d:"Außerhalb des Zeitfensters traden"},
-                {k:"impulse",l:"Impuls-Trading",d:"Kein Setup, einfach rein"},
-                {k:"fear",l:"Angst vor Verlusten",d:"Zögern bei guten Setups"},
-              ];
-              const selected=Object.keys(problems).filter(k=>problems[k]);
-              return(
-                <div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
-                    {PROBS.map(p=>(
-                      <button key={p.k} onClick={()=>saveProblems({...problems,[p.k]:!problems[p.k]})}
-                        title={p.d}
-                        style={{padding:"5px 10px",borderRadius:20,fontSize:11,fontWeight:600,
-                          background:problems[p.k]?"rgba(245,158,11,0.25)":"rgba(255,255,255,0.04)",
-                          border:"1px solid "+(problems[p.k]?"rgba(245,158,11,0.6)":"rgba(255,255,255,0.1)"),
-                          color:problems[p.k]?"#fcd34d":"#6b7a9a",
-                          transition:"all .2s"}}>
-                        {problems[p.k]?"✓ ":""}{p.l}
-                      </button>
-                    ))}
-                  </div>
-                  {selected.length>0&&(
-                    <button onClick={analyzeProblems} disabled={probLoading}
-                      style={{width:"100%",padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,
-                        background:"linear-gradient(135deg,rgba(245,158,11,0.2),rgba(239,68,68,0.1))",
-                        border:"1px solid rgba(245,158,11,0.3)",color:probLoading?"#6b7280":"#fcd34d",marginBottom:8}}>
-                      {probLoading?"🤖 Analysiere...":"🤖 KI-Diagnose starten ("+selected.length+" Probleme)"}
-                    </button>
-                  )}
-                  {probAnalysis&&(
-                    <div style={{background:"rgba(245,158,11,0.06)",borderRadius:10,padding:12,border:"1px solid rgba(245,158,11,0.15)"}}>
-                      <div style={{color:"#f59e0b",fontSize:11,fontWeight:700,marginBottom:6}}>🎯 Dein persönlicher Plan:</div>
-                      <div style={{color:"#a8b8d0",fontSize:11,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{probAnalysis}</div>
-                    </div>
-                  )}
-                  {!probAnalysis&&selected.length===0&&(
-                    <div style={{color:"#4a5568",fontSize:11,textAlign:"center",padding:"4px 0"}}>
-                      Wähle deine Probleme → KI gibt dir einen konkreten Plan
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </Card>
-          </div>
-        ))}
 
-        {/* REGELN TAB */}
-        {tab==="mind"&&<div style={{display:"flex",flexDirection:"column",gap:12,width:"100%"}}>
-          {/* COACH WARNING POPUP */}
-          {checkedIn&&mindLight!=='green'&&!warningDismissed&&<div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setWarningDismissed(true)}>
-            <div style={{background:"linear-gradient(145deg,#1a0a08,#120d0a)",border:"2px solid "+(mindLight==='red'?R:Y),borderRadius:16,padding:24,maxWidth:340,width:"100%",boxShadow:"0 0 40px "+(mindLight==='red'?"rgba(239,68,68,0.4)":"rgba(245,158,11,0.4)")}}>
-              <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>{mindLight==='red'?"◆":"⚠️"}</div>
-              <div style={{fontWeight:800,fontSize:18,color:mindLight==='red'?R:Y,textAlign:"center",marginBottom:12}}>
-                {mindLight==='red'?"Heute nicht traden!":"Vorsicht heute"}
-              </div>
-              <div style={{color:"#a8b8d0",fontSize:13,lineHeight:1.6,marginBottom:16,textAlign:"center"}}>{mindMsg}</div>
-              <div style={{background:mindLight==='red'?"rgba(239,68,68,0.1)":"rgba(245,158,11,0.1)",borderRadius:10,padding:"10px 14px",marginBottom:16}}>
-                <div style={{color:mindLight==='red'?R:Y,fontWeight:700,fontSize:12,marginBottom:4}}>
-                  {mindLight==='red'?"Coach Empfehlung:":"Coach Empfehlung:"}
-                </div>
-                <div style={{color:"#a8b8d0",fontSize:12}}>
-                  {mindLight==='red'?"Kein Trade heute. Nutze die Zeit für Reflexion und Analyse. Morgen ist auch ein Tag.":"Wenn du tradest: max 1 Trade, halbe Lots-Size, strengere Regeln."}
-                </div>
-              </div>
-              <button onClick={()=>setWarningDismissed(true)} style={{width:"100%",padding:"12px",borderRadius:10,fontWeight:700,fontSize:13,background:mindLight==='red'?"rgba(239,68,68,0.15)":"rgba(245,158,11,0.15)",color:mindLight==='red'?R:Y,border:"1px solid "+(mindLight==='red'?"rgba(239,68,68,0.3)":"rgba(245,158,11,0.3)")}}>
-                Verstanden
-              </button>
-            </div>
-          </div>}
-
-          {/* AI COACH CHECK-IN */}
           <Card style={{borderColor:"rgba(99,102,241,0.4)",background:"linear-gradient(145deg,#0f1428,#0d1020)"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
               <div style={{width:12,height:12,borderRadius:"50%",background:mindLight==='green'?G:mindLight==='yellow'?Y:mindLight==='red'?R:"#6366f1",animation:"livingOrb 2s infinite",boxShadow:"0 0 8px "+(mindLight==='green'?G:mindLight==='yellow'?Y:mindLight==='red'?R:"#6366f1")}}/>
