@@ -134,6 +134,8 @@ const Field=({label,children})=>(
   </div>
 );
 
+const sanitize=s=>typeof s==="string"?s.replace(/[\uD800-\uDFFF]/g,""):s;
+
 export default function App(){
   const[trades,setTrades]=useState(()=>{
     try{
@@ -264,7 +266,7 @@ export default function App(){
       ?"Jeronimo Check-in: Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5, Stress "+mindCheckIn.stress+"/5. Gib Rat: wenn er tradet dann max 1 Trade mit weniger Risiko. 2 motivierende Sätze."
       :"Jeronimo Check-in: alles gut! Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5. Gib ihm einen kurzen motivierenden Satz für den Trading-Tag.";
     try{
-      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:sanitize(coachProfile||''),coachMemory:coachMemory.slice(0,3).map(m=>m.note).join(' | ')}})});
+      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:coachProfile||'',coachMemory:coachMemory.slice(0,3).map(m=>m.note).join(' | ')}})});
       const d=await res.json();
       setMindMsg(d.message||statusText);
     }catch(e){setMindMsg(statusText);}
@@ -581,7 +583,7 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
         avgLoss:losses_t.length?Math.round(losses_t.reduce((s,t)=>s+t.pnl,0)/losses_t.length):0,
         allTrades:t09.map(t=>t.date+" "+t.time+" "+t.contract+" "+t.dir+" "+(t.pnl>=0?"+":"")+"$"+t.pnl.toFixed(0)).join("\n"),
         todayTrades:todT.map(t=>({pnl:t.pnl,dir:t.dir,contract:t.contract,time:t.time})),
-        coachProfile:sanitize(coachProfile||''),
+        coachProfile:coachProfile||'',
         coachMemory:coachMemory.slice(0,8).map(m=>m.note).join(' | '),
         chatHistorySummary:aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100).replace(/[\u0080-\uFFFF]/g,'').replace(/\t/g,' ')).join(' | '),
         todayTrades:(todT.map(t=>t.time+' '+t.dir+' $'+Math.round(t.pnl)).join(', ')||'Keine Trades heute').replace(/[\u0080-\uFFFF]/g,''),
@@ -716,7 +718,7 @@ const analyzeProblems=async()=>{
       body:JSON.stringify({
         messages:[{role:"user",content:prompt}],
         context:{
-          coachProfile:sanitize(coachProfile||''),
+          coachProfile:coachProfile||'',
           coachMemory:coachMemory.slice(0,5).map(m=>m.note).join(' | '),
           chatHistorySummary:''
         }
@@ -809,7 +811,7 @@ const sendAiMessage=async()=>{
         // Heutige Trades (voll)
         todayTrades:todT.map(t=>({pnl:t.pnl,dir:t.dir,contract:t.contract,time:t.time,setup:t.setup})),
         allTrades:t09.map(t=>({d:t.date,t:t.time,p:Math.round(t.pnl),dir:t.dir,c:t.contract,s:t.setup||""})),
-        coachProfile:sanitize(coachProfile||''),
+        coachProfile:coachProfile||'',
         coachMemory:coachMemory.slice(0,8).map(m=>m.note).join(' | '),
         chatHistorySummary:aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100).replace(/[\u0080-\uFFFF]/g,'').replace(/\t/g,' ')).join(' | '),
         todayTrades:(todT.map(t=>t.time+' '+t.dir+' $'+Math.round(t.pnl)).join(', ')||'Keine Trades heute').replace(/[\u0080-\uFFFF]/g,''),
@@ -820,7 +822,6 @@ const sendAiMessage=async()=>{
         winRate:t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0
       };
       // Build messages mit optionalem Bild
-      const sanitize=s=>typeof s==="string"?s.replace(/[\uD800-\uDFFF]/g,""):s;
       const apiMessages=newMsgs.map((m,i)=>{
         if(i===newMsgs.length-1&&aiImage&&m.role==="user"){
           return{role:"user",content:[
