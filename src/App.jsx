@@ -784,7 +784,8 @@ const sendAiMessage=async()=>{
         return;
       }
     }
-    if(inputLow.startsWith("merke dir")||inputLow.startsWith("vergiss nicht")){      const note=aiInput.slice(inputLow.indexOf(" ")+1).trim();
+    if(inputLow.startsWith("merke dir")||inputLow.startsWith("vergiss nicht")){
+      const note=aiInput.slice(inputLow.indexOf(" ")+1).trim();
       if(note){
         saveCoachMemory("📌 "+note);
         setAiMessages(p=>[...p,{role:"user",content:aiInput},{role:"assistant",content:"✅ Gemerkt! Ich werde mir das für alle zukünftigen Sessions merken:\n\n📌 "+note}]);
@@ -1393,6 +1394,7 @@ const sendAiMessage=async()=>{
                 </div>
               );
             })()}
+          </Card>
 
 
 
@@ -2360,4 +2362,3 @@ const sendAiMessage=async()=>{
     </div>
   );
 }
-
