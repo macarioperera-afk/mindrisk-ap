@@ -264,7 +264,7 @@ export default function App(){
       ?"Jeronimo Check-in: Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5, Stress "+mindCheckIn.stress+"/5. Gib Rat: wenn er tradet dann max 1 Trade mit weniger Risiko. 2 motivierende Sätze."
       :"Jeronimo Check-in: alles gut! Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5. Gib ihm einen kurzen motivierenden Satz für den Trading-Tag.";
     try{
-      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:coachProfile||'',coachMemory:coachMemory.slice(0,3).map(m=>m.note).join(' | ')}})});
+      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:sanitize(coachProfile||''),coachMemory:coachMemory.slice(0,3).map(m=>m.note).join(' | ')}})});
       const d=await res.json();
       setMindMsg(d.message||statusText);
     }catch(e){setMindMsg(statusText);}
@@ -581,7 +581,7 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
         avgLoss:losses_t.length?Math.round(losses_t.reduce((s,t)=>s+t.pnl,0)/losses_t.length):0,
         allTrades:t09.map(t=>t.date+" "+t.time+" "+t.contract+" "+t.dir+" "+(t.pnl>=0?"+":"")+"$"+t.pnl.toFixed(0)).join("\n"),
         todayTrades:todT.map(t=>({pnl:t.pnl,dir:t.dir,contract:t.contract,time:t.time})),
-        coachProfile:coachProfile||'',
+        coachProfile:sanitize(coachProfile||''),
         coachMemory:coachMemory.slice(0,8).map(m=>m.note).join(' | '),
         chatHistorySummary:aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100).replace(/[\u0080-\uFFFF]/g,'').replace(/\t/g,' ')).join(' | '),
         todayTrades:(todT.map(t=>t.time+' '+t.dir+' $'+Math.round(t.pnl)).join(', ')||'Keine Trades heute').replace(/[\u0080-\uFFFF]/g,''),
@@ -716,7 +716,7 @@ const analyzeProblems=async()=>{
       body:JSON.stringify({
         messages:[{role:"user",content:prompt}],
         context:{
-          coachProfile:coachProfile||'',
+          coachProfile:sanitize(coachProfile||''),
           coachMemory:coachMemory.slice(0,5).map(m=>m.note).join(' | '),
           chatHistorySummary:''
         }
@@ -809,7 +809,7 @@ const sendAiMessage=async()=>{
         // Heutige Trades (voll)
         todayTrades:todT.map(t=>({pnl:t.pnl,dir:t.dir,contract:t.contract,time:t.time,setup:t.setup})),
         allTrades:t09.map(t=>({d:t.date,t:t.time,p:Math.round(t.pnl),dir:t.dir,c:t.contract,s:t.setup||""})),
-        coachProfile:coachProfile||'',
+        coachProfile:sanitize(coachProfile||''),
         coachMemory:coachMemory.slice(0,8).map(m=>m.note).join(' | '),
         chatHistorySummary:aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100).replace(/[\u0080-\uFFFF]/g,'').replace(/\t/g,' ')).join(' | '),
         todayTrades:(todT.map(t=>t.time+' '+t.dir+' $'+Math.round(t.pnl)).join(', ')||'Keine Trades heute').replace(/[\u0080-\uFFFF]/g,''),
@@ -820,14 +820,15 @@ const sendAiMessage=async()=>{
         winRate:t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0
       };
       // Build messages mit optionalem Bild
+      const sanitize=s=>typeof s==="string"?s.replace(/[\uD800-\uDFFF]/g,""):s;
       const apiMessages=newMsgs.map((m,i)=>{
         if(i===newMsgs.length-1&&aiImage&&m.role==="user"){
           return{role:"user",content:[
             {type:"image",source:{type:"base64",media_type:aiImage.mediaType,data:aiImage.base64}},
-            {type:"text",text:m.content||"Analysiere diesen Chart für mich"}
+            {type:"text",text:sanitize(m.content)||"Analysiere diesen Chart für mich"}
           ]};
         }
-        return{role:m.role,content:m.content};
+        return{role:m.role,content:sanitize(m.content)};
       });
       setAiImage(null);
       setAiImagePreview(null);
@@ -1695,7 +1696,8 @@ const sendAiMessage=async()=>{
                       <span style={{color:"#8b96b0",fontSize:10}}>Monatsfortschritt</span>
                       <span style={{color:monthPct>=100?G:P,fontWeight:700,fontSize:10}}>{monthPct}% ({monthPnl>=0?"+":""}${Math.round(monthPnl)} von ${monthNeeded} nötig)</span>                    </div>
                     <div style={{height:6,borderRadius:3,background:"#1e2540",overflow:"hidden"}}>
-                      <div style={{height:"100%",borderRadius:3,width:monthPct+"%",background:"linear-gradient(90deg,"+B+","+P+")",transition:"width .4s"}}/>                    </div>
+                      <div style={{height:"100%",borderRadius:3,width:monthPct+"%",background:"linear-gradient(90deg,"+B+","+P+")",transition:"width .4s"}}/>
+                    </div>
                   </div>
                   {(monatExp||isDesktop)&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #1e1428"}}>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
@@ -2532,8 +2534,8 @@ const sendAiMessage=async()=>{
                 <textarea value={aiInput} onChange={e=>setAiInput(e.target.value)}
                   onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&(e.preventDefault(),sendAiMessage())}
                   placeholder={isRecording?"🎤 Höre zu...":"Frag deinen Coach..."}
-                  rows={3}
-                  style={{flex:1,fontSize:14,padding:"12px 14px",borderRadius:14,background:"#0d1320",border:"1px solid #2d3548",resize:"none",lineHeight:1.5,maxHeight:110,overflowY:"auto",color:"#f0f4ff",fontFamily:"inherit"}}/>
+                  rows={4}
+                  style={{flex:1,fontSize:13,padding:"12px 14px",borderRadius:14,background:"#0d1320",border:"1px solid #2d3548",resize:"none",lineHeight:1.5,maxHeight:140,overflowY:"auto",color:"#f0f4ff",fontFamily:"inherit"}}/>
                 <button id="aiSendBtn" onClick={sendAiMessage} disabled={aiLoading||(!aiInput.trim()&&!aiImage)}
                   style={{background:"linear-gradient(135deg,"+B+","+P+")",color:"#fff",padding:"13px 15px",borderRadius:14,fontSize:16,fontWeight:700,opacity:aiLoading||(!aiInput.trim()&&!aiImage)?0.4:1,flexShrink:0}}>→</button>
               </div>
@@ -2545,4 +2547,3 @@ const sendAiMessage=async()=>{
     </div>
   );
 }
-
