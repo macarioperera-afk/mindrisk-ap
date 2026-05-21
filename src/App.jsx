@@ -251,16 +251,16 @@ export default function App(){
     });
   };
   const ALL_RULES=[
-    {k:"r1",l:"Max 2 Trades pro Tag",icon:"🔢"},
+    {k:"r1",l:"Max 2 Trades pro Tag",icon:"#"},
     {k:"r2",l:"Nur 16:15–17:30 Uhr traden",icon:"⏰"},
-    {k:"r3",l:"SL immer vor Entry setzen",icon:"🛡"},
-    {k:"r4",l:"TP immer vor Entry setzen",icon:"🎯"},
-    {k:"r5",l:"Kein Trade nach 2 Verlusten",icon:"🛑"},
+    {k:"r3",l:"SL immer vor Entry setzen",icon:"◉"},
+    {k:"r4",l:"TP immer vor Entry setzen",icon:"◎"},
+    {k:"r5",l:"Kein Trade nach 2 Verlusten",icon:"◆"},
     {k:"r6",l:"15 Min Pause zwischen Trades",icon:"⏸"},
-    {k:"r7",l:"Nur MNQ – kein NQ",icon:"📊"},
-    {k:"r8",l:"Kein Impuls-Trade – nur Setup",icon:"🧠"},
-    {k:"r9",l:"Erst Check-in bevor traden",icon:"✅"},
-    {k:"r10",l:"Daily DD $1.000 → Rechner aus",icon:"💻"},
+    {k:"r7",l:"Nur MNQ – kein NQ",icon:"▣"},
+    {k:"r8",l:"Kein Impuls-Trade – nur Setup",icon:"∿"},
+    {k:"r9",l:"Erst Check-in bevor traden",icon:"✓"},
+    {k:"r10",l:"Daily DD $1.000 → Rechner aus",icon:"⌥"},
   ];
   const doMindCheckIn=async()=>{
     if(!mindCheckIn.mood||!mindCheckIn.energy||!mindCheckIn.stress){showToast("Bitte alle 3 bewerten!");return;}
@@ -319,8 +319,10 @@ export default function App(){
 
   useEffect(()=>{const id=setInterval(()=>setTick(t=>t+1),1000);return()=>clearInterval(id);},[]);
 
+  const userScrolledUp=useRef(false);
+  const chatContainerRef=useRef(null);
   useEffect(()=>{
-    if(aiMessagesEndRef.current){
+    if(!userScrolledUp.current&&aiMessagesEndRef.current){
       aiMessagesEndRef.current.scrollIntoView({behavior:"smooth"});
     }
   },[aiMessages,aiLoading]);
@@ -1066,7 +1068,7 @@ const sendAiMessage=async()=>{
           {/* NEUE CHALLENGE BANNER */}
           {saldo!==50000&&saldo<51500&&<div style={{background:"linear-gradient(135deg,rgba(99,102,241,0.2),rgba(168,85,247,0.15))",border:"2px solid rgba(99,102,241,0.4)",borderRadius:14,padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
             <div>
-              <div style={{color:"#f0f4ff",fontWeight:800,fontSize:14}}>🚀 Neue Challenge starten?</div>
+              <div style={{color:"#f0f4ff",fontWeight:800,fontSize:14}}>Neue Challenge starten</div>
               <div style={{color:"#8b96b0",fontSize:11}}>Saldo auf $50.000 setzen · Max DD $2.000</div>
             </div>
             <button onClick={()=>{if(window.confirm("Neue Challenge:\n$50.000 Start\nMax DD: $2.000\n\nTrades & WR bleiben erhalten!")){const tod=new Date().toISOString().slice(0,10);setSaldo(50000);localStorage.setItem("ttp_saldo",50000);setMaxDDLevel(48000);localStorage.setItem("ttp_maxdd_level",48000);setChallengeStart(tod);localStorage.setItem("ttp_challenge_start",tod);showToast("✅ Neue Challenge! $50.000 gestartet!");}}}
@@ -1076,19 +1078,19 @@ const sendAiMessage=async()=>{
           </div>}
 
           {dailyDDHit&&<div style={{background:"rgba(239,68,68,0.15)",border:"2px solid rgba(239,68,68,0.6)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
-            <span style={{fontSize:22}}>🛑</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M4.93 4.93l14.14 14.14"/></svg>
             <div><div style={{color:"#fca5a5",fontWeight:800,fontSize:14}}>Daily DD erreicht! -${Math.round(dailyLoss)} / $1.000 Limit</div><div style={{color:"#fca5a5",fontSize:11}}>Für heute KEIN weiterer Trade. Rechner aus, Coach fragen.</div></div>
           </div>}
           {!dailyDDHit&&todayBlocked&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.4)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
-            <span style={{fontSize:22}}>🚫</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
             <div><div style={{color:R,fontWeight:700,fontSize:13}}>Heute gesperrt (Overtrading gestern)</div><div style={{color:"#fca5a5",fontSize:11}}>Morgen wieder. Heute: analysieren.</div></div>
           </div>}
           {overtradingToday&&!todayBlocked&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.4)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center"}}>
-            <span style={{fontSize:22}}>🚫</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
             <div><div style={{color:R,fontWeight:700,fontSize:13}}>3 Trades – Morgen gesperrt!</div><div style={{color:"#fca5a5",fontSize:11}}>Rechner aus.</div></div>
           </div>}
           {atLimit&&!overtradingToday&&!todayBlocked&&<div style={{background:O+"22",border:"1px solid "+O,borderRadius:10,padding:"10px 14px",display:"flex",gap:10,alignItems:"center"}}>
-            <span>🛑</span><div><div style={{color:O,fontWeight:800}}>2 Trades – Tageslimit!</div><div style={{color:"#fdba74",fontSize:11}}>Kein 3. Trade!</div></div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M4.93 4.93l14.14 14.14"/></svg><div><div style={{color:O,fontWeight:800}}>2 Trades – Tageslimit!</div><div style={{color:"#fdba74",fontSize:11}}>Kein 3. Trade!</div></div>
           </div>}
           {inPause&&<div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.15),rgba(239,68,68,0.08))",border:"2px solid rgba(245,158,11,0.6)",borderRadius:14,padding:"16px 18px",display:"flex",gap:14,alignItems:"center",animation:"glowPulse 2s ease infinite"}}>
             <span style={{fontSize:24}}>⏸</span>
@@ -1103,7 +1105,7 @@ const sendAiMessage=async()=>{
           {/* NEUE CHALLENGE BANNER */}
           {saldo!==50000&&saldo<51500&&<div style={{background:"linear-gradient(135deg,rgba(99,102,241,0.2),rgba(168,85,247,0.15))",border:"2px solid rgba(99,102,241,0.4)",borderRadius:14,padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
             <div>
-              <div style={{color:"#f0f4ff",fontWeight:800,fontSize:14}}>🚀 Neue Challenge starten?</div>
+              <div style={{color:"#f0f4ff",fontWeight:800,fontSize:14}}>Neue Challenge starten</div>
               <div style={{color:"#8b96b0",fontSize:11}}>Saldo auf $50.000 setzen · Max DD $2.000</div>
             </div>
             <button onClick={()=>{if(window.confirm("Neue Challenge:\n$50.000 Start\nMax DD: $2.000\n\nTrades & WR bleiben erhalten!")){const tod=new Date().toISOString().slice(0,10);setSaldo(50000);localStorage.setItem("ttp_saldo",50000);setMaxDDLevel(48000);localStorage.setItem("ttp_maxdd_level",48000);setChallengeStart(tod);localStorage.setItem("ttp_challenge_start",tod);showToast("✅ Neue Challenge! $50.000 gestartet!");}}}
@@ -1121,7 +1123,7 @@ const sendAiMessage=async()=>{
               <div style={{background:"#0d1320",borderRadius:8,padding:"8px 12px",textAlign:"right"}}>
                 <div style={{color:"#8b96b0",fontSize:9,marginBottom:1}}>HEUTE</div>
                 <div style={{color:pc(todPnl),fontWeight:800,fontSize:16}}>{fs(todPnl)}</div>
-                <div style={{color:tradeCount>=OVERTRADING_AT?R:tradeCount>=DAILY_LIMIT?O:"#8b96b0",fontSize:9,marginTop:1,fontWeight:tradeCount>=DAILY_LIMIT?700:400}}>{tradeCount}/{DAILY_LIMIT} Trades{tradeCount>=OVERTRADING_AT?" ⚠️":""}</div>
+                <div style={{color:tradeCount>=OVERTRADING_AT?R:tradeCount>=DAILY_LIMIT?O:"#8b96b0",fontSize:9,marginTop:1,fontWeight:tradeCount>=DAILY_LIMIT?700:400}}>{tradeCount}/{DAILY_LIMIT} Trades{tradeCount>=OVERTRADING_AT?" !":""}</div>
               </div>
             </div>
             {(()=>{
@@ -1142,7 +1144,7 @@ const sendAiMessage=async()=>{
                 <div style={{marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
                     <span style={{color:"#6b7a9a",fontSize:9,fontWeight:700,letterSpacing:"0.5px"}}>TTP EOD TRAILING DD</span>
-                    <span style={{color:isLocked?G:Y,fontSize:9,fontWeight:700}}>{isLocked?"🔒 DD eingefroren bei $"+ddLockAt.toLocaleString():"⚠️ DD läuft mit"}</span>
+                    <span style={{color:isLocked?G:Y,fontSize:9,fontWeight:700}}>{isLocked?"⊠ DD eingefroren $"+ddLockAt.toLocaleString():"⚠️ DD läuft mit"}</span>
                   </div>
                   <div style={{position:"relative",height:18,borderRadius:9,overflow:"hidden",marginBottom:4}}>
                     <div style={{position:"absolute",left:0,width:lockLinePct+"%",height:"100%",background:"linear-gradient(90deg,#7f1d1d,#dc2626)",opacity:0.9}}/>
@@ -1347,7 +1349,7 @@ const sendAiMessage=async()=>{
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
                     {[{l:"AKTUELL",v:"$"+saldo.toLocaleString("de-DE",{maximumFractionDigits:0}),c:"#f0f4ff"},
                       {l:"ZIEL",v:"$"+goals.targetBalance.toLocaleString("de-DE"),c:P},
-                      {l:"NOCH FEHLT",v:missing<=0?"✅":"+$"+Math.round(missing).toLocaleString("de-DE"),c:missing<=0?G:R}
+                      {l:"NOCH FEHLT",v:missing<=0?"✓":"+$"+Math.round(missing).toLocaleString("de-DE"),c:missing<=0?G:R}
                     ].map(s=>(
                       <div key={s.l} style={{background:"#0f1428",borderRadius:8,padding:"7px 6px",textAlign:"center",border:"1px solid #1e1428"}}>
                         <div style={{color:"#6b7a9a",fontSize:9,marginBottom:2}}>{s.l}</div>
@@ -1369,7 +1371,7 @@ const sendAiMessage=async()=>{
                       {[
                         {l:"HANDELSTAGE NOCH",v:dLeft2+" Tage",c:dLeft2>5?G:dLeft2>2?Y:R,s:"diesen Monat"},
                         {l:"GEWINN/TAG NÖTIG",v:missing<=0?"✅ Erreicht":"$"+dailyNeed,c:missing<=0?G:dailyNeed<100?G:Y,s:"um Ziel zu erreichen"},
-                        {l:"GEWINN/TRADE NÖTIG",v:missing<=0?"✅":"$"+tradeNeed,c:missing<=0?G:tradeNeed<50?G:Y,s:"bei 2 Trades/Tag"},
+                        {l:"GEWINN/TRADE NÖTIG",v:missing<=0?"✓":"$"+tradeNeed,c:missing<=0?G:tradeNeed<50?G:Y,s:"bei 2 Trades/Tag"},
                         {l:"MAX. TRADES NOCH",v:dLeft2*DAILY_LIMIT,c:"#f0f4ff",s:dLeft2+" Tage × "+DAILY_LIMIT},
                         {l:"DIESEN MONAT P&L",v:(monthPnl>=0?"+":"")+"$"+monthPnl,c:pc(monthPnl),s:"seit Monatsstart"},
                         {l:"REGELQUOTE",v:disc+"%",c:sc(disc),s:"Ziel: "+goals.disc+"%"},
@@ -1464,19 +1466,19 @@ const sendAiMessage=async()=>{
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
 
           {dailyDDHit&&<div style={{background:"rgba(239,68,68,0.15)",border:"2px solid rgba(239,68,68,0.6)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
-            <span style={{fontSize:22}}>🛑</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M4.93 4.93l14.14 14.14"/></svg>
             <div><div style={{color:"#fca5a5",fontWeight:800,fontSize:14}}>Daily DD erreicht! -${Math.round(dailyLoss)} / $1.000 Limit</div><div style={{color:"#fca5a5",fontSize:11}}>Für heute KEIN weiterer Trade. Rechner aus, Coach fragen.</div></div>
           </div>}
           {!dailyDDHit&&todayBlocked&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.4)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
-            <span style={{fontSize:22}}>🚫</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
             <div><div style={{color:R,fontWeight:700,fontSize:13}}>Heute gesperrt (Overtrading gestern)</div><div style={{color:"#fca5a5",fontSize:11}}>Morgen wieder. Heute: analysieren.</div></div>
           </div>}
           {overtradingToday&&!todayBlocked&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.4)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center"}}>
-            <span style={{fontSize:22}}>🚫</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
             <div><div style={{color:R,fontWeight:700,fontSize:13}}>3 Trades – Morgen gesperrt!</div><div style={{color:"#fca5a5",fontSize:11}}>Rechner aus.</div></div>
           </div>}
           {atLimit&&!overtradingToday&&!todayBlocked&&<div style={{background:O+"22",border:"1px solid "+O,borderRadius:10,padding:"10px 14px",display:"flex",gap:10,alignItems:"center"}}>
-            <span>🛑</span><div><div style={{color:O,fontWeight:800}}>2 Trades – Tageslimit!</div><div style={{color:"#fdba74",fontSize:11}}>Kein 3. Trade!</div></div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M4.93 4.93l14.14 14.14"/></svg><div><div style={{color:O,fontWeight:800}}>2 Trades – Tageslimit!</div><div style={{color:"#fdba74",fontSize:11}}>Kein 3. Trade!</div></div>
           </div>}
           {inPause&&<div style={{background:"linear-gradient(135deg,rgba(245,158,11,0.15),rgba(239,68,68,0.08))",border:"2px solid rgba(245,158,11,0.6)",borderRadius:14,padding:"16px 18px",display:"flex",gap:14,alignItems:"center",animation:"glowPulse 2s ease infinite"}}>
             <span style={{fontSize:24}}>⏸</span>
@@ -1498,7 +1500,7 @@ const sendAiMessage=async()=>{
               <div style={{background:"#0d1320",borderRadius:8,padding:"8px 12px",textAlign:"right"}}>
                 <div style={{color:"#8b96b0",fontSize:9,marginBottom:1}}>HEUTE</div>
                 <div style={{color:pc(todPnl),fontWeight:800,fontSize:16}}>{fs(todPnl)}</div>
-                <div style={{color:tradeCount>=OVERTRADING_AT?R:tradeCount>=DAILY_LIMIT?O:"#8b96b0",fontSize:9,marginTop:1,fontWeight:tradeCount>=DAILY_LIMIT?700:400}}>{tradeCount}/{DAILY_LIMIT} Trades{tradeCount>=OVERTRADING_AT?" ⚠️":""}</div>
+                <div style={{color:tradeCount>=OVERTRADING_AT?R:tradeCount>=DAILY_LIMIT?O:"#8b96b0",fontSize:9,marginTop:1,fontWeight:tradeCount>=DAILY_LIMIT?700:400}}>{tradeCount}/{DAILY_LIMIT} Trades{tradeCount>=OVERTRADING_AT?" !":""}</div>
               </div>
             </div>
             {(()=>{
@@ -1519,7 +1521,7 @@ const sendAiMessage=async()=>{
                 <div style={{marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
                     <span style={{color:"#6b7a9a",fontSize:9,fontWeight:700,letterSpacing:"0.5px"}}>TTP EOD TRAILING DD</span>
-                    <span style={{color:isLocked?G:Y,fontSize:9,fontWeight:700}}>{isLocked?"🔒 DD eingefroren bei $"+ddLockAt.toLocaleString():"⚠️ DD läuft mit"}</span>
+                    <span style={{color:isLocked?G:Y,fontSize:9,fontWeight:700}}>{isLocked?"⊠ DD eingefroren $"+ddLockAt.toLocaleString():"⚠️ DD läuft mit"}</span>
                   </div>
                   <div style={{position:"relative",height:18,borderRadius:9,overflow:"hidden",marginBottom:4}}>
                     <div style={{position:"absolute",left:0,width:lockLinePct+"%",height:"100%",background:"linear-gradient(90deg,#7f1d1d,#dc2626)",opacity:0.9}}/>
@@ -1722,7 +1724,7 @@ const sendAiMessage=async()=>{
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
                     {[{l:"AKTUELL",v:"$"+saldo.toLocaleString("de-DE",{maximumFractionDigits:0}),c:"#f0f4ff"},
                       {l:"ZIEL",v:"$"+goals.targetBalance.toLocaleString("de-DE"),c:P},
-                      {l:"NOCH FEHLT",v:missing<=0?"✅":"+$"+Math.round(missing).toLocaleString("de-DE"),c:missing<=0?G:R}
+                      {l:"NOCH FEHLT",v:missing<=0?"✓":"+$"+Math.round(missing).toLocaleString("de-DE"),c:missing<=0?G:R}
                     ].map(s=>(
                       <div key={s.l} style={{background:"#0f1428",borderRadius:8,padding:"7px 6px",textAlign:"center",border:"1px solid #1e1428"}}>
                         <div style={{color:"#6b7a9a",fontSize:9,marginBottom:2}}>{s.l}</div>
@@ -1743,7 +1745,7 @@ const sendAiMessage=async()=>{
                       {[
                         {l:"HANDELSTAGE NOCH",v:dLeft2+" Tage",c:dLeft2>5?G:dLeft2>2?Y:R,s:"diesen Monat"},
                         {l:"GEWINN/TAG NÖTIG",v:missing<=0?"✅ Erreicht":"$"+dailyNeed,c:missing<=0?G:dailyNeed<100?G:Y,s:"um Ziel zu erreichen"},
-                        {l:"GEWINN/TRADE NÖTIG",v:missing<=0?"✅":"$"+tradeNeed,c:missing<=0?G:tradeNeed<50?G:Y,s:"bei 2 Trades/Tag"},
+                        {l:"GEWINN/TRADE NÖTIG",v:missing<=0?"✓":"$"+tradeNeed,c:missing<=0?G:tradeNeed<50?G:Y,s:"bei 2 Trades/Tag"},
                         {l:"MAX. TRADES NOCH",v:dLeft2*DAILY_LIMIT,c:"#f0f4ff",s:dLeft2+" Tage × "+DAILY_LIMIT},
                         {l:"DIESEN MONAT P&L",v:(monthPnl>=0?"+":"")+"$"+monthPnl,c:pc(monthPnl),s:"seit Monatsstart"},
                         {l:"REGELQUOTE",v:disc+"%",c:sc(disc),s:"Ziel: "+goals.disc+"%"},
@@ -1840,7 +1842,7 @@ const sendAiMessage=async()=>{
           {/* COACH WARNING POPUP */}
           {checkedIn&&mindLight!=='green'&&!warningDismissed&&<div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setWarningDismissed(true)}>
             <div style={{background:"linear-gradient(145deg,#1a0a08,#120d0a)",border:"2px solid "+(mindLight==='red'?R:Y),borderRadius:16,padding:24,maxWidth:340,width:"100%",boxShadow:"0 0 40px "+(mindLight==='red'?"rgba(239,68,68,0.4)":"rgba(245,158,11,0.4)")}}>
-              <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>{mindLight==='red'?"🛑":"⚠️"}</div>
+              <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>{mindLight==='red'?"◆":"⚠️"}</div>
               <div style={{fontWeight:800,fontSize:18,color:mindLight==='red'?R:Y,textAlign:"center",marginBottom:12}}>
                 {mindLight==='red'?"Heute nicht traden!":"Vorsicht heute"}
               </div>
@@ -2002,7 +2004,7 @@ const sendAiMessage=async()=>{
             <div><div style={{color:Y,fontWeight:800,fontSize:14}}>Pflichtpause</div><div style={{color:Y,fontWeight:800,fontSize:38,letterSpacing:2,lineHeight:1}}>{pStr}</div></div>
           </div>}
           {todayBlocked&&<div style={{background:R+"22",border:"1px solid "+R,borderRadius:10,padding:"10px 14px",display:"flex",gap:10}}><span>🚫</span><div style={{color:R,fontWeight:800}}>Heute gesperrt – Pause-Tag</div></div>}
-          {atLimit&&!overtradingToday&&!todayBlocked&&<div style={{background:O+"22",border:"1px solid "+O,borderRadius:10,padding:"10px 14px",display:"flex",gap:10}}><span>🛑</span><div style={{color:O,fontWeight:800}}>2 Trades – Tageslimit!</div></div>}
+          {atLimit&&!overtradingToday&&!todayBlocked&&<div style={{background:O+"22",border:"1px solid "+O,borderRadius:10,padding:"10px 14px",display:"flex",gap:10}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M4.93 4.93l14.14 14.14"/></svg><div style={{color:O,fontWeight:800}}>2 Trades – Tageslimit!</div></div>}
           <Card style={{borderColor:now.getHours()>=16?G+"44":Y+"44"}}>
             <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Zeitfenster</div>
             <div style={{color:now.getHours()>=16?G:Y,fontSize:24,fontWeight:800}}>{now.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr</div>
@@ -2508,7 +2510,7 @@ const sendAiMessage=async()=>{
           </button>
         )}
         {aiOpen&&(
-          <div style={{width:320,maxWidth:"calc(100vw - 32px)",background:"#131d30",border:"1px solid #6366f1",borderRadius:16,boxShadow:"0 8px 32px rgba(99,102,241,0.3)",display:"flex",flexDirection:"column",maxHeight:isDesktop?"85vh":"70vh"}}>
+          <div style={{width:320,maxWidth:"calc(100vw - 32px)",background:"#131d30",border:"1px solid #6366f1",borderRadius:16,boxShadow:"0 8px 32px rgba(99,102,241,0.3)",display:"flex",flexDirection:"column",maxHeight:isDesktop?"88vh":"80vh",minHeight:360}}>
             <div style={{padding:"12px 16px",borderBottom:"1px solid #2d3548",display:"flex",justifyContent:"space-between",alignItems:"center",background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.1))",borderRadius:"16px 16px 0 0"}}>
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
                 <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",animation:"orb 3s ease infinite",flexShrink:0}}>
@@ -2525,7 +2527,16 @@ const sendAiMessage=async()=>{
               </div>
               <button onClick={()=>setAiOpen(false)} style={{background:"rgba(255,255,255,0.08)",color:"#8b96b0",fontSize:16,padding:"4px 8px",borderRadius:6}}>×</button>
             </div>
-            <div style={{flex:1,overflow:"auto",padding:12,display:"flex",flexDirection:"column",gap:8,minHeight:120}}>
+            <div ref={chatContainerRef} onScroll={e=>{const el=e.target;const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;userScrolledUp.current=!atBottom;}} style={{flex:1,overflowY:"scroll",WebkitOverflowScrolling:"touch",padding:12,display:"flex",flexDirection:"column",gap:8,minHeight:0}}>
+              {checkedIn&&mindLight&&mindLight!=='green'&&(
+                <div style={{background:mindLight==='red'?"rgba(239,68,68,0.12)":"rgba(245,158,11,0.12)",border:"1px solid "+(mindLight==='red'?"rgba(239,68,68,0.4)":"rgba(245,158,11,0.4)"),borderRadius:10,padding:"8px 12px",marginBottom:4,display:"flex",gap:8,alignItems:"flex-start",flexShrink:0}}>
+                  <span style={{fontSize:16,flexShrink:0}}>{mindLight==='red'?"🚫":"⚠️"}</span>
+                  <div>
+                    <div style={{color:mindLight==='red'?R:Y,fontWeight:700,fontSize:11,marginBottom:2}}>{mindLight==='red'?"Heute NICHT traden!":"Heute vorsichtig sein"}</div>
+                    {mindMsg&&<div style={{color:"#a8b8d0",fontSize:10,lineHeight:1.4}}>{mindMsg}</div>}
+                  </div>
+                </div>
+              )}
               {aiMessages.length===0&&!aiLoading&&(
                 <div style={{color:"#8b96b0",fontSize:12,textAlign:"center",padding:16}}>Tippe eine Frage – echte Claude KI antwortet!</div>
               )}
@@ -2547,7 +2558,7 @@ const sendAiMessage=async()=>{
             </div>
             <div style={{padding:"6px 12px",borderTop:"1px solid #2d3548"}}>
               <div style={{display:"flex",gap:6}}>
-                <button onClick={()=>triggerAiPopup("daily_motivation")} style={{background:"rgba(0,211,149,0.15)",color:G,fontSize:10,padding:"5px 10px",borderRadius:20,border:"1px solid "+G+"44",fontWeight:700,flex:1}}>☀️ Tages-Briefing</button>
+                <button onClick={()=>triggerAiPopup("daily_motivation")} style={{background:"rgba(0,211,149,0.15)",color:G,fontSize:10,padding:"5px 10px",borderRadius:20,border:"1px solid "+G+"44",fontWeight:700,flex:1}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg> Tages-Briefing</button>
                 <button onClick={()=>setAiInput("Soll ich traden?")} style={{background:"rgba(99,102,241,0.15)",color:B,fontSize:10,padding:"5px 10px",borderRadius:20,border:"1px solid "+B+"44",fontWeight:600,flex:1}}>Soll ich traden?</button>
                 <button onClick={()=>setShowMoreButtons(p=>!p)} style={{background:"rgba(255,255,255,0.05)",color:"#6b7a9a",fontSize:16,padding:"4px 10px",borderRadius:20,border:"1px solid #2d3548",flexShrink:0,lineHeight:1}}>{showMoreButtons?"▲":"···"}</button>
               </div>
@@ -2555,7 +2566,7 @@ const sendAiMessage=async()=>{
                 {["Analysiere meine Schwächen","Beste Handelszeit?","Diese Woche?"].map(q=>(
                   <button key={q} onClick={()=>{setAiInput(q);setShowMoreButtons(false);}} style={{background:"rgba(99,102,241,0.15)",color:B,fontSize:10,padding:"4px 10px",borderRadius:20,border:"1px solid "+B+"44",fontWeight:600}}>{q}</button>
                 ))}
-                {t09.length>0&&<button onClick={()=>{const last=t09[t09.length-1];setAiInput("Analysiere: "+last.contract+" "+last.dir+" "+(last.pnl>=0?"+":"")+last.pnl.toFixed(2)+"$ um "+last.time+" am "+last.date);setShowMoreButtons(false);}} style={{background:"rgba(0,211,149,0.15)",color:G,fontSize:10,padding:"4px 10px",borderRadius:20,border:"1px solid "+G+"44",fontWeight:600}}>📊 Letzter Trade</button>}
+                {t09.length>0&&<button onClick={()=>{const last=t09[t09.length-1];setAiInput("Analysiere: "+last.contract+" "+last.dir+" "+(last.pnl>=0?"+":"")+last.pnl.toFixed(2)+"$ um "+last.time+" am "+last.date);setShowMoreButtons(false);}} style={{background:"rgba(0,211,149,0.15)",color:G,fontSize:10,padding:"4px 10px",borderRadius:20,border:"1px solid "+G+"44",fontWeight:600}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="12" width="4" height="10" rx="1"/><rect x="9" y="7" width="4" height="15" rx="1"/><rect x="16" y="3" width="4" height="19" rx="1"/></svg> Letzter Trade</button>}
               </div>}
             </div>
             <>
@@ -2578,7 +2589,7 @@ const sendAiMessage=async()=>{
                   {isRecording?"Aufnahme":"Sprechen"}
                 </button>
                 <button onClick={()=>{setAiMessages([]);localStorage.removeItem('ttp_chat_history');}}
-                  style={{background:"#131d30",border:"1px solid #2d3548",color:"#4b5568",padding:"9px 12px",borderRadius:10,fontSize:13,flexShrink:0}}>🗑</button>
+                  style={{background:"#131d30",border:"1px solid #2d3548",color:"#4b5568",padding:"9px 12px",borderRadius:10,fontSize:13,flexShrink:0}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
               </div>
               <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
                 <textarea value={aiInput} onChange={e=>setAiInput(e.target.value)}
