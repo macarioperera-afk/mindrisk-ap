@@ -148,7 +148,21 @@ export default function App(){
         return SEED;
       }
       const s=localStorage.getItem('ttp_trades');
-      return s?JSON.parse(s):SEED;
+      if(!s) return SEED;
+      const parsed=JSON.parse(s);
+      // Migration: fix imported trades that wrongly have all rules=true
+      const migrated=parsed.map(t=>{
+        const allTrue=t.rules&&Object.values(t.rules).every(Boolean);
+        const isImport=t.setup&&(t.setup.includes('Import')||t.setup==='Chat Import'||t.notes?.includes('Impulstrade')||t.id?.startsWith('a'));
+        if(allTrue&&isImport){
+          const hr=parseInt(t.time?.split(':')[0]||'0');
+          const mn=parseInt(t.time?.split(':')[1]||'0');
+          const inWin=(hr===16&&mn>=15)||(hr===17&&mn<=30);
+          return{...t,rules:{r1:false,r2:false,r3:false,r4:false,r5:inWin,r6:true}};
+        }
+        return t;
+      });
+      return migrated;
     }catch(e){return SEED;}
   });
   const[showSplash,setShowSplash]=useState(true);
@@ -1111,13 +1125,13 @@ const sendAiMessage=async()=>{
               </div>
             </div>
             {(()=>{
-              const startBal=acct.size;
+              const startBal=acct.size;const profitThreshold=acct.size+2000;
               const ddLevel=maxDDLevel;
               const ddAbstand=Math.max(0,saldo-ddLevel);
-              const profit=Math.max(0,saldo-startBal);
+              const profit=Math.max(0,saldo-profitThreshold);
               const totalRange=acct.maxDD+Math.max(0,saldo-startBal)+acct.maxDD;
               const ddPct=Math.round(ddAbstand/acct.maxDD*100);
-              const profitPct=profit>0?Math.round(profit/acct.maxDD*100):0;
+              const profitPct=profit>0?Math.round(profit/(acct.target-profitThreshold)*100):0;
               return(
                 <div style={{marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
@@ -1476,13 +1490,13 @@ const sendAiMessage=async()=>{
               </div>
             </div>
             {(()=>{
-              const startBal=acct.size;
+              const startBal=acct.size;const profitThreshold=acct.size+2000;
               const ddLevel=maxDDLevel;
               const ddAbstand=Math.max(0,saldo-ddLevel);
-              const profit=Math.max(0,saldo-startBal);
+              const profit=Math.max(0,saldo-profitThreshold);
               const totalRange=acct.maxDD+Math.max(0,saldo-startBal)+acct.maxDD;
               const ddPct=Math.round(ddAbstand/acct.maxDD*100);
-              const profitPct=profit>0?Math.round(profit/acct.maxDD*100):0;
+              const profitPct=profit>0?Math.round(profit/(acct.target-profitThreshold)*100):0;
               return(
                 <div style={{marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
