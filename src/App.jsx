@@ -592,22 +592,24 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
 
     try{
       const wins_t=t09.filter(t=>t.pnl>0),losses_t=t09.filter(t=>t.pnl<0);
-      const ctx={saldo,kontoabstand,tradeCount,todPnl,disc,todayBlocked,inPause,tradesLeft,
-        totalTrades:t09.length,winRate:wr,currentDay:tod,dayWR,monthPnl,targetBalance:goals.targetBalance,
+      const ctx={
+        saldo:Math.round(saldo),
+        kontoabstand,tradeCount,todPnl,disc,todayBlocked,inPause,tradesLeft,
+        overtradingToday,atLimit,
+        currentDay:tod,dayWR,monthPnl,
+        targetBalance:goals.targetBalance,
         missingToTarget:Math.max(0,goals.targetBalance-saldo),
+        totalTrades:allT09.length,
+        winRate:t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0,
+        allTimeWR:allT09.length?Math.round(allT09.filter(t=>t.pnl>0).length/allT09.length*100):0,
         avgWin:wins_t.length?Math.round(wins_t.reduce((s,t)=>s+t.pnl,0)/wins_t.length):0,
         avgLoss:losses_t.length?Math.round(losses_t.reduce((s,t)=>s+t.pnl,0)/losses_t.length):0,
         allTrades:t09.map(t=>t.date+" "+t.time+" "+t.contract+" "+t.dir+" "+(t.pnl>=0?"+":"")+"$"+t.pnl.toFixed(0)).join("\n"),
-        todayTrades:todT.map(t=>({pnl:t.pnl,dir:t.dir,contract:t.contract,time:t.time})),
-        coachProfile:coachProfile||'',
-        coachMemory:coachMemory.slice(0,8).map(m=>m.note).join(' | '),
-        chatHistorySummary:aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100).replace(/[\u0080-\uFFFF]/g,'').replace(/\t/g,' ')).join(' | '),
-        todayTrades:(todT.map(t=>t.time+' '+t.dir+' $'+Math.round(t.pnl)).join(', ')||'Keine Trades heute').replace(/[\u0080-\uFFFF]/g,''),
-        totalTrades:allT09.length,
-        allTimeWR:allT09.length?Math.round(allT09.filter(t=>t.pnl>0).length/allT09.length*100):0,
-        saldo:Math.round(saldo),
-        todayPnl:todPnl,
-        winRate:t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0};
+        todayTrades:(todT.map(t=>t.time+' '+t.dir+' $'+Math.round(t.pnl)).join(', ')||'Keine Trades heute'),
+        coachProfile:sanitize(coachProfile||''),
+        coachMemory:sanitize(coachMemory.slice(0,8).map(m=>m.note).join(' | ')),
+        chatHistorySummary:sanitize(aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100)).join(' | '))
+      };
       const res=await fetch('/api/chat',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({messages:[{role:"user",content:prompt}],context:ctx})
@@ -1767,10 +1769,8 @@ const sendAiMessage=async()=>{
           </Card>
 
           {/* TRADING PROBLEME */}
-          {(()=>{
             const PROBS=[{k:"overtrading",l:"Overtrading"},{k:"fomo",l:"FOMO"},{k:"revenge",l:"Revenge Trading"},{k:"early_exit",l:"Zu früh aussteigen"},{k:"no_sl",l:"SL nicht einhalten"},{k:"outside_window",l:"Falsche Zeiten"},{k:"impulse",l:"Impuls-Trading"},{k:"fear",l:"Angst vor Verlusten"}];
             const selected=Object.keys(problems).filter(k=>problems[k]);
-            return(
               <Card style={{borderColor:"rgba(245,158,11,0.2)",background:"linear-gradient(145deg,#1a1508,#0f1010)"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                   <div style={{width:12,height:12,borderRadius:"50%",background:"radial-gradient(circle,#fcd34d,#f59e0b)",animation:"livingOrb 2s infinite",boxShadow:"0 0 8px rgba(245,158,11,0.6)"}}/>
@@ -1795,8 +1795,6 @@ const sendAiMessage=async()=>{
                   <div style={{color:"#a8b8d0",fontSize:11,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{probAnalysis}</div>
                 </div>}
               </Card>
-            );
-          })()}
 
           {/* TAGES-REFLEXION */}
           <Card style={{borderColor:"rgba(99,102,241,0.2)"}}>
@@ -1813,37 +1811,6 @@ const sendAiMessage=async()=>{
 
         </div>}
 
-        {tab==="check"&&<div style={{display:"flex",flexDirection:"column",gap:12,width:"100%"}}>
-          {inPause&&<div style={{background:"#1a0a00",border:"2px solid "+Y,borderRadius:12,padding:"12px 16px",display:"flex",gap:12,alignItems:"center"}}>
-            <span style={{fontSize:24}}>⏸</span>
-            <div><div style={{color:Y,fontWeight:800,fontSize:14}}>Pflichtpause</div><div style={{color:Y,fontWeight:800,fontSize:38,letterSpacing:2,lineHeight:1}}>{pStr}</div></div>
-          </div>}
-          {todayBlocked&&<div style={{background:R+"22",border:"1px solid "+R,borderRadius:10,padding:"10px 14px",display:"flex",gap:10}}><span>🚫</span><div style={{color:R,fontWeight:800}}>Heute gesperrt – Pause-Tag</div></div>}
-          {atLimit&&!overtradingToday&&!todayBlocked&&<div style={{background:O+"22",border:"1px solid "+O,borderRadius:10,padding:"10px 14px",display:"flex",gap:10}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M4.93 4.93l14.14 14.14"/></svg><div style={{color:O,fontWeight:800}}>2 Trades – Tageslimit!</div></div>}
-          <Card style={{borderColor:now.getHours()>=16?G+"44":Y+"44"}}>
-            <div style={{fontWeight:700,fontSize:16,marginBottom:4}}>Zeitfenster</div>
-            <div style={{color:now.getHours()>=16?G:Y,fontSize:24,fontWeight:800}}>{now.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr</div>
-            <div style={{color:"#8b96b0",fontSize:12,marginTop:4}}>{now.getHours()>=16?"Optimales Fenster (16:15+)":"Warte auf 16:15 Uhr"}</div>
-          </Card>
-          {!inPause&&!todayBlocked&&!overtradingToday&&!atLimit&&<Card>
-            <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>✅ Pre-Trade Checkliste</div>
-            <div style={{color:"#8b96b0",fontSize:11,marginBottom:12}}>Alle 4 Punkte abhaken vor dem Trade</div>
-            {[{id:"c1",q:"Geplantes Setup – kein Impuls?"},{id:"c2",q:"SL und TP definiert?"},{id:"c3",q:"Emotional ruhig und klar?"},{id:"c4",q:"Nach 16:15 Uhr?"}].map(it=>(
-              <Chk key={it.id} checked={checks[it.id]} onClick={()=>{const n={...checks,[it.id]:!checks[it.id]};setChecks(n);localStorage.setItem("ttp_checks",JSON.stringify({date:todayISO(),data:n}));}} label={it.q}/>
-            ))}
-            <div style={{marginTop:12,background:allChecked?G+"22":R+"11",border:"1px solid "+(allChecked?G:R)+"44",borderRadius:10,padding:12,textAlign:"center"}}>
-              {allChecked?<div style={{color:G,fontWeight:800,fontSize:17}}>GRUENES LICHT ✅</div>:<div style={{color:R,fontWeight:700,fontSize:15}}>Noch nicht bereit</div>}
-            </div>
-          </Card>}
-          <Card style={{background:"#12101a",borderColor:P+"33"}}>
-            <div style={{color:P,fontWeight:700,marginBottom:8}}>Meine Regeln</div>
-            {["1 MNQ – kein NQ bis profitabel","Max 2 Trades/Tag","15 Min Pause nach jedem Trade","Nur 16:15–17:30 Uhr","SL + TP vor dem Entry","Ein 3. Trade sperrt morgen"].map((r,i)=>(
-              <div key={i} style={{display:"flex",gap:8,padding:"6px 0",borderBottom:"1px solid #2d3548",fontSize:13,color:"#c4b5fd"}}>
-                <span style={{color:P,fontWeight:700,flexShrink:0}}>{i+1}.</span>{r}
-              </div>
-            ))}
-          </Card>
-        </div>}
 
         {/* LOGGEN TAB */}
         {tab==="log"&&<div style={{maxWidth:isDesktop?"700px":"100%",margin:isDesktop?"0 auto":"0"}}>
@@ -2416,7 +2383,6 @@ const sendAiMessage=async()=>{
                   style={{background:"linear-gradient(135deg,"+B+","+P+")",color:"#fff",padding:"13px 15px",borderRadius:14,fontSize:16,fontWeight:700,opacity:aiLoading||(!aiInput.trim()&&!aiImage)?0.4:1,flexShrink:0}}>→</button>
               </div>
             </div>
-            </>
           </div>
         )}
       </div>
