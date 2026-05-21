@@ -1396,7 +1396,6 @@ const sendAiMessage=async()=>{
             })()}
 
 
-          {/* TRADING PROBLEME CARD */}
 
           <Card style={{borderColor:B+"44"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
@@ -1677,7 +1676,6 @@ const sendAiMessage=async()=>{
           </Card>
 
 
-          {/* TRADING PROBLEME CARD */}
 
           <Card style={{borderColor:"rgba(99,102,241,0.4)",background:"linear-gradient(145deg,#0f1428,#0d1020)"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
@@ -1768,33 +1766,6 @@ const sendAiMessage=async()=>{
             )}
           </Card>
 
-          {/* TRADING PROBLEME */}
-            const PROBS=[{k:"overtrading",l:"Overtrading"},{k:"fomo",l:"FOMO"},{k:"revenge",l:"Revenge Trading"},{k:"early_exit",l:"Zu früh aussteigen"},{k:"no_sl",l:"SL nicht einhalten"},{k:"outside_window",l:"Falsche Zeiten"},{k:"impulse",l:"Impuls-Trading"},{k:"fear",l:"Angst vor Verlusten"}];
-            const selected=Object.keys(problems).filter(k=>problems[k]);
-              <Card style={{borderColor:"rgba(245,158,11,0.2)",background:"linear-gradient(145deg,#1a1508,#0f1010)"}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                  <div style={{width:12,height:12,borderRadius:"50%",background:"radial-gradient(circle,#fcd34d,#f59e0b)",animation:"livingOrb 2s infinite",boxShadow:"0 0 8px rgba(245,158,11,0.6)"}}/>
-                  <div>
-                    <div style={{fontWeight:800,fontSize:15,color:"#f0f4ff"}}>Meine Trading-Probleme</div>
-                    <div style={{color:"#f59e0b",fontSize:9,fontWeight:600}}>KI-DIAGNOSE</div>
-                  </div>
-                </div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
-                  {PROBS.map(p=>(
-                    <button key={p.k} onClick={()=>saveProblems({...problems,[p.k]:!problems[p.k]})}
-                      style={{padding:"5px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:problems[p.k]?"rgba(245,158,11,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(problems[p.k]?"rgba(245,158,11,0.6)":"rgba(255,255,255,0.1)"),color:problems[p.k]?"#fcd34d":"#6b7a9a"}}>
-                      {problems[p.k]?"✓ ":""}{p.l}
-                    </button>
-                  ))}
-                </div>
-                {selected.length>0&&<button onClick={analyzeProblems} disabled={probLoading} style={{width:"100%",padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,background:"linear-gradient(135deg,rgba(245,158,11,0.2),rgba(239,68,68,0.1))",border:"1px solid rgba(245,158,11,0.3)",color:probLoading?"#6b7280":"#fcd34d",marginBottom:8}}>
-                  {probLoading?"🤖 Analysiere...":"🤖 KI-Diagnose ("+selected.length+" Probleme)"}
-                </button>}
-                {probAnalysis&&<div style={{background:"rgba(245,158,11,0.06)",borderRadius:10,padding:12,border:"1px solid rgba(245,158,11,0.15)"}}>
-                  <div style={{color:"#f59e0b",fontSize:11,fontWeight:700,marginBottom:6}}>🎯 Dein Plan:</div>
-                  <div style={{color:"#a8b8d0",fontSize:11,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{probAnalysis}</div>
-                </div>}
-              </Card>
 
           {/* TAGES-REFLEXION */}
           <Card style={{borderColor:"rgba(99,102,241,0.2)"}}>
