@@ -217,7 +217,7 @@ export default function App(){
   const[acct,setAcct]=useState(()=>{
     try{return JSON.parse(localStorage.getItem('ttp_account')||'null')||{
       type:'challenge',broker:'TTP',number:'P1-235109',
-      size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30
+      size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30,lotSize:1
     };}catch(e){return{type:'challenge',broker:'TTP',number:'P1-235109',size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30};}
   });
   const saveAcct=(a)=>{setAcct(a);localStorage.setItem('ttp_account',JSON.stringify(a));};
@@ -399,7 +399,7 @@ export default function App(){
   },[overtradingDays]);
 
   const todayBlocked=blockedDays.has(todayISO());
-  const calMap=useMemo(()=>{const m={};t09.forEach(t=>{if(!m[t.date])m[t.date]=0;m[t.date]+=t.pnl;});return m;},[t09]);
+  const calMap=useMemo(()=>{const m={};allT09.forEach(t=>{if(!m[t.date])m[t.date]=0;m[t.date]+=t.pnl;});return m;},[allT09]);
 
   const weekdayStats=useMemo(()=>{
     const DAYS=["So","Mo","Di","Mi","Do","Fr","Sa"];
@@ -424,11 +424,11 @@ export default function App(){
     if(dataSet.length<2)return null;
     const wins=t09.filter(t=>t.pnl>0),losses=t09.filter(t=>t.pnl<=0);
     const wr=wins.length/t09.length;
-    const avgW=wins.length?wins.reduce((s,t)=>s+t.pnl,0)/wins.length:0;
+    const ls=acct.lotSize||1;const avgW=wins.length?wins.reduce((s,t)=>s+t.pnl,0)/wins.length:0;
     const avgL=losses.length?Math.abs(losses.reduce((s,t)=>s+t.pnl,0)/losses.length):1;
     const rr=avgW/avgL;
     const m={};t09.forEach(t=>{m[t.date]=(m[t.date]||0)+1;});
-    const dailyEV=Math.round(2*(wr*avgW-(1-wr)*avgL));
+    const dailyEV=Math.round(2*(wr*avgW-(1-wr)*avgL));const slAmt=ls*20;const tpAmt=ls*40;
     const monthlyEV=Math.round(dailyEV*22);
     return{wr:Math.round(wr*100),rr:rr.toFixed(1),neededWR:Math.round(100/(1+rr)),
       dailyEV,monthlyEV,avgW:Math.round(avgW),avgL:Math.round(avgL),
@@ -1125,30 +1125,42 @@ const sendAiMessage=async()=>{
               </div>
             </div>
             {(()=>{
-              const startBal=acct.size;const profitThreshold=acct.size+2000;
-              const ddLevel=maxDDLevel;
-              const ddAbstand=Math.max(0,saldo-ddLevel);
-              const profit=Math.max(0,saldo-profitThreshold);
-              const totalRange=acct.maxDD+Math.max(0,saldo-startBal)+acct.maxDD;
-              const ddPct=Math.round(ddAbstand/acct.maxDD*100);
-              const profitPct=profit>0?Math.round(profit/(acct.target-profitThreshold)*100):0;
+              // TTP EOD Trailing DD: DD folgt Saldo nach oben bis DD=$50k (bei Saldo=$52k) -> dann eingefroren
+              const ddInitial=acct.size-acct.maxDD;        // $48.000 - Startlevel DD
+              const ddLockAt=acct.size;                    // $50.000 - DD friert hier ein
+              const profitStart=acct.size+acct.maxDD;      // $52.000 - ab hier reiner Profit
+              const currentDD=Math.min(saldo-acct.maxDD,ddLockAt); // aktueller DD-Level (trailing bis Lock)
+              const ddAbstand=Math.max(0,saldo-currentDD); // Abstand vom aktuellen DD
+              const isLocked=saldo>=profitStart;           // DD eingefroren?
+              const profit=Math.max(0,saldo-profitStart);  // Gewinn über $52k
+              const totalRange=acct.target-ddInitial;      // $48k→$54k = $6k Gesamtrange
+              const markerPct=Math.min(99,Math.max(1,(saldo-ddInitial)/totalRange*100));
+              const lockLinePct=(ddLockAt-ddInitial)/totalRange*100;   // wo $50k liegt = 33%
+              const profitLinePct=(profitStart-ddInitial)/totalRange*100; // wo $52k liegt = 66%
+              const ddColor=ddAbstand<500?R:ddAbstand<1000?Y:G;
               return(
                 <div style={{marginBottom:8}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                    <span style={{color:"#8b96b0",fontSize:10}}>Konto Position</span>
-                    <span style={{color:"#a5b4fc",fontSize:10,fontWeight:700}}>${Math.round(ddLevel).toLocaleString()} ← DD → ${startBal.toLocaleString()} ← Profit → ${Math.round(saldo).toLocaleString()}</span>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                    <span style={{color:"#6b7a9a",fontSize:9,fontWeight:700,letterSpacing:"0.5px"}}>TTP EOD TRAILING DD</span>
+                    <span style={{color:isLocked?G:Y,fontSize:9,fontWeight:700}}>{isLocked?"🔒 DD eingefroren bei $"+ddLockAt.toLocaleString():"⚠️ DD läuft mit"}</span>
                   </div>
-                  <div style={{height:12,borderRadius:6,overflow:"hidden",display:"flex",background:"#0d1320",boxShadow:"inset 0 2px 4px rgba(0,0,0,0.4)"}}>
-                    <div style={{width:ddPct+"%",background:ddAbstand<500?"#ef4444":ddAbstand<1000?"#f59e0b":"#22c55e",transition:"width .5s",position:"relative",minWidth:ddPct>0?4:0,boxShadow:"1px 0 0 rgba(0,0,0,0.3)"}}>
-                      {ddPct>15&&<span style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",fontSize:8,color:"#fff",fontWeight:700,whiteSpace:"nowrap"}}>DD ${Math.round(ddAbstand)}</span>}
-                    </div>
-                    {profit>0&&<div style={{width:Math.min(profitPct,100)+"%",background:"linear-gradient(90deg,#16a34a,#22c55e)",transition:"width .5s",position:"relative",minWidth:4}}>
-                      {profitPct>15&&<span style={{position:"absolute",left:4,top:"50%",transform:"translateY(-50%)",fontSize:8,color:"#fff",fontWeight:700,whiteSpace:"nowrap"}}>+${Math.round(profit)}</span>}
-                    </div>}
+                  <div style={{position:"relative",height:18,borderRadius:9,overflow:"hidden",marginBottom:4}}>
+                    <div style={{position:"absolute",left:0,width:lockLinePct+"%",height:"100%",background:"linear-gradient(90deg,#7f1d1d,#dc2626)",opacity:0.9}}/>
+                    <div style={{position:"absolute",left:lockLinePct+"%",width:(profitLinePct-lockLinePct)+"%",height:"100%",background:"linear-gradient(90deg,#f59e0b,#fbbf24)"}}/>
+                    <div style={{position:"absolute",left:profitLinePct+"%",right:0,height:"100%",background:"linear-gradient(90deg,#16a34a,#22c55e)"}}/>
+                    <div style={{position:"absolute",left:markerPct+"%",top:0,bottom:0,width:3,background:"#fff",transform:"translateX(-50%)",boxShadow:"0 0 8px rgba(255,255,255,0.9)",zIndex:2}}/>
+                    <div style={{position:"absolute",left:lockLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.3)"}}/>
+                    <div style={{position:"absolute",left:profitLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.3)"}}/>
                   </div>
-                  <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
-                    <span style={{color:ddAbstand<500?R:ddAbstand<1000?Y:G,fontSize:9}}>DD Abstand: ${Math.round(ddAbstand)} ({ddPct}%)</span>
-                    <span style={{color:profit>0?G:"#4b5568",fontSize:9}}>Profit: {profit>0?"+":""}${Math.round(profit)}</span>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:"#4b5568",marginBottom:6}}>
+                    <span style={{color:R}}>${ddInitial.toLocaleString()}<br/>Max DD</span>
+                    <span style={{color:Y,textAlign:"center"}}>${ddLockAt.toLocaleString()}<br/>DD Lock</span>
+                    <span style={{color:G,textAlign:"center"}}>${profitStart.toLocaleString()}<br/>Profit</span>
+                    <span style={{textAlign:"right"}}>${acct.target.toLocaleString()}<br/>Ziel</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between"}}>
+                    <span style={{color:ddColor,fontSize:9,fontWeight:700}}>Abstand: ${Math.round(ddAbstand).toLocaleString()}</span>
+                    <span style={{color:profit>0?G:"#6b7a9a",fontSize:9,fontWeight:700}}>{profit>0?"Profit: +$"+Math.round(profit).toLocaleString():"Noch $"+(profitStart-saldo).toLocaleString()+" bis Profit"}</span>
                   </div>
                 </div>
               );
@@ -1490,30 +1502,42 @@ const sendAiMessage=async()=>{
               </div>
             </div>
             {(()=>{
-              const startBal=acct.size;const profitThreshold=acct.size+2000;
-              const ddLevel=maxDDLevel;
-              const ddAbstand=Math.max(0,saldo-ddLevel);
-              const profit=Math.max(0,saldo-profitThreshold);
-              const totalRange=acct.maxDD+Math.max(0,saldo-startBal)+acct.maxDD;
-              const ddPct=Math.round(ddAbstand/acct.maxDD*100);
-              const profitPct=profit>0?Math.round(profit/(acct.target-profitThreshold)*100):0;
+              // TTP EOD Trailing DD: DD folgt Saldo nach oben bis DD=$50k (bei Saldo=$52k) -> dann eingefroren
+              const ddInitial=acct.size-acct.maxDD;        // $48.000 - Startlevel DD
+              const ddLockAt=acct.size;                    // $50.000 - DD friert hier ein
+              const profitStart=acct.size+acct.maxDD;      // $52.000 - ab hier reiner Profit
+              const currentDD=Math.min(saldo-acct.maxDD,ddLockAt); // aktueller DD-Level (trailing bis Lock)
+              const ddAbstand=Math.max(0,saldo-currentDD); // Abstand vom aktuellen DD
+              const isLocked=saldo>=profitStart;           // DD eingefroren?
+              const profit=Math.max(0,saldo-profitStart);  // Gewinn über $52k
+              const totalRange=acct.target-ddInitial;      // $48k→$54k = $6k Gesamtrange
+              const markerPct=Math.min(99,Math.max(1,(saldo-ddInitial)/totalRange*100));
+              const lockLinePct=(ddLockAt-ddInitial)/totalRange*100;   // wo $50k liegt = 33%
+              const profitLinePct=(profitStart-ddInitial)/totalRange*100; // wo $52k liegt = 66%
+              const ddColor=ddAbstand<500?R:ddAbstand<1000?Y:G;
               return(
                 <div style={{marginBottom:8}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                    <span style={{color:"#8b96b0",fontSize:10}}>Konto Position</span>
-                    <span style={{color:"#a5b4fc",fontSize:10,fontWeight:700}}>${Math.round(ddLevel).toLocaleString()} ← DD → ${startBal.toLocaleString()} ← Profit → ${Math.round(saldo).toLocaleString()}</span>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                    <span style={{color:"#6b7a9a",fontSize:9,fontWeight:700,letterSpacing:"0.5px"}}>TTP EOD TRAILING DD</span>
+                    <span style={{color:isLocked?G:Y,fontSize:9,fontWeight:700}}>{isLocked?"🔒 DD eingefroren bei $"+ddLockAt.toLocaleString():"⚠️ DD läuft mit"}</span>
                   </div>
-                  <div style={{height:12,borderRadius:6,overflow:"hidden",display:"flex",background:"#0d1320",boxShadow:"inset 0 2px 4px rgba(0,0,0,0.4)"}}>
-                    <div style={{width:ddPct+"%",background:ddAbstand<500?"#ef4444":ddAbstand<1000?"#f59e0b":"#22c55e",transition:"width .5s",position:"relative",minWidth:ddPct>0?4:0,boxShadow:"1px 0 0 rgba(0,0,0,0.3)"}}>
-                      {ddPct>15&&<span style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",fontSize:8,color:"#fff",fontWeight:700,whiteSpace:"nowrap"}}>DD ${Math.round(ddAbstand)}</span>}
-                    </div>
-                    {profit>0&&<div style={{width:Math.min(profitPct,100)+"%",background:"linear-gradient(90deg,#16a34a,#22c55e)",transition:"width .5s",position:"relative",minWidth:4}}>
-                      {profitPct>15&&<span style={{position:"absolute",left:4,top:"50%",transform:"translateY(-50%)",fontSize:8,color:"#fff",fontWeight:700,whiteSpace:"nowrap"}}>+${Math.round(profit)}</span>}
-                    </div>}
+                  <div style={{position:"relative",height:18,borderRadius:9,overflow:"hidden",marginBottom:4}}>
+                    <div style={{position:"absolute",left:0,width:lockLinePct+"%",height:"100%",background:"linear-gradient(90deg,#7f1d1d,#dc2626)",opacity:0.9}}/>
+                    <div style={{position:"absolute",left:lockLinePct+"%",width:(profitLinePct-lockLinePct)+"%",height:"100%",background:"linear-gradient(90deg,#f59e0b,#fbbf24)"}}/>
+                    <div style={{position:"absolute",left:profitLinePct+"%",right:0,height:"100%",background:"linear-gradient(90deg,#16a34a,#22c55e)"}}/>
+                    <div style={{position:"absolute",left:markerPct+"%",top:0,bottom:0,width:3,background:"#fff",transform:"translateX(-50%)",boxShadow:"0 0 8px rgba(255,255,255,0.9)",zIndex:2}}/>
+                    <div style={{position:"absolute",left:lockLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.3)"}}/>
+                    <div style={{position:"absolute",left:profitLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.3)"}}/>
                   </div>
-                  <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
-                    <span style={{color:ddAbstand<500?R:ddAbstand<1000?Y:G,fontSize:9}}>DD Abstand: ${Math.round(ddAbstand)} ({ddPct}%)</span>
-                    <span style={{color:profit>0?G:"#4b5568",fontSize:9}}>Profit: {profit>0?"+":""}${Math.round(profit)}</span>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:"#4b5568",marginBottom:6}}>
+                    <span style={{color:R}}>${ddInitial.toLocaleString()}<br/>Max DD</span>
+                    <span style={{color:Y,textAlign:"center"}}>${ddLockAt.toLocaleString()}<br/>DD Lock</span>
+                    <span style={{color:G,textAlign:"center"}}>${profitStart.toLocaleString()}<br/>Profit</span>
+                    <span style={{textAlign:"right"}}>${acct.target.toLocaleString()}<br/>Ziel</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between"}}>
+                    <span style={{color:ddColor,fontSize:9,fontWeight:700}}>Abstand: ${Math.round(ddAbstand).toLocaleString()}</span>
+                    <span style={{color:profit>0?G:"#6b7a9a",fontSize:9,fontWeight:700}}>{profit>0?"Profit: +$"+Math.round(profit).toLocaleString():"Noch $"+(profitStart-saldo).toLocaleString()+" bis Profit"}</span>
                   </div>
                 </div>
               );
@@ -2437,6 +2461,17 @@ const sendAiMessage=async()=>{
                 <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>RISIKO EINSTELLUNGEN</div>
                 <Field label={"MAX DD ($) – Level: $"+(acct.size-acct.maxDD).toLocaleString()}><input type="number" defaultValue={acct.maxDD} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,maxDD:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 <Field label="DAILY DD LIMIT ($)"><input type="number" defaultValue={acct.dailyDD} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,dailyDD:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:6}}>LOT SIZE (für Kalkulationen)</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:8}}>
+                  {[1,2,3,5].map(l=>(
+                    <button key={l} onClick={()=>saveAcct({...acct,lotSize:l})} style={{padding:"6px 4px",borderRadius:7,fontSize:11,fontWeight:700,background:acct.lotSize===l?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(acct.lotSize===l?"#6366f1":"#2d3548"),color:acct.lotSize===l?"#a5b4fc":"#6b7a9a"}}>{l} MNQ</button>
+                  ))}
+                </div>
+                <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",marginBottom:8}}>
+                  <div style={{color:"#8b96b0",fontSize:10}}>
+                    {acct.lotSize||1} MNQ → SL: <span style={{color:R,fontWeight:700}}>-${((acct.lotSize||1)*20).toFixed(0)}</span> | TP: <span style={{color:G,fontWeight:700}}>+${((acct.lotSize||1)*40).toFixed(0)}</span> | EV/Trade: <span style={{color:B,fontWeight:700}}>{(()=>{const w=t09.length?t09.filter(t=>t.pnl>0).length/t09.length:0.5;return((w*(acct.lotSize||1)*40-(1-w)*(acct.lotSize||1)*20)).toFixed(0);})()} $</span>
+                  </div>
+                </div>
                 {acct.type==='challenge'&&<div>
                   <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:8}}>CHALLENGE ZIEL</div>
                   <Field label="ZIEL SALDO ($)"><input type="number" defaultValue={acct.target} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,target:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
