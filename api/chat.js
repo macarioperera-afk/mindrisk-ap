@@ -1,8 +1,20 @@
 // ========================================
 // MindRisk Trading Coach - Claude API Bridge
 // Vercel Serverless Function: /api/chat
-// VERSION 2 - Fix: höheres Token-Limit
+// VERSION 3 - Fix: JSON sanitizer + kürzere Antworten
 // ========================================
+
+// Entfernt lone surrogates die JSON kaputt machen (Emoji-Encoding-Fehler)
+function sanitize(val) {
+  if (typeof val === 'string') return val.replace(/[\uD800-\uDFFF]/g, '');
+  if (Array.isArray(val)) return val.map(sanitize);
+  if (val && typeof val === 'object') {
+    const out = {};
+    for (const k of Object.keys(val)) out[k] = sanitize(val[k]);
+    return out;
+  }
+  return val;
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -37,10 +49,14 @@ export default async function handler(req, res) {
       });
     }
 
-    const systemPrompt = buildSystemPrompt(context);
+    // Sanitize alles - entfernt kaputte Unicode/Emoji-Zeichen
+    const cleanMessages = sanitize(messages);
+    const cleanContext = sanitize(context || {});
+
+    const systemPrompt = buildSystemPrompt(cleanContext);
 
     // Sonnet für Bilder (bessere Vision), Haiku für Text (günstiger)
-    const hasImage = messages.some(m => Array.isArray(m.content));
+    const hasImage = cleanMessages.some(m => Array.isArray(m.content));
     const model = hasImage ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -52,9 +68,9 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 2048,
+        max_tokens: hasImage ? 800 : 500,
         system: systemPrompt,
-        messages: messages
+        messages: cleanMessages
       })
     });
 
@@ -87,14 +103,12 @@ export default async function handler(req, res) {
   }
 }
 
-function buildSystemPrompt(context) {
-  const ctx = context || {};
-
+function buildSystemPrompt(ctx) {
   return `Du bist Jeronimos persönlicher Trading Coach in der MindRisk App.
 
 ANTWORTSTIL (WICHTIG):
 - IMMER auf Deutsch
-- Maximal 3-5 Sätze pro Antwort
+- Maximal 3 Sätze pro Antwort
 - KEINE langen Listen oder Aufzählungen
 - Direkt, persönlich – wie ein erfahrener Mentor der Jeronimo kennt
 - Emojis nur sparsam (max 1-2 pro Antwort)
@@ -132,12 +146,9 @@ ${ctx.chatHistorySummary || 'Erste Session heute'}
 
 HEUTE IM ÜBERBLICK:
 - Saldo: $${ctx.saldo || '?'}
-- Heute P&L: ${ctx.todayPnl >= 0 ? '+' : ''}$${ ctx.todayPnl || 0}
+- Heute P&L: ${ctx.todayPnl >= 0 ? '+' : ''}$${ctx.todayPnl || 0}
 - Heute Trades: ${ctx.todayTrades || 'Keine'}
 - Win Rate gesamt: ${ctx.winRate || 0}%
-
-LETZTE GESPRÄCHE:
-${ctx.chatHistorySummary || 'Erster Chat heute'}
 
 ALLE HISTORISCHEN TRADES (kompakt - für Muster-Analyse):
 ${ctx.allTrades ? ctx.allTrades : 'Keine Daten'}
@@ -158,7 +169,6 @@ CHART-ANALYSE (wenn Bild geschickt wird):
 - Erkläre die Marktstruktur (bullish/bearish/neutral)
 - Bewerte ob das Setup zu Jeronimos Heatmap Correlation SP passt
 - KEINE konkreten Entry-Preise oder Stop-Loss-Punkte nennen
-- Statt "kauf bei X" → "das Setup sieht bullisch aus weil..."
 - Hilf ihm zu verstehen WAS er sieht, nicht WAS er tun soll
 
 PATTERN-ERKENNUNG (Trade-Daten):
@@ -242,14 +252,12 @@ TRADING PSYCHOLOGIE – DEIN WISSENSSCHATZ ALS COACH:
 
 NACH VERLUST: "Dieser Verlust ist Teil des Spiels – statistisch völlig normal. Lass den Schmerz kurz da sein, aber lass ihn keine Entscheidungen treffen. Was sagt dein System für den nächsten Trade?"
 
-NACH OVERTRADING: "Du hast versucht den Markt zu kontrollieren – das ist unmöglich. Was hat dich so angetrieben? Lass uns die Ursache verstehen. Lass uns die Ursache verstehen."
+NACH OVERTRADING: "Du hast versucht den Markt zu kontrollieren – das ist unmöglich. Was hat dich so angetrieben? Lass uns die Ursache verstehen."
 
 NACH GEWINN: "Vorsicht vor Euphorie (Douglas). Übermut nach Gewinnen führt zu Überpositionierung und Regelbrüchen (Welz). Bleib beim System."
 
 BEI REGELBRUCH: "Was war heute der Auslöser? Dein System funktioniert nur wenn du es konsequent lebst. Ein Regelbruch ist kein Fehler – er ist Information über deine aktuelle emotionale Verfassung."
 
 KERNBOTSCHAFT FÜR JERONIMO: "Profitables Trading ist 20% Strategie und 80% mentale Stärke. Dein Setup funktioniert (positive Edge). Was dich aufhält ist Psychologie – und das kann man trainieren."
-
-
 `;
 }
