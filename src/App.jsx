@@ -688,7 +688,7 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
     const time=hour+':'+min;
     const qty=parseInt(parts[6])||1;
     const dir=qty>0?'LONG':'SHORT';
-    parsed.push({id:uid(),acct:'09',contract,date,time,pnl,dur:0,dir,setup:'Import TTP',notes:'',rules:{r1:true,r2:true,r3:true,r4:true,r5:true,r6:true}});
+    parsed.push({id:uid(),acct:'09',contract,date,time,pnl,dur:0,dir,setup:'Import TTP',notes:'',rules:{r1:false,r2:false,r3:false,r4:false,r5:(parseInt(time.split(':')[0])===16&&parseInt(time.split(':')[1])>=15)||(parseInt(time.split(':')[0])===17&&parseInt(time.split(':')[1])<=30),r6:true}});
   }
   if(!parsed.length){alert('Keine Trades gefunden. Bitte TTP Export einfügen.');return;}
   if(!window.confirm('Import: '+parsed.length+' Trades einfügen? Das aktualisiert auch den Saldo.')){return;}
@@ -754,7 +754,7 @@ const sendAiMessage=async()=>{
         const pnlStr=(parts[7]||'0').replace(/[$,]/g,'').replace(',','.');
         const pnl=parseFloat(pnlStr);
         if(isNaN(pnl))continue;
-        imported.push({id:uid(),acct:'09',contract,date,time,pnl,dur:0,dir:parseInt(parts[6]||'1')>0?'LONG':'SHORT',setup:'Chat Import',notes:'',rules:{r1:true,r2:true,r3:true,r4:true,r5:true,r6:true}});
+        imported.push({id:uid(),acct:'09',contract,date,time,pnl,dur:0,dir:parseInt(parts[6]||'1')>0?'LONG':'SHORT',setup:'Chat Import',notes:'',rules:{r1:false,r2:false,r3:false,r4:false,r5:(parseInt(time.split(':')[0])===16&&parseInt(time.split(':')[1])>=15)||(parseInt(time.split(':')[0])===17&&parseInt(time.split(':')[1])<=30),r6:true}});
       }
       if(imported.length>0){
         setTrades(p=>{const u=[...p,...imported];localStorage.setItem('ttp_trades',JSON.stringify(u));return u;});
@@ -1107,7 +1107,7 @@ const sendAiMessage=async()=>{
               <div style={{background:"#0d1320",borderRadius:8,padding:"8px 12px",textAlign:"right"}}>
                 <div style={{color:"#8b96b0",fontSize:9,marginBottom:1}}>HEUTE</div>
                 <div style={{color:pc(todPnl),fontWeight:800,fontSize:16}}>{fs(todPnl)}</div>
-                <div style={{color:"#8b96b0",fontSize:9,marginTop:1}}>{tradeCount}/{DAILY_LIMIT} Trades</div>
+                <div style={{color:tradeCount>=OVERTRADING_AT?R:tradeCount>=DAILY_LIMIT?O:"#8b96b0",fontSize:9,marginTop:1,fontWeight:tradeCount>=DAILY_LIMIT?700:400}}>{tradeCount}/{DAILY_LIMIT} Trades{tradeCount>=OVERTRADING_AT?" ⚠️":""}</div>
               </div>
             </div>
             {(()=>{
@@ -1146,7 +1146,7 @@ const sendAiMessage=async()=>{
               </div>
               <Bar2 pct={Math.min(100,disc/goals.disc*100)} color={sc(disc)}/>
             </div>
-            <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid #2d3548",display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
+            <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid rgba(99,102,241,0.2)",display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
               <div style={{background:"#0d1320",borderRadius:8,padding:"7px 8px",textAlign:"center",flex:1}}>
                 <div style={{color:"#6b7a9a",fontSize:8,marginBottom:2}}>MONAT P&L</div>
                 <div style={{color:pc(monthPnl),fontWeight:800,fontSize:14}}>{fs(monthPnl)}</div>
@@ -1158,7 +1158,7 @@ const sendAiMessage=async()=>{
                 <div style={{color:"#4a5568",fontSize:8}}>{t09.length} Trades</div>
               </div>
             </div>
-            <div style={{paddingTop:8,borderTop:"1px solid #2d3548",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div style={{paddingTop:12,marginTop:4,borderTop:"1px solid rgba(255,255,255,0.06)",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <Field label="SALDO ($)">
                 <input type="number" step="0.01" defaultValue={saldo} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)){setSaldo(v);localStorage.setItem("ttp_saldo",v);}}} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/>
               </Field>
@@ -1472,7 +1472,7 @@ const sendAiMessage=async()=>{
               <div style={{background:"#0d1320",borderRadius:8,padding:"8px 12px",textAlign:"right"}}>
                 <div style={{color:"#8b96b0",fontSize:9,marginBottom:1}}>HEUTE</div>
                 <div style={{color:pc(todPnl),fontWeight:800,fontSize:16}}>{fs(todPnl)}</div>
-                <div style={{color:"#8b96b0",fontSize:9,marginTop:1}}>{tradeCount}/{DAILY_LIMIT} Trades</div>
+                <div style={{color:tradeCount>=OVERTRADING_AT?R:tradeCount>=DAILY_LIMIT?O:"#8b96b0",fontSize:9,marginTop:1,fontWeight:tradeCount>=DAILY_LIMIT?700:400}}>{tradeCount}/{DAILY_LIMIT} Trades{tradeCount>=OVERTRADING_AT?" ⚠️":""}</div>
               </div>
             </div>
             {(()=>{
