@@ -784,8 +784,7 @@ const sendAiMessage=async()=>{
         return;
       }
     }
-    if(inputLow.startsWith("merke dir")||inputLow.startsWith("vergiss nicht")){
-      const note=aiInput.slice(inputLow.indexOf(" ")+1).trim();
+    if(inputLow.startsWith("merke dir")||inputLow.startsWith("vergiss nicht")){      const note=aiInput.slice(inputLow.indexOf(" ")+1).trim();
       if(note){
         saveCoachMemory("📌 "+note);
         setAiMessages(p=>[...p,{role:"user",content:aiInput},{role:"assistant",content:"✅ Gemerkt! Ich werde mir das für alle zukünftigen Sessions merken:\n\n📌 "+note}]);
@@ -2323,7 +2322,7 @@ const sendAiMessage=async()=>{
                 {t09.length>0&&<button onClick={()=>{const last=t09[t09.length-1];setAiInput("Analysiere: "+last.contract+" "+last.dir+" "+(last.pnl>=0?"+":"")+last.pnl.toFixed(2)+"$ um "+last.time+" am "+last.date);setShowMoreButtons(false);}} style={{background:"rgba(0,211,149,0.15)",color:G,fontSize:10,padding:"4px 10px",borderRadius:20,border:"1px solid "+G+"44",fontWeight:600}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="12" width="4" height="10" rx="1"/><rect x="9" y="7" width="4" height="15" rx="1"/><rect x="16" y="3" width="4" height="19" rx="1"/></svg> Letzter Trade</button>}
               </div>}
             </div>
-            <>
+
             {aiImagePreview&&<div style={{padding:"6px 12px",borderTop:"1px solid #2d3548",display:"flex",alignItems:"center",gap:8}}>
               <img src={aiImagePreview} alt="chart" style={{width:52,height:52,borderRadius:8,objectFit:"cover",border:"1px solid "+B+"44"}}/>
               <div style={{fontSize:11,color:"#a8b8d0",flex:1}}>📊 Chart wird mitgeschickt...</div>
@@ -2361,3 +2360,4 @@ const sendAiMessage=async()=>{
     </div>
   );
 }
+
