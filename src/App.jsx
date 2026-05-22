@@ -682,7 +682,8 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
     reader.onload=(ev)=>{
       const base64=ev.target.result.split(",")[1];
       setAiImage({base64,mediaType:file.type||"image/jpeg"});
-      setAiImagePreview(ev.target.result);    };
+      setAiImagePreview(ev.target.result);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -1473,6 +1474,52 @@ const sendAiMessage=async()=>{
             <button onClick={()=>{const u={...journal,[todayISO()]:{...todayJ}};setJournal(u);localStorage.setItem("ttp_journal",JSON.stringify(u));showToast("✅ Reflexion gespeichert!");}} style={{background:B,color:"#fff",padding:10,width:"100%",fontWeight:700,borderRadius:10,fontSize:13}}>Speichern</button>
           </Card>
 
+          <Card style={{borderColor:"rgba(245,158,11,0.2)",background:"linear-gradient(145deg,#1a1508 0%,#0f1010 100%)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,cursor:"pointer"}} onClick={()=>setProbExp(p=>!p)}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:14,height:14,borderRadius:"50%",background:"radial-gradient(circle,#fcd34d,#f59e0b 60%,#92400e)",animation:"livingOrb 2s ease-in-out infinite",boxShadow:"0 0 10px rgba(245,158,11,0.6)",flexShrink:0}}/>
+                <div>
+                  <div style={{fontWeight:800,fontSize:15,color:"#f0f4ff"}}>Meine Trading-Probleme</div>
+                  <div style={{color:"#f59e0b",fontSize:9,fontWeight:600}}>PERSÖNLICHE KI-DIAGNOSE</div>
+                </div>
+              </div>
+              <span style={{color:"#f59e0b",fontSize:11,fontWeight:600}}>{probExp?"▲":"▼"}</span>
+            </div>
+            {probExp&&(()=>{
+              const PROBS=[
+                {k:"overtrading",l:"Overtrading"},{k:"fomo",l:"FOMO"},{k:"revenge",l:"Revenge Trading"},
+                {k:"early_exit",l:"Zu früh aussteigen"},{k:"no_sl",l:"SL nicht einhalten"},
+                {k:"outside_window",l:"Falsche Zeiten"},{k:"impulse",l:"Impuls-Trading"},{k:"fear",l:"Angst vor Verlusten"},
+              ];
+              const selected=Object.keys(problems).filter(k=>problems[k]);
+              return(
+                <div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+                    {PROBS.map(p=>(
+                      <button key={p.k} onClick={()=>saveProblems({...problems,[p.k]:!problems[p.k]})}
+                        style={{padding:"5px 10px",borderRadius:20,fontSize:11,fontWeight:600,
+                          background:problems[p.k]?"rgba(245,158,11,0.25)":"rgba(255,255,255,0.04)",
+                          border:"1px solid "+(problems[p.k]?"rgba(245,158,11,0.6)":"rgba(255,255,255,0.1)"),
+                          color:problems[p.k]?"#fcd34d":"#6b7a9a"}}>
+                        {problems[p.k]?"✓ ":""}{p.l}
+                      </button>
+                    ))}
+                  </div>
+                  {selected.length>0&&<button onClick={analyzeProblems} disabled={probLoading}
+                    style={{width:"100%",padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,
+                      background:"linear-gradient(135deg,rgba(245,158,11,0.2),rgba(239,68,68,0.1))",
+                      border:"1px solid rgba(245,158,11,0.3)",color:probLoading?"#6b7280":"#fcd34d",marginBottom:8}}>
+                    {probLoading?"KI Analysiert...":"KI-Diagnose starten ("+selected.length+" Probleme)"}
+                  </button>}
+                  {probAnalysis&&<div style={{background:"rgba(245,158,11,0.06)",borderRadius:10,padding:12,border:"1px solid rgba(245,158,11,0.15)"}}>
+                    <div style={{color:"#f59e0b",fontSize:11,fontWeight:700,marginBottom:6}}>Dein persönlicher Plan:</div>
+                    <div style={{color:"#a8b8d0",fontSize:11,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{probAnalysis}</div>
+                  </div>}
+                  {!probAnalysis&&selected.length===0&&<div style={{color:"#4a5568",fontSize:11,textAlign:"center",padding:"4px 0"}}>Wähle deine Probleme – KI gibt dir einen konkreten Plan</div>}
+                </div>
+              );
+            })()}
+          </Card>
         </div>}
 
 
@@ -2053,4 +2100,3 @@ const sendAiMessage=async()=>{
     </div>
   );
 }
-
