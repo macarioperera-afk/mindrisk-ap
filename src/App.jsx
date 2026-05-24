@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const SUPA_URL="https://lznaqqjhmawvpvzzwgnc.supabase.co";
 const SUPA_KEY="sb_publishable_a9rGWRoY6g99XC9nqSNc-g_XbhpxALh";
-const supabase=createClient(SUPA_URL,SUPA_KEY);
+const supabase=createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'mindrisk_auth'}});
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 
 const G="#00d395",R="#ef4444",B="#6366f1",Y="#f59e0b",P="#a855f7",O="#f97316";
@@ -457,7 +457,7 @@ export default function App(){
   const pStr=pMin+":"+(pSec<10?"0":"")+pSec;
   const sc=v=>v>=80?G:v>=60?Y:R;
 
-  const allT09=useMemo(()=>trades.filter(t=>t&&t.acct==="09"&&typeof t.date==="string").sort((a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1),[trades]);
+  const allT09=useMemo(()=>trades.filter(t=>t&&typeof t.date==="string").sort((a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1),[trades]);
   const t09=useMemo(()=>allT09.filter(t=>t.date>=challengeStart),[allT09,challengeStart]);
   const netPnl=useMemo(()=>Math.round(t09.reduce((s,t)=>s+t.pnl,0)*100)/100,[t09]);
   const kontoabstand=Math.max(0,Math.round((saldo-maxDDLevel)*100)/100);
@@ -780,8 +780,7 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
     reader.readAsDataURL(file);
   };
 
-  const importTTPTrades=(raw)=>{
-  const lines=raw.trim().split('\n').filter(l=>l.trim());
+  const importTTPTrades=(raw)=>{  const lines=raw.trim().split('\n').filter(l=>l.trim());
   const parsed=[];
   for(const line of lines){
     const parts=line.split('\t').map(s=>s.trim());
@@ -1563,8 +1562,7 @@ const sendAiMessage=async()=>{
               const tradeNeed=Math.ceil(dailyNeed/DAILY_LIMIT);
               const slD=20,tpD=40;
               return(
-                <div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
+                <div>                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
                     {[{l:"AKTUELL",v:"$"+saldo.toLocaleString("de-DE",{maximumFractionDigits:0}),c:"#f0f4ff"},
                       {l:"ZIEL",v:"$"+goals.targetBalance.toLocaleString("de-DE"),c:P},
                       {l:"NOCH FEHLT",v:missing<=0?"✓":"+$"+Math.round(missing).toLocaleString("de-DE"),c:missing<=0?G:R}
