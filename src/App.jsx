@@ -1070,7 +1070,7 @@ const sendAiMessage=async()=>{
         </div>
       </div>}
 
-      {showOnboarding&&<div style={{position:"fixed",inset:0,zIndex:9998,background:"#080c14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",overflowY:"auto"}}>
+      {showOnboarding&&authUser&&<div style={{position:"fixed",inset:0,zIndex:9998,background:"#080c14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",overflowY:"auto"}}>
         {/* STEP 0: WELCOME */}
         {onboardStep===0&&<div style={{width:"100%",maxWidth:400,textAlign:"center",animation:"fadeIn .5s ease"}}>
           <div style={{fontSize:48,fontWeight:900,letterSpacing:"-2px",marginBottom:8}}><span style={{color:B}}>Mind</span><span style={{color:"#f0f4ff"}}>Risk</span></div>
