@@ -28,30 +28,64 @@ async function getWeeklyNews() {
   if (newsCache.date === todayStr && newsCache.data) return newsCache.data;
 
   try {
-    // Get next 5 trading days
-    const end = new Date(today);
-    end.setDate(end.getDate() + 14);
-    const endStr = end.toISOString().split('T')[0];
+    // Try Forex Factory public calendar (this week + next week)
+    const urls = [
+      'https://nfs.faireconomy.media/ff_calendar_thisweek.json',
+      'https://nfs.faireconomy.media/ff_calendar_nextweek.json'
+    ];
+    
+    let allEvents = [];
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (res.ok) {
+          const data = await res.json();
+          allEvents = allEvents.concat(data);
+        }
+      } catch(e) {}
+    }
 
-    const url = `https://financialmodelingprep.com/api/v3/economic_calendar?from=${todayStr}&to=${endStr}&apikey=${FMP_KEY}`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
+    if (allEvents.length === 0) {
+      // Fallback: FMP API
+      const end = new Date(today);
+      end.setDate(end.getDate() + 14);
+      const endStr = end.toISOString().split('T')[0];
+      const url = `https://financialmodelingprep.com/api/v3/economic_calendar?from=${todayStr}&to=${endStr}&apikey=${FMP_KEY}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        allEvents = data.map(e => ({
+          date: e.date?.split('T')[0] || '',
+          time: e.date?.split('T')[1]?.slice(0,5) || '',
+          title: e.event,
+          impact: e.impact,
+          country: 'USD'
+        }));
+      }
+    }
 
-    // Only HIGH impact USD events
-    const events = data
-      .filter(e => e.impact === 'High' && (e.currency === 'USD' || e.country === 'US'))
+    // Filter HIGH impact USD only
+    const events = allEvents
+      .filter(e => {
+        const imp = (e.impact || '').toLowerCase();
+        const country = (e.country || e.currency || '').toUpperCase();
+        return (imp === 'high' || imp === '3') && country === 'USD';
+      })
       .map(e => ({
-        date: e.date?.split('T')[0] || '',
-        time: e.date?.split('T')[1]?.slice(0,5) || '',
-        name: e.event,
-        forecast: e.estimate || '',
+        date: e.date?.split('T')[0] || e.date || '',
+        time: e.date?.includes('T') ? e.date.split('T')[1]?.slice(0,5) : (e.time || ''),
+        name: e.title || e.event || e.name,
+        forecast: e.forecast || e.estimate || '',
         previous: e.previous || ''
       }))
+      .filter(e => e.date >= todayStr)
       .sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
 
-    newsCache = { data: events, date: todayStr };
-    return events;
+    if (events.length > 0) {
+      newsCache = { data: events, date: todayStr };
+      return events;
+    }
+    return null;
   } catch(e) {
     return null;
   }
@@ -174,6 +208,7 @@ REGELN: Max ${ctx.maxTrades||2} Trades | ${ctx.windowStart||'16:15'}-${ctx.windo
 WENN WOCHENENDE: Klar sagen Märkte geschlossen, keine Trade-Empfehlung.
 WENN NEWS IN <2H: Warnen, Uhrzeit nennen, empfehlen davor oder danach zu traden.
 WENN NACH NEWS GEFRAGT: Exakte Zeiten und Namen aus dem Kalender nennen.
+WICHTIG: Die HIGH IMPACT NEWS oben kommen von einem LIVE-WIRTSCHAFTSKALENDER (Forex Factory API). Diese Daten sind aktuell und zuverlässig. Nutze sie - nicht dein Training.
 
 PSYCHOLOGIE: Verlust = Statistik. Overtrading sofort stoppen. 20% Strategie, 80% Psychologie.`;
 }
