@@ -925,12 +925,8 @@ const sendAiMessage=async()=>{
         coachProfile:coachProfile||'',
         coachMemory:coachMemory.slice(0,8).map(m=>m.note).join(' | '),
         chatHistorySummary:aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100).replace(/[\u0080-\uFFFF]/g,'').replace(/\t/g,' ')).join(' | '),
-        todayTrades:(todT.map(t=>t.time+' '+t.dir+' $'+Math.round(t.pnl)).join(', ')||'Keine Trades heute').replace(/[\u0080-\uFFFF]/g,''),
-        totalTrades:allT09.length,
         allTimeWR:allT09.length?Math.round(allT09.filter(t=>t.pnl>0).length/allT09.length*100):0,
-        saldo:Math.round(saldo),
-        todayPnl:todPnl,
-        winRate:t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0
+        todayPnl:todPnl
       };
       // Build messages mit optionalem Bild
       const apiMessages=newMsgs.map((m,i)=>{
