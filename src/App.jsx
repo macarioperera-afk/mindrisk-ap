@@ -216,9 +216,9 @@ export default function App(){
   const[challengeStart,setChallengeStart]=useState(()=>localStorage.getItem('ttp_challenge_start')||'2000-01-01');
   const[acct,setAcct]=useState(()=>{
     try{return JSON.parse(localStorage.getItem('ttp_account')||'null')||{
-      type:'challenge',broker:'TTP',number:'P1-235109',
+      type:'challenge',broker:'',number:'',name:'',
       size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30,lotSize:1
-    };}catch(e){return{type:'challenge',broker:'TTP',number:'P1-235109',size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30};}
+    };}catch(e){return{type:'challenge',broker:'',number:'',size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30};}
   });
   const saveAcct=(a)=>{setAcct(a);localStorage.setItem('ttp_account',JSON.stringify(a));};
   const startChallenge=()=>{
@@ -275,10 +275,10 @@ export default function App(){
     // AI just gives motivating message
     const statusText=light==='red'?'Heute ist nicht dein Tag für Trades':light==='yellow'?'Heute mit Vorsicht':' Du bist bereit';
     const prompt=light==='red'
-      ?"Jeronimo macht seinen Check-in. Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5, Stress "+mindCheckIn.stress+"/5. Empfehle ihm heute NICHT zu traden. Gib ihm 2-3 kurze motivierende Sätze: dass jeder Tag Chancen hat, dass Pause manchmal der beste Trade ist, und was er stattdessen tun kann (Analyse, Lernen). Klingt ermutigend, nicht negativ."
+      ?"Trader macht seinen Check-in. Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5, Stress "+mindCheckIn.stress+"/5. Empfehle ihm heute NICHT zu traden. Gib ihm 2-3 kurze motivierende Sätze: dass jeder Tag Chancen hat, dass Pause manchmal der beste Trade ist, und was er stattdessen tun kann (Analyse, Lernen). Klingt ermutigend, nicht negativ."
       :light==='yellow'
-      ?"Jeronimo Check-in: Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5, Stress "+mindCheckIn.stress+"/5. Gib Rat: wenn er tradet dann max 1 Trade mit weniger Risiko. 2 motivierende Sätze."
-      :"Jeronimo Check-in: alles gut! Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5. Gib ihm einen kurzen motivierenden Satz für den Trading-Tag.";
+      ?"Trader Check-in: Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5, Stress "+mindCheckIn.stress+"/5. Gib Rat: wenn er tradet dann max 1 Trade mit weniger Risiko. 2 motivierende Sätze."
+      :"Trader Check-in: alles gut! Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5. Gib ihm einen kurzen motivierenden Satz für den Trading-Tag.";
     try{
       const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:coachProfile||'',coachMemory:coachMemory.slice(0,3).map(m=>m.note).join(' | ')}})});
       const d=await res.json();
@@ -337,7 +337,7 @@ export default function App(){
       const inWindow=(h===16&&m>=15)||(h===17&&m<=30);
       setAiOpen(true);
       const greet=h<12?"Guten Morgen":h<17?"Hi":h<21?"Guten Abend":"Hey";
-      setAiMessages([{role:"assistant",content:greet+" Jeronimo! 👋\n\nHeute ist "+tod+". "+(inWindow?"⚡ Trading-Fenster ist OFFEN!":"Trading-Fenster: 16:15–17:30 Uhr.")+"\n\nTippe '☀️ Tages-Briefing' für die volle KI-Analyse – oder stell direkt eine Frage!",auto:true}]);
+      setAiMessages([{role:"assistant",content:greet+" "+(acct.name||"Trader")+"! 👋\n\nHeute ist "+tod+". "+(inWindow?"⚡ Trading-Fenster ist OFFEN!":"Trading-Fenster: 16:15–17:30 Uhr.")+"\n\nTippe '☀️ Tages-Briefing' für die volle KI-Analyse – oder stell direkt eine Frage!",auto:true}]);
     },2200);
     return()=>{clearTimeout(t);clearTimeout(t2);};
   },[]);
@@ -493,7 +493,7 @@ export default function App(){
     const inWindow=(hour===16&&min>=15)||(hour===17&&min<=30);
     if(trigger==="daily_motivation"){
       const q=getDailyQuote();
-      return "Guten Morgen Jeronimo! \u2600\uFE0F\n\n"+q+"\n\nHeute ("+tod+"): "+todayT.length+"/2 Trades\n"+tod+"-WR historisch: "+dayWR+"%\n\nRoutine: Regeln durchgehen \u2192 Setup warten \u2192 Nur 16:15-17:30 Uhr.";
+      return "Guten Morgen "+(acct.name||"Trader")+"! \u2600\uFE0F\n\n"+q+"\n\nHeute ("+tod+"): "+todayT.length+"/2 Trades\n"+tod+"-WR historisch: "+dayWR+"%\n\nRoutine: Regeln durchgehen \u2192 Setup warten \u2192 Nur 16:15-17:30 Uhr.";
     }
     if(trigger==="trading_window"){
       if(dayWR<40&&dayMap[tod]&&dayMap[tod].n>=3)return "\u26A0\uFE0F Trading-Fenster offen, aber "+tod+" ist dein schwacher Tag ("+dayWR+"% WR). Empfehlung: Heute Pause oder demo.";
@@ -510,7 +510,7 @@ export default function App(){
       return "\uD83D\uDCC8 Gewinn +$"+lastT.pnl.toFixed(0)+" aber Regelquote nur "+rulePct+"%. Glueck ist keine Strategie.";
     }
     const msg=(userMsg||"").toLowerCase();
-    if(msg.includes("hallo")||msg.includes("hi"))return "Hi Jeronimo! \uD83D\uDC4B "+t09.length+" Trades, "+wr+"% WR. Heute: "+todayT.length+"/2 ("+(todPnlV>=0?"+":"")+"$"+todPnlV.toFixed(0)+").";
+    if(msg.includes("hallo")||msg.includes("hi"))return "Hi "+(acct.name||"Trader")+"! \uD83D\uDC4B "+t09.length+" Trades, "+wr+"% WR. Heute: "+todayT.length+"/2 ("+(todPnlV>=0?"+":"")+"$"+todPnlV.toFixed(0)+").";
     if(msg.includes("heute"))return todayT.length===0?"Heute noch keine Trades. "+tod+"-WR: "+dayWR+"%. "+(inWindow?"Fenster offen!":"Fenster: 16:15-17:30."):"Heute: "+todayT.length+" Trades, P&L: "+(todPnlV>=0?"+":"")+"$"+todPnlV.toFixed(0)+(todayT.length>=2?". LIMIT!":". Noch "+(2-todayT.length)+" Trade moeglich.");
     if(msg.includes("soll ich")||msg.includes("traden")){
       if(todayT.length>=2)return "Nein. Du hast schon "+todayT.length+"/2 Trades. Limit erreicht.";
@@ -571,7 +571,7 @@ Sei direkt und ehrlich. Erkenne Muster wenn du sie siehst. Max 4 Sätze.`;
     else if(type==="overtrading"){
       const tod3=t09.filter(t=>t.date===todayISO());
       const todTradesStr=tod3.map(t=>"• "+t.time+" "+t.contract+" "+(t.pnl>=0?"+":"")+"$"+t.pnl.toFixed(0)).join("\n");
-      prompt="NOTFALL: Jeronimo hat gerade seinen "+tod3.length+". Trade gemacht (Limit: "+DAILY_LIMIT+").\n\nHeutige Trades:\n"+todTradesStr+"\nHeutige P&L: "+(todPnl>=0?"+":"")+"$"+todPnl.toFixed(0)+"\n\nGib eine KLARE STOPP-Nachricht. Kurz, direkt, keine Ausreden akzeptieren. Max 3 Sätze.";
+      prompt="NOTFALL: "+(acct.name||"Trader")+" hat gerade seinen "+tod3.length+". Trade gemacht (Limit: "+DAILY_LIMIT+").\n\nHeutige Trades:\n"+todTradesStr+"\nHeutige P&L: "+(todPnl>=0?"+":"")+"$"+todPnl.toFixed(0)+"\n\nGib eine KLARE STOPP-Nachricht. Kurz, direkt, keine Ausreden akzeptieren. Max 3 Sätze.";
     }
     else if(type==="trading_window"){
       prompt=`Das Trading-Fenster (16:15-17:30) ist gerade geöffnet.
@@ -1012,7 +1012,7 @@ const sendAiMessage=async()=>{
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
           <div style={{flex:1}}>
             <div style={{fontWeight:900,fontSize:30,letterSpacing:"-1.5px",lineHeight:1}}><span style={{color:B}}>Mind</span><span style={{color:"#f0f4ff"}}>Risk</span></div>
-            <div style={{color:"#f0f4ff",fontSize:12,fontWeight:700,marginTop:3}}>Jeronimo <span style={{color:"#6b7a9a",fontSize:10,fontWeight:400}}>· Konto 09 · P1-235109</span></div>
+            <div style={{color:"#f0f4ff",fontSize:12,fontWeight:700,marginTop:3}}>{acct.name||"Trader"} <span style={{color:"#6b7a9a",fontSize:10,fontWeight:400}}>{acct.number?("· "+acct.number):""}</span></div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{fontSize:10}}>
@@ -1921,7 +1921,7 @@ const sendAiMessage=async()=>{
               {settingsSection==="coach"&&sec.id==="coach"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#0d1320"}}>
                 <div style={{color:"#8b96b0",fontSize:10,marginBottom:6}}>KI liest das bei JEDER Antwort:</div>
                 <textarea rows={5} value={coachProfile} onChange={e=>{setCoachProfile(e.target.value);localStorage.setItem('ttp_coach_profile',e.target.value);}}
-                  placeholder="Ich bin Jeronimo. Ich trade MNQ/NQ bei TTP. Mein Problem ist Overtrading nach Verlusten..."
+                  placeholder="Ich trade bei einer Prop Firm. Beschreibe hier dein Profil, Probleme und Ziele..."
                   style={{resize:"vertical",fontSize:11,lineHeight:1.5,width:"100%",marginBottom:8}}/>
                 <div style={{color:G,fontSize:9,marginBottom:10}}>Schreib auch Psychologie, Schwächen, Ziele</div>
                 {coachMemory.length>0&&<div>
@@ -1945,6 +1945,7 @@ const sendAiMessage=async()=>{
                       style={{padding:"8px",borderRadius:8,fontSize:11,fontWeight:700,background:acct.type===t.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(acct.type===t.k?"#6366f1":"#2d3548"),color:acct.type===t.k?"#a5b4fc":"#6b7a9a"}}>{t.l}</button>
                   ))}
                 </div>
+                <Field label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 <Field label="BROKER"><input defaultValue={acct.broker} onBlur={e=>saveAcct({...acct,broker:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 <Field label="KONTO NUMMER"><input defaultValue={acct.number} onBlur={e=>saveAcct({...acct,number:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:8}}>KONTO GRÖßE</div>
