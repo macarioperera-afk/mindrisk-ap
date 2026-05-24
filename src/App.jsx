@@ -139,16 +139,11 @@ const sanitize=s=>typeof s==="string"?s.replace(/[\uD800-\uDFFF]/g,""):s;
 export default function App(){
   const[trades,setTrades]=useState(()=>{
     try{
-      const v=localStorage.getItem('ttp_data_version');
-      if(v!=='2026-05-15-v3'){
-        localStorage.setItem('ttp_data_version','2026-05-15-v3');
-        localStorage.setItem('ttp_trades',JSON.stringify(SEED));
-        const seedSum=SEED.filter(t=>t.acct==='09').reduce((s,t)=>s+t.pnl,0);
-        localStorage.setItem('ttp_saldo',Math.round((50000+seedSum)*100)/100);
-        return SEED;
-      }
+      // New users start empty - no demo data
+      const onboardingDone=localStorage.getItem('ttp_onboarding_done');
+      if(!onboardingDone) return [];
       const s=localStorage.getItem('ttp_trades');
-      if(!s) return SEED;
+      if(!s) return [];
       const parsed=JSON.parse(s);
       // Migration: fix imported trades that wrongly have all rules=true
       const migrated=parsed.map(t=>{
@@ -165,6 +160,9 @@ export default function App(){
       return migrated;
     }catch(e){return SEED;}
   });
+  const[showOnboarding,setShowOnboarding]=useState(()=>!localStorage.getItem('ttp_onboarding_done'));
+  const[onboardStep,setOnboardStep]=useState(0);
+  const[onboardData,setOnboardData]=useState({name:'',firm:'TTP',firmOther:'',size:50000,maxDD:2000,dailyDD:1000,target:54000,number:'',psychAnswers:{}});
   const[showSplash,setShowSplash]=useState(true);
   const[tab,setTab]=useState("dash");
   const[toast,setToast]=useState("");
@@ -210,7 +208,55 @@ export default function App(){
       return s?JSON.parse(s):{maxTrades:2,pauseMins:15,windowStart:"16:15",windowEnd:"17:30",monthlyGoal:1500,riskPerTradePct:2};
     }catch(e){return{maxTrades:2,pauseMins:15,windowStart:"16:15",windowEnd:"17:30",monthlyGoal:1500,riskPerTradePct:2};}
   });
-  const saveSettings=(s)=>{setSettings(s);localStorage.setItem('ttp_settings',JSON.stringify(s));};
+  const saveSettings=(s)=>{setSettings(s);localStorage.setItem('ttp_settings',JSON.stringify(s));}
+
+  const completeOnboarding=async()=>{
+    // Save profile
+    const newAcct={
+      type:'challenge',
+      broker:onboardData.firm==='Andere'?onboardData.firmOther:onboardData.firm,
+      number:onboardData.number,
+      name:onboardData.name,
+      size:onboardData.size,
+      maxDD:onboardData.maxDD,
+      dailyDD:onboardData.dailyDD,
+      target:onboardData.target,
+      targetDays:30,
+      lotSize:1
+    };
+    saveAcct(newAcct);
+    setSaldo(onboardData.size);
+    localStorage.setItem('ttp_saldo',onboardData.size);
+    setMaxDDLevel(onboardData.size-onboardData.maxDD);
+    localStorage.setItem('ttp_maxdd_level',onboardData.size-onboardData.maxDD);
+    // Save psychology answers as coach profile
+    const psychText=Object.entries(onboardData.psychAnswers).map(([k,v])=>k+': '+v).join(' | ');
+    setCoachProfile(psychText);
+    localStorage.setItem('ttp_coach_profile',psychText);
+    // Mark onboarding done
+    localStorage.setItem('ttp_onboarding_done','true');
+    localStorage.setItem('ttp_challenge_start',new Date().toISOString().split('T')[0]);
+    setChallengeStart(new Date().toISOString().split('T')[0]);
+    setShowOnboarding(false);
+    // Trigger AI welcome analysis
+    setTimeout(()=>{
+      setAiOpen(true);
+      const firmName=onboardData.firm==='Andere'?onboardData.firmOther:onboardData.firm;
+      const psychSummary=Object.values(onboardData.psychAnswers).join(', ');
+      triggerAiPopupCustom('Neuer Trader '+onboardData.name+' startet bei '+firmName+'. Psychologie-Check: '+psychSummary+'. Konto: $'+onboardData.size+'. Gib eine kurze persönliche Willkommensnachricht und deinen wichtigsten Rat für den Start. Max 3 Sätze.');
+    },1000);
+  };
+
+  const triggerAiPopupCustom=async(prompt)=>{
+    setAiLoading(true);
+    setAiMessages([{role:'assistant',content:'Analysiere deinen Profil...'}]);
+    try{
+      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:'',coachMemory:'',chatHistorySummary:''}})});
+      const d=await res.json();
+      if(d.message)setAiMessages([{role:'assistant',content:d.message}]);
+    }catch(e){setAiMessages([{role:'assistant',content:'Willkommen bei MindRisk! Ich bin dein persönlicher Trading Coach.'}]);}
+    setAiLoading(false);
+  };;
   const[profExpanded,setProfExpanded]=useState(false);
   const[monatExp,setMonatExp]=useState(false);
   const[challengeStart,setChallengeStart]=useState(()=>localStorage.getItem('ttp_challenge_start')||'2000-01-01');
@@ -950,7 +996,134 @@ const sendAiMessage=async()=>{
 
   return(
     <div style={{background:"#0d1320",minHeight:"100vh",color:"#f0f4ff",fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",fontSize:isDesktop?15:14,paddingBottom:"calc(70px + env(safe-area-inset-bottom,0px))",width:"100%",overflowX:"hidden"}}>
-      {showSplash&&<div style={{position:"fixed",inset:0,zIndex:9999,background:"radial-gradient(circle at center,#1a1f2e 0%,#0f1117 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",animation:"fadeOut 0.4s ease 1.4s forwards"}}>
+      {showOnboarding&&<div style={{position:"fixed",inset:0,zIndex:9998,background:"#080c14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",overflowY:"auto"}}>
+        {/* STEP 0: WELCOME */}
+        {onboardStep===0&&<div style={{width:"100%",maxWidth:400,textAlign:"center",animation:"fadeIn .5s ease"}}>
+          <div style={{fontSize:48,fontWeight:900,letterSpacing:"-2px",marginBottom:8}}><span style={{color:B}}>Mind</span><span style={{color:"#f0f4ff"}}>Risk</span></div>
+          <div style={{fontSize:12,color:"#6b7a9a",letterSpacing:"3px",marginBottom:40}}>TRADING JOURNAL</div>
+          <div style={{width:64,height:64,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a855f7)",margin:"0 auto 32px",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 40px rgba(99,102,241,0.4)"}}>
+            <svg width="32" height="32" viewBox="0 0 28 28" fill="none"><circle cx="10" cy="12" r="2.5" fill="white"/><circle cx="18" cy="12" r="2.5" fill="white"/><path d="M9 17.5 Q14 21 19 17.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none"/></svg>
+          </div>
+          <div style={{fontSize:26,fontWeight:800,color:"#f0f4ff",marginBottom:12,letterSpacing:"-0.5px"}}>Dein persönlicher Trading Coach</div>
+          <div style={{fontSize:15,color:"#6b7a9a",lineHeight:1.6,marginBottom:40}}>MindRisk hilft dir disziplinierter zu traden, Overtrading zu stoppen und bei Prop Firm Challenges erfolgreich zu sein.</div>
+          <button onClick={()=>setOnboardStep(1)} style={{width:"100%",padding:"16px",borderRadius:14,fontWeight:800,fontSize:16,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",border:"none",marginBottom:12}}>Jetzt starten →</button>
+          <div style={{fontSize:12,color:"#4b5568"}}>Kostenlos · Kein Account nötig</div>
+        </div>}
+
+        {/* STEP 1: PROFIL */}
+        {onboardStep===1&&<div style={{width:"100%",maxWidth:400,animation:"fadeIn .5s ease"}}>
+          <div style={{color:"#6366f1",fontSize:11,fontWeight:700,letterSpacing:"2px",marginBottom:8}}>SCHRITT 1 VON 3</div>
+          <div style={{fontSize:24,fontWeight:800,color:"#f0f4ff",marginBottom:4,letterSpacing:"-0.5px"}}>Dein Profil</div>
+          <div style={{fontSize:14,color:"#6b7a9a",marginBottom:28}}>Damit der Coach dich wirklich kennt.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid #2d3548"}}>
+              <div style={{color:"#6b7a9a",fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>DEIN NAME</div>
+              <input value={onboardData.name} onChange={e=>setOnboardData(p=>({...p,name:e.target.value}))} placeholder="z.B. Max" style={{background:"transparent",border:"none",fontSize:16,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/>
+            </div>
+            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid #2d3548"}}>
+              <div style={{color:"#6b7a9a",fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>PROP FIRM</div>
+              <select value={onboardData.firm} onChange={e=>setOnboardData(p=>({...p,firm:e.target.value}))} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}>
+                <option value="TTP">The Trading Pit (TTP)</option>
+                <option value="FTMO">FTMO</option>
+                <option value="MyFundedFX">MyFundedFX</option>
+                <option value="Topstep">Topstep</option>
+                <option value="E8 Funding">E8 Funding</option>
+                <option value="Andere">Andere</option>
+              </select>
+            </div>
+            {onboardData.firm==="Andere"&&<div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid #2d3548"}}>
+              <div style={{color:"#6b7a9a",fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>FIRM NAME</div>
+              <input value={onboardData.firmOther} onChange={e=>setOnboardData(p=>({...p,firmOther:e.target.value}))} placeholder="Firma eingeben" style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/>
+            </div>}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid #2d3548"}}>
+                <div style={{color:"#6b7a9a",fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>KONTO ($)</div>
+                <select value={onboardData.size} onChange={e=>setOnboardData(p=>({...p,size:parseInt(e.target.value),target:parseInt(e.target.value)+parseInt(e.target.value)*0.08,maxDD:parseInt(e.target.value)*0.04,dailyDD:parseInt(e.target.value)*0.02}))} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}>
+                  {[25000,50000,75000,100000,125000,150000,200000].map(s=><option key={s} value={s}>${(s/1000).toFixed(0)}k</option>)}
+                </select>
+              </div>
+              <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid #2d3548"}}>
+                <div style={{color:"#6b7a9a",fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>MAX DD ($)</div>
+                <input type="number" value={onboardData.maxDD} onChange={e=>setOnboardData(p=>({...p,maxDD:parseInt(e.target.value)||2000}))} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/>
+              </div>
+            </div>
+            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid #2d3548"}}>
+              <div style={{color:"#6b7a9a",fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>KONTO-NUMMER (optional)</div>
+              <input value={onboardData.number} onChange={e=>setOnboardData(p=>({...p,number:e.target.value}))} placeholder="z.B. P1-235109" style={{background:"transparent",border:"none",fontSize:14,color:"#f0f4ff",width:"100%",outline:"none"}}/>
+            </div>
+          </div>
+          <button onClick={()=>onboardData.name.trim()?setOnboardStep(2):null} style={{width:"100%",padding:"16px",borderRadius:14,fontWeight:800,fontSize:16,background:onboardData.name.trim()?"linear-gradient(135deg,#6366f1,#a855f7)":"#2d3548",color:"#fff",border:"none",marginTop:20}}>Weiter →</button>
+          <button onClick={()=>setOnboardStep(0)} style={{width:"100%",padding:"10px",background:"none",color:"#4b5568",fontSize:13,marginTop:8}}>← Zurück</button>
+        </div>}
+
+        {/* STEP 2: PSYCHOLOGIE */}
+        {onboardStep===2&&<div style={{width:"100%",maxWidth:400,animation:"fadeIn .5s ease"}}>
+          <div style={{color:"#6366f1",fontSize:11,fontWeight:700,letterSpacing:"2px",marginBottom:8}}>SCHRITT 2 VON 3</div>
+          <div style={{fontSize:24,fontWeight:800,color:"#f0f4ff",marginBottom:4,letterSpacing:"-0.5px"}}>Ehrlicher Check</div>
+          <div style={{fontSize:14,color:"#6b7a9a",marginBottom:28}}>Damit der Coach sofort helfen kann. Niemand sieht das außer dir.</div>
+          {[
+            {k:"problem",q:"Was ist dein größtes Trading-Problem?",opts:["Overtrading","Revenge Trading","FOMO","SL nicht einhalten","Zu früh aussteigen","Ungeduld"]},
+            {k:"challenges",q:"Wie viele Challenges hast du schon verloren?",opts:["Noch keine","1-2","3-5","Mehr als 5"]},
+            {k:"after_loss",q:"Was passiert nach einem Verlust?",opts:["Ich höre auf","Ich versuche es zurückzuholen","Ich mache Pause","Ich trade normal weiter"]},
+            {k:"discipline",q:"Wie diszipliniert befolgst du deine Regeln?",opts:["Immer","Meistens","Manchmal","Selten"]},
+          ].map(q=>(
+            <div key={q.k} style={{marginBottom:20}}>
+              <div style={{color:"#f0f4ff",fontSize:14,fontWeight:600,marginBottom:10}}>{q.q}</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {q.opts.map(o=>(
+                  <button key={o} onClick={()=>setOnboardData(p=>({...p,psychAnswers:{...p.psychAnswers,[q.k]:o}}))}
+                    style={{padding:"8px 14px",borderRadius:20,fontSize:12,fontWeight:600,
+                      background:onboardData.psychAnswers[q.k]===o?"rgba(99,102,241,0.3)":"rgba(255,255,255,0.04)",
+                      border:"1px solid "+(onboardData.psychAnswers[q.k]===o?"#6366f1":"rgba(255,255,255,0.1)"),
+                      color:onboardData.psychAnswers[q.k]===o?"#a5b4fc":"#6b7a9a"}}>
+                    {o}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button onClick={()=>Object.keys(onboardData.psychAnswers).length>=4?setOnboardStep(3):null}
+            style={{width:"100%",padding:"16px",borderRadius:14,fontWeight:800,fontSize:16,
+              background:Object.keys(onboardData.psychAnswers).length>=4?"linear-gradient(135deg,#6366f1,#a855f7)":"#2d3548",
+              color:"#fff",border:"none",marginTop:8}}>
+            {Object.keys(onboardData.psychAnswers).length>=4?"Weiter →":"Alle Fragen beantworten ("+Object.keys(onboardData.psychAnswers).length+"/4)"}
+          </button>
+          <button onClick={()=>setOnboardStep(1)} style={{width:"100%",padding:"10px",background:"none",color:"#4b5568",fontSize:13,marginTop:8}}>← Zurück</button>
+        </div>}
+
+        {/* STEP 3: FERTIG */}
+        {onboardStep===3&&<div style={{width:"100%",maxWidth:400,textAlign:"center",animation:"fadeIn .5s ease"}}>
+          <div style={{color:"#6366f1",fontSize:11,fontWeight:700,letterSpacing:"2px",marginBottom:8}}>SCHRITT 3 VON 3</div>
+          <div style={{fontSize:28,fontWeight:800,color:"#f0f4ff",marginBottom:8}}>Alles bereit!</div>
+          <div style={{fontSize:14,color:"#6b7a9a",marginBottom:32,lineHeight:1.6}}>Dein Coach kennt jetzt dein Profil und deine Schwächen. Er wird dir von Anfang an gezielt helfen.</div>
+          <div style={{background:"#141e35",borderRadius:14,padding:20,marginBottom:24,textAlign:"left",border:"1px solid rgba(99,102,241,0.2)"}}>
+            <div style={{color:"#6366f1",fontSize:11,fontWeight:700,marginBottom:12}}>DEIN PROFIL</div>
+            {[
+              ["Name",onboardData.name],
+              ["Firm",onboardData.firm==="Andere"?onboardData.firmOther:onboardData.firm],
+              ["Konto","$"+(onboardData.size/1000).toFixed(0)+"k"],
+              ["Hauptproblem",onboardData.psychAnswers.problem||"-"],
+              ["Nach Verlust",onboardData.psychAnswers.after_loss||"-"],
+            ].map(([k,v])=>(
+              <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #2d3548",fontSize:13}}>
+                <span style={{color:"#6b7a9a"}}>{k}</span>
+                <span style={{color:"#f0f4ff",fontWeight:600}}>{v}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={completeOnboarding} style={{width:"100%",padding:"16px",borderRadius:14,fontWeight:800,fontSize:16,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",border:"none",marginBottom:12}}>MindRisk starten 🚀</button>
+          <button onClick={()=>setOnboardStep(2)} style={{width:"100%",padding:"10px",background:"none",color:"#4b5568",fontSize:13}}>← Zurück</button>
+        </div>}
+
+        {/* Progress dots */}
+        {onboardStep>0&&<div style={{position:"fixed",bottom:32,display:"flex",gap:8}}>
+          {[1,2,3].map(s=>(
+            <div key={s} style={{width:s===onboardStep?24:8,height:8,borderRadius:4,background:s<=onboardStep?"#6366f1":"#2d3548",transition:"all .3s"}}/>
+          ))}
+        </div>}
+      </div>}
+
+            {showSplash&&<div style={{position:"fixed",inset:0,zIndex:9999,background:"radial-gradient(circle at center,#1a1f2e 0%,#0f1117 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",animation:"fadeOut 0.4s ease 1.4s forwards"}}>
         <div style={{fontSize:42,fontWeight:900,letterSpacing:"-2px",marginBottom:8}}><span style={{color:B}}>Mind</span><span style={{color:"#f0f4ff"}}>Risk</span></div>
         <div style={{fontSize:11,color:"#8b96b0",letterSpacing:"3px",marginBottom:32}}>TRADING JOURNAL</div>
         <div style={{width:48,height:48,borderRadius:"50%",border:"3px solid #2d3548",borderTopColor:B,animation:"spin 0.8s linear infinite"}}/>
