@@ -173,6 +173,8 @@ export default function App(){
   const[authError,setAuthError]=useState("");
   const[authWorking,setAuthWorking]=useState(false);
   const[showOnboarding,setShowOnboarding]=useState(()=>!localStorage.getItem('ttp_onboarding_done'));
+  const[newsWarning,setNewsWarning]=useState(null); // {name, time, minsLeft}
+  const[weeklyNews,setWeeklyNews]=useState([]);
   const[onboardStep,setOnboardStep]=useState(0);
   const[onboardData,setOnboardData]=useState({name:'',firm:'TTP',firmOther:'',size:50000,maxDD:2000,dailyDD:1000,target:54000,number:'',psychAnswers:{}});
   const[showSplash,setShowSplash]=useState(true);
@@ -408,6 +410,46 @@ export default function App(){
   const isDesktop=screenW>=800;
 
   useEffect(()=>{const id=setInterval(()=>setTick(t=>t+1),1000);return()=>clearInterval(id);},[]);
+
+  // Fetch weekly news on load
+  useEffect(()=>{
+    const fetchNews=async()=>{
+      try{
+        const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({newsOnly:true})});
+        const d=await res.json();
+        if(d.news)setWeeklyNews(d.news);
+      }catch(e){}
+    };
+    fetchNews();
+  },[]);
+
+  // Check 15-min warning before HIGH impact news
+  useEffect(()=>{
+    const check=()=>{
+      if(!weeklyNews.length)return;
+      const now=new Date();
+      const todayStr=now.toISOString().split('T')[0];
+      const todayEvents=weeklyNews.filter(n=>n.date===todayStr);
+      for(const ev of todayEvents){
+        if(!ev.time)continue;
+        const [h,m]=ev.time.split(':').map(Number);
+        // Convert ET to local (ET = UTC-4/UTC-5, approximate)
+        const eventUTC=new Date(todayStr+'T'+ev.time+':00-04:00');
+        const diffMs=eventUTC-now;
+        const diffMins=Math.round(diffMs/60000);
+        if(diffMins>=14&&diffMins<=16){
+          setNewsWarning({name:ev.name,time:ev.time,minsLeft:diffMins});
+          setAiOpen(true);
+          // Auto message
+          setAiMessages(prev=>[...prev,{role:'assistant',content:'⚠️ NEWS IN 15 MIN: '+ev.name+' um '+ev.time+' ET (High Impact). Kein Trade jetzt — warte bis die Volatilität sich legt!'}]);
+          break;
+        }
+      }
+    };
+    const id=setInterval(check,60000);
+    check();
+    return()=>clearInterval(id);
+  },[weeklyNews]);
 
   // Auth listener
   useEffect(()=>{
@@ -790,7 +832,8 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
       setAiImage({base64,mediaType:file.type||"image/jpeg"});
       setAiImagePreview(ev.target.result);
     };
-    reader.readAsDataURL(file);  };
+    reader.readAsDataURL(file);
+  };
 
   const importTTPTrades=(raw)=>{  const lines=raw.trim().split('\n').filter(l=>l.trim());
   const parsed=[];
@@ -1582,7 +1625,8 @@ const sendAiMessage=async()=>{
               </div>
             </div>
             {(()=>{
-              const startSaldo=Math.round((saldo-monthPnl)*100)/100;              const monthNeeded=Math.round(Math.max(1,goals.targetBalance-startSaldo));
+              const startSaldo=Math.round((saldo-monthPnl)*100)/100;
+              const monthNeeded=Math.round(Math.max(1,goals.targetBalance-startSaldo));
               const monthPct=Math.round(Math.min(100,Math.max(0,monthPnl/monthNeeded*100)));
               const missing=Math.round(Math.max(0,goals.targetBalance-saldo));
               const today2=new Date();const endM2=new Date(today2.getFullYear(),today2.getMonth()+1,0);
