@@ -1,5 +1,5 @@
 // MindRisk Trading Coach - Claude API Bridge
-// VERSION 5 - Economic Calendar + Smart Caching
+// VERSION 6 - Weekly Economic Calendar + 15min Warning
 
 const FMP_KEY = 'jnJ8yz9FNsoe2uuZQ3A1eYPb1oKlIf3A';
 let newsCache = { data: null, date: null };
@@ -22,30 +22,36 @@ function hasContent(msg) {
   return typeof c === 'string' && c.trim().length > 0;
 }
 
-async function getEconomicNews() {
-  const today = new Date().toISOString().split('T')[0];
-  if (newsCache.date === today && newsCache.data) return newsCache.data;
-  
+async function getWeeklyNews() {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  if (newsCache.date === todayStr && newsCache.data) return newsCache.data;
+
   try {
-    const url = `https://financialmodelingprep.com/stable/economic-calendar?from=${today}&to=${today}&apikey=${FMP_KEY}`;
+    // Get next 5 trading days
+    const end = new Date(today);
+    end.setDate(end.getDate() + 7);
+    const endStr = end.toISOString().split('T')[0];
+
+    const url = `https://financialmodelingprep.com/stable/economic-calendar?from=${todayStr}&to=${endStr}&apikey=${FMP_KEY}`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
-    
-    // Filter HIGH impact USD events only
-    const highImpact = data
-      .filter(e => e.impact === 'High' && e.currency === 'USD')
+
+    // Only HIGH impact USD events
+    const events = data
+      .filter(e => e.impact === 'High' && (e.currency === 'USD' || e.country === 'US'))
       .map(e => ({
-        time: e.date ? e.date.split('T')[1]?.slice(0,5) : '',
+        date: e.date?.split('T')[0] || '',
+        time: e.date?.split('T')[1]?.slice(0,5) || '',
         name: e.event,
-        impact: e.impact,
-        forecast: e.estimate,
-        previous: e.previous
+        forecast: e.estimate || '',
+        previous: e.previous || ''
       }))
-      .slice(0, 5);
-    
-    newsCache = { data: highImpact, date: today };
-    return highImpact;
+      .sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+
+    newsCache = { data: events, date: todayStr };
+    return events;
   } catch(e) {
     return null;
   }
@@ -63,6 +69,12 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'ANTHROPIC_API_KEY fehlt' });
   }
 
+  // Special endpoint: just return news for frontend
+  if (req.body?.newsOnly) {
+    const news = await getWeeklyNews();
+    return res.status(200).json({ news: news || [] });
+  }
+
   try {
     const { messages, context } = req.body;
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -75,10 +87,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Keine gültigen Nachrichten' });
     }
 
-    // Get economic news (cached per day)
-    const economicNews = await getEconomicNews();
-    
-    const systemPrompt = buildSystemPrompt(cleanContext, economicNews);
+    const weeklyNews = await getWeeklyNews();
+    const systemPrompt = buildSystemPrompt(cleanContext, weeklyNews);
     const hasImage = cleanMessages.some(m => Array.isArray(m.content));
     const model = hasImage ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
@@ -99,7 +109,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      return res.status(response.status).json({ error: 'Anthropic API Error', details: errorText });
+      return res.status(response.status).json({ error: 'Anthropic Error', details: errorText });
     }
 
     const data = await response.json();
@@ -116,12 +126,21 @@ function buildSystemPrompt(ctx, news) {
   const days = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
   const dayName = days[today.getDay()];
   const isWeekend = today.getDay() === 0 || today.getDay() === 6;
-  
-  const newsText = news && news.length > 0
-    ? news.map(n => `⚠️ ${n.time} Uhr: ${n.name} (HIGH IMPACT)`).join('\n')
-    : 'Keine High-Impact News heute.';
+  const todayStr = today.toISOString().split('T')[0];
 
-  const marketStatus = isWeekend 
+  // Today's news
+  const todayNews = news?.filter(n => n.date === todayStr) || [];
+  const weekNews = news?.filter(n => n.date > todayStr) || [];
+
+  const todayNewsText = todayNews.length > 0
+    ? todayNews.map(n => `⚠️ ${n.time} ET: ${n.name}${n.forecast?' (Prognose: '+n.forecast+')':''}`).join('\n')
+    : 'Keine HIGH Impact News heute.';
+
+  const weekNewsText = weekNews.length > 0
+    ? weekNews.map(n => `📅 ${n.date} ${n.time} ET: ${n.name}`).join('\n')
+    : 'Keine weiteren HIGH Impact News diese Woche.';
+
+  const marketStatus = isWeekend
     ? `🔴 MÄRKTE GESCHLOSSEN (${dayName})`
     : `🟢 Märkte offen (${dayName})`;
 
@@ -134,35 +153,27 @@ ANTWORTSTIL:
 - Max 1 Emoji
 - KEINE Krisenhotlines
 
-TRADER PROFIL: ${ctx.coachProfile||'Noch nicht eingerichtet'}
-COACH GEDÄCHTNIS: ${ctx.coachMemory||'Keine Erkenntnisse'}
-
 HEUTE: ${dayName}, ${today.toLocaleDateString('de-DE')}
 MARKT: ${marketStatus}
-WIRTSCHAFTSNEWS HEUTE:
-${newsText}
 
-KONTO: Saldo $${ctx.saldo||'?'} | Trades heute: ${ctx.tradeCount||0} | P&L heute: ${ctx.todayPnl>=0?'+':''}$${ctx.todayPnl||0}
-WIN RATE: ${ctx.winRate||0}% | DD Abstand: $${ctx.kontoabstand||'?'}
-PROP FIRM: ${ctx.broker||'Unbekannt'} | Konto: ${ctx.accountNumber||''}
+HIGH IMPACT NEWS HEUTE (3 Sterne, nur USD):
+${todayNewsText}
 
-HEUTIGE TRADES: ${ctx.todayTrades||'Keine'}
-CHAT VERLAUF: ${ctx.chatHistorySummary||'Erste Session'}
+HIGH IMPACT NEWS DIESE WOCHE:
+${weekNewsText}
 
-JERONIMOS HAUPTPROBLEM: OVERTRADING
+TRADER PROFIL: ${ctx.coachProfile||'Noch nicht eingerichtet'}
+GEDÄCHTNIS: ${ctx.coachMemory||'Keine Erkenntnisse'}
 
-REGELN (konfigurierbar):
-- Max ${ctx.maxTrades||2} Trades/Tag
-- Handelsfenster: ${ctx.windowStart||'16:15'}-${ctx.windowEnd||'17:30'} Uhr
-- SL: ${ctx.slTicks||40} Ticks | TP: ${ctx.tpTicks||80} Ticks
+KONTO: $${ctx.saldo||'?'} | Trades: ${ctx.tradeCount||0}/${ctx.maxTrades||2} | P&L: ${ctx.todayPnl>=0?'+':''}$${ctx.todayPnl||0}
+WR: ${ctx.winRate||0}% | DD Abstand: $${ctx.kontoabstand||'?'}
+PROP FIRM: ${ctx.broker||'-'} | ${ctx.accountNumber||''}
 
-WENN WOCHENENDE: Klar sagen dass Märkte geschlossen sind, keine Trading-Empfehlung.
-WENN NEWS HEUTE: Vor High-Impact News warnen, Zeiten nennen.
+REGELN: Max ${ctx.maxTrades||2} Trades | ${ctx.windowStart||'16:15'}-${ctx.windowEnd||'17:30'} Uhr | SL ${ctx.slTicks||40} Ticks | TP ${ctx.tpTicks||80} Ticks
 
-PSYCHOLOGIE (Mark Douglas):
-- Verlust = Statistik, kein Fehler
-- Overtrading: sofort klare Stopp-Botschaft
-- 5 Wahrheiten: Jeder Trade einzigartig, Edge über viele Trades
+WENN WOCHENENDE: Klar sagen Märkte geschlossen, keine Trade-Empfehlung.
+WENN NEWS IN <2H: Warnen, Uhrzeit nennen, empfehlen davor oder danach zu traden.
+WENN NACH NEWS GEFRAGT: Exakte Zeiten und Namen aus dem Kalender nennen.
 
-KERNBOTSCHAFT: 20% Strategie, 80% Psychologie.`;
+PSYCHOLOGIE: Verlust = Statistik. Overtrading sofort stoppen. 20% Strategie, 80% Psychologie.`;
 }
