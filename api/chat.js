@@ -33,7 +33,7 @@ async function getWeeklyNews() {
     end.setDate(end.getDate() + 14);
     const endStr = end.toISOString().split('T')[0];
 
-    const url = `https://financialmodelingprep.com/stable/economic-calendar?from=${todayStr}&to=${endStr}&apikey=${FMP_KEY}`;
+    const url = `https://financialmodelingprep.com/api/v3/economic_calendar?from=${todayStr}&to=${endStr}&apikey=${FMP_KEY}`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
