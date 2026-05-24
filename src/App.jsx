@@ -1,4 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const SUPA_URL="https://lznaqqjhmawvpvzzwgnc.supabase.co";
+const SUPA_KEY="sb_publishable_a9rGWRoY6g99XC9nqSNc-g_XbhpxALh";
+const supabase=createClient(SUPA_URL,SUPA_KEY);
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 
 const G="#00d395",R="#ef4444",B="#6366f1",Y="#f59e0b",P="#a855f7",O="#f97316";
@@ -160,6 +165,13 @@ export default function App(){
       return migrated;
     }catch(e){return SEED;}
   });
+  const[authUser,setAuthUser]=useState(null);
+  const[authLoading,setAuthLoading]=useState(true);
+  const[authScreen,setAuthScreen]=useState("login"); // login | register
+  const[authEmail,setAuthEmail]=useState("");
+  const[authPassword,setAuthPassword]=useState("");
+  const[authError,setAuthError]=useState("");
+  const[authWorking,setAuthWorking]=useState(false);
   const[showOnboarding,setShowOnboarding]=useState(()=>!localStorage.getItem('ttp_onboarding_done'));
   const[onboardStep,setOnboardStep]=useState(0);
   const[onboardData,setOnboardData]=useState({name:'',firm:'TTP',firmOther:'',size:50000,maxDD:2000,dailyDD:1000,target:54000,number:'',psychAnswers:{}});
@@ -209,6 +221,29 @@ export default function App(){
     }catch(e){return{maxTrades:2,pauseMins:15,windowStart:"16:15",windowEnd:"17:30",monthlyGoal:1500,riskPerTradePct:2};}
   });
   const saveSettings=(s)=>{setSettings(s);localStorage.setItem('ttp_settings',JSON.stringify(s));}
+
+  const signUp=async()=>{
+    if(!authEmail||!authPassword){setAuthError("Email und Passwort eingeben");return;}
+    setAuthWorking(true);setAuthError("");
+    const{error}=await supabase.auth.signUp({email:authEmail,password:authPassword});
+    if(error)setAuthError(error.message);
+    else setAuthError("✅ Bestätigungsmail gesendet! Bitte Email bestätigen.");
+    setAuthWorking(false);
+  };
+
+  const signIn=async()=>{
+    if(!authEmail||!authPassword){setAuthError("Email und Passwort eingeben");return;}
+    setAuthWorking(true);setAuthError("");
+    const{error}=await supabase.auth.signInWithPassword({email:authEmail,password:authPassword});
+    if(error)setAuthError("Falsche Email oder Passwort");
+    setAuthWorking(false);
+  };
+
+  const signOut=async()=>{
+    await supabase.auth.signOut();
+    localStorage.clear();
+    window.location.reload();
+  };
 
   const completeOnboarding=async()=>{
     // Save profile
@@ -364,6 +399,18 @@ export default function App(){
   const isDesktop=screenW>=800;
 
   useEffect(()=>{const id=setInterval(()=>setTick(t=>t+1),1000);return()=>clearInterval(id);},[]);
+
+  // Auth listener
+  useEffect(()=>{
+    supabase.auth.getSession().then(({data:{session}})=>{
+      setAuthUser(session?.user||null);
+      setAuthLoading(false);
+    });
+    const{data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
+      setAuthUser(session?.user||null);
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
 
   const userScrolledUp=useRef(false);
   const chatContainerRef=useRef(null);
@@ -996,6 +1043,37 @@ const sendAiMessage=async()=>{
 
   return(
     <div style={{background:"#0d1320",minHeight:"100vh",color:"#f0f4ff",fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",fontSize:isDesktop?15:14,paddingBottom:"calc(70px + env(safe-area-inset-bottom,0px))",width:"100%",overflowX:"hidden"}}>
+      {authLoading&&<div style={{position:"fixed",inset:0,zIndex:9999,background:"#080c14",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div style={{width:40,height:40,borderRadius:"50%",border:"3px solid #2d3548",borderTopColor:B,animation:"spin .8s linear infinite"}}/>
+      </div>}
+
+      {!authLoading&&!authUser&&<div style={{position:"fixed",inset:0,zIndex:9998,background:"#080c14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
+        <div style={{fontSize:42,fontWeight:900,letterSpacing:"-2px",marginBottom:4}}><span style={{color:B}}>Mind</span><span style={{color:"#f0f4ff"}}>Risk</span></div>
+        <div style={{fontSize:11,color:"#6b7a9a",letterSpacing:"3px",marginBottom:40}}>TRADING JOURNAL</div>
+        <div style={{width:"100%",maxWidth:360}}>
+          <div style={{display:"flex",marginBottom:24,background:"#141e35",borderRadius:10,padding:4}}>
+            <button onClick={()=>{setAuthScreen("login");setAuthError("");}} style={{flex:1,padding:"8px",borderRadius:8,fontWeight:700,fontSize:14,background:authScreen==="login"?"#6366f1":"transparent",color:authScreen==="login"?"#fff":"#6b7a9a",border:"none"}}>Einloggen</button>
+            <button onClick={()=>{setAuthScreen("register");setAuthError("");}} style={{flex:1,padding:"8px",borderRadius:8,fontWeight:700,fontSize:14,background:authScreen==="register"?"#6366f1":"transparent",color:authScreen==="register"?"#fff":"#6b7a9a",border:"none"}}>Registrieren</button>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid #2d3548"}}>
+              <div style={{color:"#6b7a9a",fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>EMAIL</div>
+              <input type="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} placeholder="deine@email.com" style={{background:"transparent",border:"none",fontSize:15,color:"#f0f4ff",width:"100%",outline:"none"}}/>
+            </div>
+            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid #2d3548"}}>
+              <div style={{color:"#6b7a9a",fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>PASSWORT</div>
+              <input type="password" value={authPassword} onChange={e=>setAuthPassword(e.target.value)} placeholder="••••••••" style={{background:"transparent",border:"none",fontSize:15,color:"#f0f4ff",width:"100%",outline:"none"}} onKeyDown={e=>e.key==="Enter"&&(authScreen==="login"?signIn():signUp())}/>
+            </div>
+            {authError&&<div style={{color:authError.startsWith("✅")?G:R,fontSize:12,textAlign:"center",padding:"4px 0"}}>{authError}</div>}
+            <button onClick={authScreen==="login"?signIn:signUp} disabled={authWorking}
+              style={{padding:"16px",borderRadius:14,fontWeight:800,fontSize:16,background:authWorking?"#2d3548":"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",border:"none",marginTop:4}}>
+              {authWorking?"...":(authScreen==="login"?"Einloggen →":"Account erstellen →")}
+            </button>
+          </div>
+          <div style={{textAlign:"center",marginTop:20,fontSize:12,color:"#4b5568"}}>Deine Daten werden sicher gespeichert und sind nur für dich sichtbar.</div>
+        </div>
+      </div>}
+
       {showOnboarding&&<div style={{position:"fixed",inset:0,zIndex:9998,background:"#080c14",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",overflowY:"auto"}}>
         {/* STEP 0: WELCOME */}
         {onboardStep===0&&<div style={{width:"100%",maxWidth:400,textAlign:"center",animation:"fadeIn .5s ease"}}>
