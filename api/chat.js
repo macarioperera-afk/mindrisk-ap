@@ -30,7 +30,7 @@ async function getWeeklyNews() {
   try {
     // Get next 5 trading days
     const end = new Date(today);
-    end.setDate(end.getDate() + 7);
+    end.setDate(end.getDate() + 14);
     const endStr = end.toISOString().split('T')[0];
 
     const url = `https://financialmodelingprep.com/stable/economic-calendar?from=${todayStr}&to=${endStr}&apikey=${FMP_KEY}`;
