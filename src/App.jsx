@@ -361,7 +361,16 @@ export default function App(){
       ?"Trader Check-in: Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5, Stress "+mindCheckIn.stress+"/5. Gib Rat: wenn er tradet dann max 1 Trade mit weniger Risiko. 2 motivierende Sätze."
       :"Trader Check-in: alles gut! Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5. Gib ihm einen kurzen motivierenden Satz für den Trading-Tag.";
     try{
-      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:coachProfile||'',coachMemory:coachMemory.slice(0,3).map(m=>m.note).join(' | ')}})});
+      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:coachProfile||'',
+          traderName:acct.name||'Trader',
+          broker:acct.broker||'',
+          accountNumber:acct.number||'',
+          maxTrades:settings.maxTrades||2,
+          windowStart:settings.windowStart||'16:15',
+          windowEnd:settings.windowEnd||'17:30',
+          slTicks:acct.slTicks||40,
+          tpTicks:acct.tpTicks||80,
+          kontoabstand:Math.round(saldo-(saldo-acct.maxDD||2000)),coachMemory:coachMemory.slice(0,3).map(m=>m.note).join(' | ')}})});
       const d=await res.json();
       setMindMsg(d.message||statusText);
     }catch(e){setMindMsg(statusText);}
@@ -427,10 +436,12 @@ export default function App(){
       const tod=DAYS[new Date().getDay()];
       const h=new Date().getHours();
       const m=new Date().getMinutes();
-      const inWindow=(h===16&&m>=15)||(h===17&&m<=30);
+      const dayOfWeek=new Date().getDay(); // 0=Sun, 6=Sat
+      const isWeekend=dayOfWeek===6||(dayOfWeek===0); // Sat always, Sun markets open 18:00 ET
+      const inWindow=!isWeekend&&((h===16&&m>=15)||(h===17&&m<=30));
       setAiOpen(true);
       const greet=h<12?"Guten Morgen":h<17?"Hi":h<21?"Guten Abend":"Hey";
-      setAiMessages([{role:"assistant",content:greet+" "+(acct.name||"Trader")+"! 👋\n\nHeute ist "+tod+". "+(inWindow?"⚡ Trading-Fenster ist OFFEN!":"Trading-Fenster: 16:15–17:30 Uhr.")+"\n\nTippe '☀️ Tages-Briefing' für die volle KI-Analyse – oder stell direkt eine Frage!",auto:true}]);
+      setAiMessages([{role:"assistant",content:greet+" "+(acct.name||"Trader")+"! 👋\n\nHeute ist "+tod+". "+(inWindow?"⚡ Trading-Fenster ist OFFEN!":(dayOfWeek===6?"🔴 Heute Samstag – Märkte geschlossen.":dayOfWeek===0?"🔴 Heute Sonntag – Märkte geschlossen (öffnen 18:00 ET).":"Trading-Fenster: 16:15–17:30 Uhr."))+"\n\nTippe '☀️ Tages-Briefing' für die volle KI-Analyse – oder stell direkt eine Frage!",auto:true}]);
     },2200);
     return()=>{clearTimeout(t);clearTimeout(t2);};
   },[]);
@@ -583,7 +594,9 @@ export default function App(){
     const dayWR=dayMap[tod]?Math.round(dayMap[tod].w/dayMap[tod].n*100):0;
     const lastT=t09[t09.length-1];
     const hour=new Date().getHours();const min=new Date().getMinutes();
-    const inWindow=(hour===16&&min>=15)||(hour===17&&min<=30);
+    const dayOfWeek2=new Date().getDay();
+    const isWeekend2=dayOfWeek2===6||dayOfWeek2===0;
+    const inWindow=!isWeekend2&&((hour===16&&min>=15)||(hour===17&&min<=30));
     if(trigger==="daily_motivation"){
       const q=getDailyQuote();
       return "Guten Morgen "+(acct.name||"Trader")+"! \u2600\uFE0F\n\n"+q+"\n\nHeute ("+tod+"): "+todayT.length+"/2 Trades\n"+tod+"-WR historisch: "+dayWR+"%\n\nRoutine: Regeln durchgehen \u2192 Setup warten \u2192 Nur 16:15-17:30 Uhr.";
@@ -777,8 +790,7 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
       setAiImage({base64,mediaType:file.type||"image/jpeg"});
       setAiImagePreview(ev.target.result);
     };
-    reader.readAsDataURL(file);
-  };
+    reader.readAsDataURL(file);  };
 
   const importTTPTrades=(raw)=>{  const lines=raw.trim().split('\n').filter(l=>l.trim());
   const parsed=[];
@@ -829,6 +841,15 @@ const analyzeProblems=async()=>{
         messages:[{role:"user",content:prompt}],
         context:{
           coachProfile:coachProfile||'',
+          traderName:acct.name||'Trader',
+          broker:acct.broker||'',
+          accountNumber:acct.number||'',
+          maxTrades:settings.maxTrades||2,
+          windowStart:settings.windowStart||'16:15',
+          windowEnd:settings.windowEnd||'17:30',
+          slTicks:acct.slTicks||40,
+          tpTicks:acct.tpTicks||80,
+          kontoabstand:Math.round(saldo-(saldo-acct.maxDD||2000)),
           coachMemory:coachMemory.slice(0,5).map(m=>m.note).join(' | '),
           chatHistorySummary:''
         }
@@ -922,6 +943,15 @@ const sendAiMessage=async()=>{
         todayTrades:todT.map(t=>({pnl:t.pnl,dir:t.dir,contract:t.contract,time:t.time,setup:t.setup})),
         allTrades:t09.map(t=>({d:t.date,t:t.time,p:Math.round(t.pnl),dir:t.dir,c:t.contract,s:t.setup||""})),
         coachProfile:coachProfile||'',
+          traderName:acct.name||'Trader',
+          broker:acct.broker||'',
+          accountNumber:acct.number||'',
+          maxTrades:settings.maxTrades||2,
+          windowStart:settings.windowStart||'16:15',
+          windowEnd:settings.windowEnd||'17:30',
+          slTicks:acct.slTicks||40,
+          tpTicks:acct.tpTicks||80,
+          kontoabstand:Math.round(saldo-(saldo-acct.maxDD||2000)),
         coachMemory:coachMemory.slice(0,8).map(m=>m.note).join(' | '),
         chatHistorySummary:aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100).replace(/[\u0080-\uFFFF]/g,'').replace(/\t/g,' ')).join(' | '),
         allTimeWR:allT09.length?Math.round(allT09.filter(t=>t.pnl>0).length/allT09.length*100):0,
@@ -1338,7 +1368,7 @@ const sendAiMessage=async()=>{
           <Card style={{borderColor:B+"44"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
               <div>
-                <div style={{color:"#8b96b0",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:3}}>KONTO 09</div>
+                <div style={{color:"#8b96b0",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:3}}>{acct.number?"KONTO "+acct.number:"MEIN KONTO"}</div>
                 <div style={{color:pc(netPnl),fontWeight:800,fontSize:isDesktop?38:26}}>{netPnl>=0?"+":"-"}${Math.round(Math.abs(netPnl)).toLocaleString()}</div>
                 <div style={{color:"#8b96b0",fontSize:isDesktop?13:10,marginTop:1}}>Saldo: ${Math.round(saldo).toLocaleString()}</div>
               </div>
@@ -1552,8 +1582,7 @@ const sendAiMessage=async()=>{
               </div>
             </div>
             {(()=>{
-              const startSaldo=Math.round((saldo-monthPnl)*100)/100;
-              const monthNeeded=Math.round(Math.max(1,goals.targetBalance-startSaldo));
+              const startSaldo=Math.round((saldo-monthPnl)*100)/100;              const monthNeeded=Math.round(Math.max(1,goals.targetBalance-startSaldo));
               const monthPct=Math.round(Math.min(100,Math.max(0,monthPnl/monthNeeded*100)));
               const missing=Math.round(Math.max(0,goals.targetBalance-saldo));
               const today2=new Date();const endM2=new Date(today2.getFullYear(),today2.getMonth()+1,0);
