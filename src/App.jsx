@@ -116,7 +116,7 @@ const Pill=({bg,color,children})=>(
   <span style={{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:bg,color}}>{children}</span>
 );
 const Card=({children,style,onClick})=>(
-  <div onClick={onClick} style={{background:"linear-gradient(145deg,#182040 0%,#111d30 100%)",border:"1px solid rgba(99,102,241,0.18)",borderRadius:14,padding:16,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.05)",...style}}>{children}</div>
+  <div onClick={onClick} style={{background:"linear-gradient(145deg,#1a2540 0%,#141e32 100%)",border:"1px solid rgba(99,102,241,0.18)",borderRadius:14,padding:16,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.05)",...style}}>{children}</div>
 );
 const Bar2=({pct,color})=>(
   <div style={{height:10,borderRadius:5,background:"rgba(255,255,255,0.05)",boxShadow:"inset 0 2px 4px rgba(0,0,0,0.4)"}}>
@@ -133,7 +133,7 @@ const Chk=({checked,onClick,label})=>(
 );
 
 const Field=({label,children})=>(
-  <div style={{background:"#131b2e",borderRadius:10,padding:"10px 12px",border:"1px solid #2d3548"}}>
+  <div style={{background:"#111725",borderRadius:10,padding:"10px 12px",border:"1px solid #2d3548"}}>
     <div style={{color:"#8b96b0",fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:6}}>{label}</div>
     {children}
   </div>
@@ -780,7 +780,8 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
     reader.readAsDataURL(file);
   };
 
-  const importTTPTrades=(raw)=>{  const lines=raw.trim().split('\n').filter(l=>l.trim());const parsed=[];
+  const importTTPTrades=(raw)=>{  const lines=raw.trim().split('\n').filter(l=>l.trim());
+  const parsed=[];
   for(const line of lines){
     const parts=line.split('\t').map(s=>s.trim());
     if(parts.length<8)continue;
@@ -1036,7 +1037,7 @@ const sendAiMessage=async()=>{
 ];
 
   return(
-    <div style={{background:"#131b2e",minHeight:"100vh",color:"#f0f4ff",fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",fontSize:isDesktop?15:14,paddingBottom:isDesktop?"20px":"calc(70px + env(safe-area-inset-bottom,0px))",width:"100%",overflowX:"hidden",paddingRight:isDesktop?"380px":"0"}}>
+    <div style={{background:"#111725",minHeight:"100vh",color:"#f0f4ff",fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",fontSize:isDesktop?15:14,paddingBottom:isDesktop?"20px":"calc(70px + env(safe-area-inset-bottom,0px))",width:"100%",overflowX:"hidden",paddingRight:isDesktop?"380px":"0"}}>
       {authLoading&&<div style={{position:"fixed",inset:0,zIndex:9999,background:"#080c14",display:"flex",alignItems:"center",justifyContent:"center"}}>
         <div style={{width:40,height:40,borderRadius:"50%",border:"3px solid #2d3548",borderTopColor:B,animation:"spin .8s linear infinite"}}/>
       </div>}
@@ -1309,7 +1310,7 @@ const sendAiMessage=async()=>{
       <div style={{padding:isDesktop?"20px 28px 30px":"16px 16px 20px",width:"100%",boxSizing:"border-box",maxWidth:"100%"}}>
 
         {/* DASHBOARD */}
-        {tab==="dash"&&<div style={{display:isDesktop?"grid":"flex",gridTemplateColumns:isDesktop?"1fr 1fr":"none",flexDirection:"column",gap:12,width:"100%",alignItems:"start"}}>
+        {tab==="dash"&&<div style={{display:isDesktop?"grid":"flex",gridTemplateColumns:isDesktop?"1fr 380px":"none",flexDirection:"column",gap:16,width:"100%",alignItems:"start"}}>
           {dailyDDHit&&<div style={{background:"rgba(239,68,68,0.15)",border:"2px solid rgba(239,68,68,0.6)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M4.93 4.93l14.14 14.14"/></svg>
             <div><div style={{color:"#fca5a5",fontWeight:800,fontSize:14}}>Daily DD erreicht! -${Math.round(dailyLoss)} / $1.000 Limit</div><div style={{color:"#fca5a5",fontSize:11}}>Für heute KEIN weiterer Trade. Rechner aus, Coach fragen.</div></div>
@@ -1334,16 +1335,16 @@ const sendAiMessage=async()=>{
             </div>
           </div>}
 
-          <Card style={{borderColor:B+"44",gridColumn:isDesktop?"1 / -1":"auto"}}>
+          <Card style={{borderColor:B+"44"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
               <div>
                 <div style={{color:"#8b96b0",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:3}}>KONTO 09</div>
-                <div style={{color:pc(netPnl),fontWeight:800,fontSize:isDesktop?44:28}}>{netPnl>=0?"+":"-"}${Math.round(Math.abs(netPnl)).toLocaleString()}</div>
+                <div style={{color:pc(netPnl),fontWeight:800,fontSize:isDesktop?52:28}}>{netPnl>=0?"+":"-"}${Math.round(Math.abs(netPnl)).toLocaleString()}</div>
                 <div style={{color:"#8b96b0",fontSize:isDesktop?13:10,marginTop:1}}>Saldo: ${Math.round(saldo).toLocaleString()}</div>
               </div>
-              <div style={{background:"#131b2e",borderRadius:8,padding:"8px 12px",textAlign:"right"}}>
+              <div style={{background:"#111725",borderRadius:8,padding:"8px 12px",textAlign:"right"}}>
                 <div style={{color:"#8b96b0",fontSize:9,marginBottom:1}}>HEUTE</div>
-                <div style={{color:pc(todPnl),fontWeight:800,fontSize:16}}>{fs(todPnl)}</div>
+                <div style={{color:pc(todPnl),fontWeight:800,fontSize:isDesktop?22:16}}>{fs(todPnl)}</div>
                 <div style={{color:tradeCount>=OVERTRADING_AT?R:tradeCount>=DAILY_LIMIT?O:"#8b96b0",fontSize:9,marginTop:1,fontWeight:tradeCount>=DAILY_LIMIT?700:400}}>{tradeCount}/{DAILY_LIMIT} Trades{tradeCount>=OVERTRADING_AT?" !":""}</div>
               </div>
             </div>
@@ -1373,10 +1374,10 @@ const sendAiMessage=async()=>{
                     <div style={{position:"absolute",left:profitLinePct+"%",top:0,bottom:0,width:1,background:"rgba(255,255,255,0.15)"}}/>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:"#4b5568",marginBottom:6}}>
-                    <span style={{color:R}}>${ddInitial.toLocaleString()}<br/>Max DD</span>
-                    <span style={{color:Y,textAlign:"center"}}>${ddLockAt.toLocaleString()}<br/>DD Lock</span>
-                    <span style={{color:G,textAlign:"center"}}>${profitStart.toLocaleString()}<br/>Profit</span>
-                    <span style={{textAlign:"right"}}>${acct.target.toLocaleString()}<br/>Ziel</span>
+                    <span style={{color:R,fontSize:12,fontWeight:700}}>${ddInitial.toLocaleString()}<br/>Max DD</span>
+                    <span style={{color:Y,textAlign:"center",fontSize:12,fontWeight:700}}>${ddLockAt.toLocaleString()}<br/>DD Lock</span>
+                    <span style={{color:G,textAlign:"center",fontSize:12,fontWeight:700}}>${profitStart.toLocaleString()}<br/>Profit</span>
+                    <span style={{textAlign:"right",fontSize:12,fontWeight:600,color:"#8b96b0"}}>${acct.target.toLocaleString()}<br/>Ziel</span>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between"}}>
                     <span style={{color:ddColor,fontSize:9,fontWeight:700}}>Abstand: ${Math.round(ddAbstand).toLocaleString()}</span>
@@ -1393,12 +1394,12 @@ const sendAiMessage=async()=>{
               <Bar2 pct={Math.min(100,disc/goals.disc*100)} color={sc(disc)}/>
             </div>
             <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid #2d3548",display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
-              <div style={{background:"#131b2e",borderRadius:8,padding:"7px 8px",textAlign:"center",flex:1}}>
+              <div style={{background:"#111725",borderRadius:8,padding:"7px 8px",textAlign:"center",flex:1}}>
                 <div style={{color:"#6b7a9a",fontSize:8,marginBottom:2}}>MONAT P&L</div>
                 <div style={{color:pc(monthPnl),fontWeight:800,fontSize:14}}>{fs(monthPnl)}</div>
                 <div style={{color:"#4a5568",fontSize:8}}>diesen Monat</div>
               </div>
-              <div style={{background:"#131b2e",borderRadius:8,padding:"7px 8px",textAlign:"center",flex:1}}>
+              <div style={{background:"#111725",borderRadius:8,padding:"7px 8px",textAlign:"center",flex:1}}>
                 <div style={{color:"#6b7a9a",fontSize:8,marginBottom:2}}>WIN RATE</div>
                 <div style={{color:(t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0)>=50?G:R,fontWeight:800,fontSize:14}}>{t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0}%</div>
                 <div style={{color:"#4a5568",fontSize:8}}>{t09.length} Trades</div>
@@ -1415,17 +1416,18 @@ const sendAiMessage=async()=>{
           </Card>
 
           
-<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,gridColumn:isDesktop?"1 / -1":"auto"}}>
+<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
             {[{l:"TRADES",v:tradeCount+"/"+DAILY_LIMIT,c:tradesLeft>0?G:R},{l:"MONAT P&L",v:fs(monthPnl),c:pc(monthPnl)},{l:"WIN RATE",v:(t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0)+"%",c:(t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0)>=50?G:R},{l:"DD ABSTAND",v:"$"+Math.round(kontoabstand),c:kontoabstand<1000?Y:G}].map(s=>(
               <div key={s.l} style={{background:"#131d30",border:"1px solid #2d3548",borderRadius:10,padding:10,textAlign:"center"}}>
                 <div style={{color:"#8b96b0",fontSize:9,marginBottom:3}}>{s.l}</div>
-                <div style={{color:s.c,fontWeight:800,fontSize:isDesktop?16:14}}>{s.v}</div>
+                <div style={{color:s.c,fontWeight:800,fontSize:isDesktop?20:14}}>{s.v}</div>
               </div>
             ))}
           </div>
 
 
-          <Card style={{breakInside:"avoid",height:isDesktop?"auto":"auto"}}>
+          <div style={{gridColumn:isDesktop?"2":"auto",gridRow:isDesktop?"1 / 4":"auto",display:"flex",flexDirection:"column",gap:16}}>
+          <Card style={{breakInside:"avoid"}}>
             <div style={{fontWeight:isDesktop?800:700,marginBottom:isDesktop?14:10,fontSize:isDesktop?18:15}}>{now.toLocaleString("de-DE",{month:"long",year:"numeric"})}</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3,marginBottom:5}}>
               {["Mo","Di","Mi","Do","Fr","Sa","So"].map(d=><div key={d} style={{textAlign:"center",color:"#8b96b0",fontSize:isDesktop?13:10,fontWeight:700,marginBottom:isDesktop?4:0}}>{d}</div>)}
@@ -1433,9 +1435,32 @@ const sendAiMessage=async()=>{
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:isDesktop?6:3}}>{renderCal()}</div>
           </Card>
 
+          {/* NEWS WIDGET */}
+          <Card style={{borderColor:"rgba(245,158,11,0.2)",background:"linear-gradient(145deg,#1a1f10,#141e32)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:Y,animation:"livingOrb 2s infinite"}}/>
+              <div style={{fontWeight:800,fontSize:14,color:"#f0f4ff"}}>Economic Calendar</div>
+            </div>
+            {weeklyNews.length>0?(
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {weeklyNews.slice(0,4).map((ev,i)=>(
+                  <div key={i} style={{background:"rgba(0,0,0,0.2)",borderRadius:8,padding:"8px 10px",borderLeft:"3px solid "+Y}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{color:"#f0f4ff",fontSize:12,fontWeight:700}}>{ev.name}</div>
+                      <div style={{color:Y,fontSize:11,fontWeight:700,flexShrink:0,marginLeft:8}}>{ev.time} ET</div>
+                    </div>
+                    <div style={{color:"#6b7a9a",fontSize:10,marginTop:2}}>{ev.date}</div>
+                  </div>
+                ))}
+              </div>
+            ):(
+              <div style={{color:"#4a5568",fontSize:12,textAlign:"center",padding:"12px 0"}}>Keine HIGH Impact News diese Woche</div>
+            )}
+          </Card>
+          </div>
 
-          {/* WEG ZUR PROFITABILITÄT */}
-          {profitPlan&&<Card style={{borderColor:"#6366f133",background:"linear-gradient(135deg,#0a0b12,#0f1117)"}} onClick={()=>setProfExpanded(p=>!p)}>
+          {/* WEG ZUR PROFITABILITÄT */}}
+          {profitPlan&&<Card style={{borderColor:"#6366f133",background:"linear-gradient(135deg,#111a2e,#141e32)",gridColumn:isDesktop?"1 / -1":"auto"}} onClick={()=>setProfExpanded(p=>!p)}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:4,height:4,borderRadius:"50%",background:"#6366f1",flexShrink:0,marginTop:5,marginLeft:5,animation:"watchDots 2.5s ease-in-out infinite",boxShadow:"0 0 4px rgba(99,102,241,0.8)"}}/>
@@ -1491,9 +1516,9 @@ const sendAiMessage=async()=>{
                     <div style={{color:"#6366f1",fontWeight:700,fontSize:11,marginBottom:8,letterSpacing:"0.5px"}}>SETUP 1 MNQ</div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
                       {[{l:"STOP LOSS",v:"40 Ticks",s:"$20",c:R},{l:"TAKE PROFIT",v:"80 Ticks",s:"$40",c:G},{l:"CRV",v:"2:1",s:"Risk/Reward",c:Y}].map(s=>(
-                        <div key={s.l} style={{background:"#0f1828",borderRadius:7,padding:"8px 6px",textAlign:"center"}}>
+                        <div key={s.l} style={{background:"#131d30",borderRadius:7,padding:"8px 6px",textAlign:"center"}}>
                           <div style={{color:"#6b7a9a",fontSize:8,marginBottom:2}}>{s.l}</div>
-                          <div style={{color:s.c,fontWeight:800,fontSize:isDesktop?16:14}}>{s.v}</div>
+                          <div style={{color:s.c,fontWeight:800,fontSize:isDesktop?20:14}}>{s.v}</div>
                           <div style={{color:s.c,fontSize:9,opacity:0.7}}>{s.s}</div>
                         </div>
                       ))}
@@ -1506,7 +1531,7 @@ const sendAiMessage=async()=>{
                         {l:"MONATE BIS ZIEL",v:monateBis?monateBis+"Mo":"∞",c:monateBis&&monateBis<=6?G:Y,s:"bei akt. Performance"},
                         {l:"HANDELSTAGE NOCH",v:dLeft+" Tage",c:dLeft>5?G:dLeft>2?Y:R,s:"bis Monatsende"},
                       ].map(s=>(
-                        <div key={s.l} style={{background:"#0f1828",borderRadius:7,padding:"8px 10px",border:"1px solid #1e2030"}}>
+                        <div key={s.l} style={{background:"#131d30",borderRadius:7,padding:"8px 10px",border:"1px solid #1e2030"}}>
                           <div style={{color:"#6b7a9a",fontSize:9}}>{s.l}</div>
                           <div style={{color:s.c,fontWeight:800,fontSize:15}}>{s.v}</div>
                           <div style={{color:"#8b96b0",fontSize:9}}>{s.s}</div>
@@ -1536,7 +1561,7 @@ const sendAiMessage=async()=>{
 
 
           {/* MEIN MONATSZIEL */}
-          <Card style={{borderColor:P+"33",background:"#0d0a14"}} onClick={()=>setMonatExp(p=>!p)}>
+          <Card style={{borderColor:P+"33",background:"linear-gradient(145deg,#1a1432,#141e32)",gridColumn:isDesktop?"1 / -1":"auto"}} onClick={()=>setMonatExp(p=>!p)}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:4,height:4,borderRadius:"50%",background:"#a855f7",flexShrink:0,marginTop:5,marginLeft:5,animation:"watchDotsPurple 2.5s ease-in-out infinite 0.3s",boxShadow:"0 0 4px rgba(168,85,247,0.8)"}}/>
@@ -1562,7 +1587,8 @@ const sendAiMessage=async()=>{
               const slD=20,tpD=40;
               return(
                 <div>                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
-                    {[{l:"AKTUELL",v:"$"+saldo.toLocaleString("de-DE",{maximumFractionDigits:0}),c:"#f0f4ff"},{l:"ZIEL",v:"$"+goals.targetBalance.toLocaleString("de-DE"),c:P},
+                    {[{l:"AKTUELL",v:"$"+saldo.toLocaleString("de-DE",{maximumFractionDigits:0}),c:"#f0f4ff"},
+                      {l:"ZIEL",v:"$"+goals.targetBalance.toLocaleString("de-DE"),c:P},
                       {l:"NOCH FEHLT",v:missing<=0?"✓":"+$"+Math.round(missing).toLocaleString("de-DE"),c:missing<=0?G:R}
                     ].map(s=>(
                       <div key={s.l} style={{background:"#0f1428",borderRadius:8,padding:"7px 6px",textAlign:"center",border:"1px solid #1e1428"}}>
@@ -1818,7 +1844,7 @@ const sendAiMessage=async()=>{
               <div style={{background:"#0a160f",borderRadius:10,padding:"10px 12px",border:"1px solid "+G+"33"}}>
                 <div style={{color:G,fontSize:11,fontWeight:600}}>1 MNQ: SL 40 Ticks ($20) | TP 80 Ticks ($40)</div>
               </div>
-              <div style={{background:"#131b2e",borderRadius:10,padding:12,border:"1px solid #2d3548"}}>
+              <div style={{background:"#111725",borderRadius:10,padding:12,border:"1px solid #2d3548"}}>
                 <div style={{color:"#8b96b0",fontSize:11,marginBottom:6,fontWeight:600}}>REGELN EINGEHALTEN?</div>
                 {RULES.map(r=>(<Chk key={r.id} checked={form.rules[r.id]} onClick={()=>setForm(f=>({...f,rules:{...f.rules,[r.id]:!f.rules[r.id]}}))} label={r.label}/>))}
               </div>
@@ -1884,7 +1910,7 @@ const sendAiMessage=async()=>{
                     return(
                       <div key={h} style={{display:"flex",alignItems:"center",gap:8}}>
                         <div style={{color:isWindow?G:"#8b96b0",fontSize:11,fontWeight:isWindow?700:400,width:36,flexShrink:0}}>{h}:00{isWindow&&" ⚡"}</div>
-                        <div style={{flex:1,height:20,background:"#131b2e",borderRadius:4,overflow:"hidden",position:"relative"}}>
+                        <div style={{flex:1,height:20,background:"#111725",borderRadius:4,overflow:"hidden",position:"relative"}}>
                           <div style={{height:"100%",width:wr+"%",background:c+"44",borderRadius:4}}/>
                           <div style={{position:"absolute",top:0,left:4,right:0,height:"100%",display:"flex",alignItems:"center"}}>
                             <span style={{color:c,fontSize:10,fontWeight:700}}>{wr}% WR</span>
@@ -1911,7 +1937,7 @@ const sendAiMessage=async()=>{
                   const wr=Math.round(d.wins/d.n*100);
                   const c=wr>=60?G:wr>=40?Y:R;
                   return(
-                    <div key={name} style={{marginBottom:8,padding:"8px 10px",background:"#131b2e",borderRadius:8,borderLeft:"3px solid "+c}}>
+                    <div key={name} style={{marginBottom:8,padding:"8px 10px",background:"#111725",borderRadius:8,borderLeft:"3px solid "+c}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                         <div style={{fontSize:11,fontWeight:700,color:"#f0f4ff"}}>{name}</div>
                         <div style={{color:pc(d.pnl),fontWeight:800,fontSize:12}}>{d.pnl>=0?"+":""}${Math.round(d.pnl)}</div>
@@ -1945,7 +1971,7 @@ const sendAiMessage=async()=>{
                   ].map(s=>(
                     <div key={s.l} style={{marginBottom:6}}>
                       <div style={{color:"#6b7a9a",fontSize:9}}>{s.l}</div>
-                      <div style={{color:s.c,fontWeight:800,fontSize:isDesktop?16:14}}>{s.v}</div>
+                      <div style={{color:s.c,fontWeight:800,fontSize:isDesktop?20:14}}>{s.v}</div>
                     </div>
                   ))}
                 </Card>
@@ -1957,7 +1983,7 @@ const sendAiMessage=async()=>{
                   ].map(s=>(
                     <div key={s.l} style={{marginBottom:6}}>
                       <div style={{color:"#6b7a9a",fontSize:9}}>{s.l}</div>
-                      <div style={{color:s.c,fontWeight:800,fontSize:isDesktop?16:14}}>{s.v}</div>
+                      <div style={{color:s.c,fontWeight:800,fontSize:isDesktop?20:14}}>{s.v}</div>
                     </div>
                   ))}
                 </Card>
@@ -1972,7 +1998,7 @@ const sendAiMessage=async()=>{
               {weekdayStats.map(d=>{
                 const c=d.pct>=60?G:d.pct>=40?Y:R;
                 return(
-                  <div key={d.label} style={{background:"#131b2e",borderRadius:8,padding:"8px 4px",textAlign:"center",border:"1px solid "+(d.days>0?c+"33":"#1e2d48")}}>
+                  <div key={d.label} style={{background:"#111725",borderRadius:8,padding:"8px 4px",textAlign:"center",border:"1px solid "+(d.days>0?c+"33":"#1e2d48")}}>
                     <div style={{fontWeight:700,fontSize:13,marginBottom:2,color:d.days>0?c:"#4a5568"}}>{d.label}</div>
                     {d.days>0?(<>
                       <div style={{color:c,fontWeight:800,fontSize:16}}>{d.pct}%</div>
@@ -2048,7 +2074,7 @@ const sendAiMessage=async()=>{
             {monthlyStats.map(ms=>{
               const isExp=expandedMonth===ms.mo;
               return(
-                <div key={ms.mo} style={{marginBottom:8,background:"#131b2e",borderRadius:10,padding:"10px 12px",border:isExp?"1px solid "+B+"55":"1px solid transparent"}}>
+                <div key={ms.mo} style={{marginBottom:8,background:"#111725",borderRadius:10,padding:"10px 12px",border:isExp?"1px solid "+B+"55":"1px solid transparent"}}>
                   <div onClick={()=>setExpandedMonth(isExp?null:ms.mo)} style={{cursor:"pointer"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
                       <div style={{display:"flex",gap:6,alignItems:"center"}}>
@@ -2125,7 +2151,7 @@ const sendAiMessage=async()=>{
                 <div style={{color:settingsSection===sec.id?B:"#6b7a9a",fontSize:12,fontWeight:700,transform:settingsSection===sec.id?"rotate(180deg)":"none",transition:"transform .2s"}}>▼</div>
               </div>
 
-              {settingsSection==="goals"&&sec.id==="goals"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#131b2e"}}>
+              {settingsSection==="goals"&&sec.id==="goals"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#111725"}}>
                 <div style={{marginBottom:12}}>
                   <div style={{color:"#8b96b0",fontSize:10,fontWeight:600,marginBottom:6}}>ZIEL-ZEITRAUM</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
@@ -2147,7 +2173,7 @@ const sendAiMessage=async()=>{
                 </div>
               </div>}
 
-              {settingsSection==="rules"&&sec.id==="rules"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#131b2e",display:"flex",flexDirection:"column",gap:10}}>
+              {settingsSection==="rules"&&sec.id==="rules"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#111725",display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{color:"#8b96b0",fontSize:10,marginBottom:6}}>Wähle max. 5 Regeln für MIND Tab:</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
                   {ALL_RULES.map(r=>{const on=selectedRules.includes(r.k);const disabled=!on&&selectedRules.length>=5;return(<button key={r.k} onClick={()=>!disabled&&toggleRule(r.k)} style={{padding:"5px 8px",borderRadius:16,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3,background:on?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(on?"#6366f1":"rgba(255,255,255,0.1)"),color:on?"#a5b4fc":disabled?"#2d3548":"#6b7a9a",opacity:disabled?0.4:1}}>{r.icon} {r.l}</button>);})}
@@ -2161,7 +2187,7 @@ const sendAiMessage=async()=>{
                 </div>
               </div>}
 
-              {settingsSection==="coach"&&sec.id==="coach"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#131b2e"}}>
+              {settingsSection==="coach"&&sec.id==="coach"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#111725"}}>
                 <div style={{color:"#8b96b0",fontSize:10,marginBottom:6}}>KI liest das bei JEDER Antwort:</div>
                 <textarea rows={5} value={coachProfile} onChange={e=>{setCoachProfile(e.target.value);localStorage.setItem('ttp_coach_profile',e.target.value);}}
                   placeholder="Ich trade bei einer Prop Firm. Beschreibe hier dein Profil, Probleme und Ziele..."
@@ -2180,7 +2206,7 @@ const sendAiMessage=async()=>{
                 </div>}
               </div>}
 
-              {settingsSection==="data"&&sec.id==="data"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#131b2e"}}>
+              {settingsSection==="data"&&sec.id==="data"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#111725"}}>
                 <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>KONTO TYP</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
                   {[{k:"challenge",l:"🎯 Challenge"},{k:"pa",l:"💰 PA Account"}].map(t=>(
@@ -2247,7 +2273,7 @@ const sendAiMessage=async()=>{
           </button>
         )}
         {(aiOpen||isDesktop)&&(
-          <div style={{width:isDesktop?"370px":320,maxWidth:isDesktop?"370px":"calc(100vw - 32px)",background:isDesktop?"#0f1828":"#131d30",border:isDesktop?"none":"1px solid #6366f1",borderLeft:isDesktop?"1px solid rgba(99,102,241,0.3)":"none",borderRadius:isDesktop?0:16,boxShadow:isDesktop?"none":"0 8px 32px rgba(99,102,241,0.3)",display:"flex",flexDirection:"column",height:isDesktop?"100vh":"auto",maxHeight:isDesktop?"100vh":"80vh",minHeight:isDesktop?"100vh":360}}>
+          <div style={{width:isDesktop?"400px":320,maxWidth:isDesktop?"400px":"calc(100vw - 32px)",background:isDesktop?"#131d30":"#131d30",border:isDesktop?"none":"1px solid #6366f1",borderLeft:isDesktop?"1px solid rgba(99,102,241,0.3)":"none",borderRadius:isDesktop?0:16,boxShadow:isDesktop?"none":"0 8px 32px rgba(99,102,241,0.3)",display:"flex",flexDirection:"column",height:isDesktop?"100vh":"auto",maxHeight:isDesktop?"100vh":"80vh",minHeight:isDesktop?"100vh":360}}>
             <div style={{padding:"12px 16px",borderBottom:"1px solid #2d3548",display:"flex",justifyContent:"space-between",alignItems:"center",background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.1))",borderRadius:"16px 16px 0 0"}}>
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
                 <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",animation:"orb 3s ease infinite",flexShrink:0}}>
@@ -2333,7 +2359,7 @@ const sendAiMessage=async()=>{
                   onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&(e.preventDefault(),sendAiMessage())}
                   placeholder={isRecording?"🎤 Höre zu...":"Frag deinen Coach..."}
                   rows={4}
-                  style={{flex:1,fontSize:13,padding:"12px 14px",borderRadius:14,background:"#131b2e",border:"1px solid #2d3548",resize:"none",lineHeight:1.5,maxHeight:140,overflowY:"auto",color:"#f0f4ff",fontFamily:"inherit"}}/>
+                  style={{flex:1,fontSize:13,padding:"12px 14px",borderRadius:14,background:"#111725",border:"1px solid #2d3548",resize:"none",lineHeight:1.5,maxHeight:140,overflowY:"auto",color:"#f0f4ff",fontFamily:"inherit"}}/>
                 <button id="aiSendBtn" onClick={sendAiMessage} disabled={aiLoading||(!aiInput.trim()&&!aiImage)}
                   style={{background:"linear-gradient(135deg,"+B+","+P+")",color:"#fff",padding:"13px 15px",borderRadius:14,fontSize:16,fontWeight:700,opacity:aiLoading||(!aiInput.trim()&&!aiImage)?0.4:1,flexShrink:0}}>→</button>
               </div>
