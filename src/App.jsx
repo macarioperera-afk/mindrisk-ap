@@ -787,8 +787,8 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
     if(parts.length<8)continue;
     const contract=parts[0].includes('MNQ')?'MNQ':'NQ';
     const entryDT=parts[1]; // "18.5.2026, 16:54:51"
-    const pnlStr=parts[7].replace('$','').replace(',','.');const pnl=parseFloat(pnlStr);
-    if(isNaN(pnl))continue;
+    const pnlStr=parts[7].replace('$','').replace(',','.');
+    const pnl=parseFloat(pnlStr);if(isNaN(pnl))continue;
     // Parse date: "18.5.2026, 16:54:51" -> "2026-05-18" + "16:54"
     const dtMatch=entryDT.match(/(\d+)\.(\d+)\.(\d+),\s*(\d+):(\d+)/);
     if(!dtMatch)continue;
@@ -1458,7 +1458,7 @@ const sendAiMessage=async()=>{
           </Card>
           </div>
 
-          {/* WEG ZUR PROFITABILITÄT */}}
+          {/* WEG ZUR PROFITABILITÄT */}
           {profitPlan&&<Card style={{borderColor:"#6366f133",background:"linear-gradient(135deg,#111a2e,#141e32)",gridColumn:isDesktop?"1 / -1":"auto"}} onClick={()=>setProfExpanded(p=>!p)}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -1576,9 +1576,9 @@ const sendAiMessage=async()=>{
             </div>
             {(()=>{
               const startSaldo=Math.round((saldo-monthPnl)*100)/100;
-              const monthNeeded=Math.round(Math.max(1,goals.targetBalance-startSaldo));const monthPct=Math.round(Math.min(100,Math.max(0,monthPnl/monthNeeded*100)));
-              const missing=Math.round(Math.max(0,goals.targetBalance-saldo));
-              const today2=new Date();const endM2=new Date(today2.getFullYear(),today2.getMonth()+1,0);
+              const monthNeeded=Math.round(Math.max(1,goals.targetBalance-startSaldo));
+              const monthPct=Math.round(Math.min(100,Math.max(0,monthPnl/monthNeeded*100)));
+              const missing=Math.round(Math.max(0,goals.targetBalance-saldo));const today2=new Date();const endM2=new Date(today2.getFullYear(),today2.getMonth()+1,0);
               let dLeft2=0;for(let d=new Date(today2);d<=endM2;d.setDate(d.getDate()+1)){const dw=d.getDay();if(dw!==0&&dw!==6)dLeft2++;}
               const dailyNeed=dLeft2>0?Math.ceil(missing/dLeft2):0;
               const tradeNeed=Math.ceil(dailyNeed/DAILY_LIMIT);
