@@ -1519,105 +1519,146 @@ const sendAiMessage=async()=>{
 
 
           {/* WEG ZUR PROFITABILITÄT */}
-          {profitPlan&&<Card style={{borderColor:"#6366f133",background:"linear-gradient(135deg,#0a0b12,#0f1117)"}} onClick={()=>setProfExpanded(p=>!p)}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{width:4,height:4,borderRadius:"50%",background:"#6366f1",flexShrink:0,marginTop:5,marginLeft:5,animation:"watchDots 2.5s ease-in-out infinite",boxShadow:"0 0 4px rgba(99,102,241,0.8)"}}/>
-                <div>
-                  <div style={{fontWeight:800,fontSize:15,color:"#f0f4ff"}}>Weg zur Profitabilität</div>
-                  <div style={{color:"#6366f1",fontSize:9,fontWeight:600,letterSpacing:"0.5px"}}>POWERED BY MINDRISK AI</div>
-                </div>
-              </div>
-              {!isDesktop&&<span style={{color:"#6366f1",fontSize:11,fontWeight:600}}>{profExpanded?"▲ schließen":"▼ öffnen"}</span>}
-            </div>
-            {!profExpanded&&!isDesktop&&profitPlan&&<div style={{display:"flex",gap:8,marginBottom:2}}>
-              <div style={{background:"#0d1420",borderRadius:7,padding:"5px 10px",flex:1,textAlign:"center"}}>
-                <div style={{color:"#6b7a9a",fontSize:8}}>EV / TAG</div>
-                <div style={{color:profitPlan.dailyEV>=0?G:R,fontWeight:800,fontSize:13}}>{profitPlan.dailyEV>=0?"+":""}${profitPlan.dailyEV}</div>
-              </div>
-              <div style={{background:"#0d1420",borderRadius:7,padding:"5px 10px",flex:1,textAlign:"center"}}>
-                <div style={{color:"#6b7a9a",fontSize:8}}>PROGNOSE MONAT</div>
-                <div style={{color:profitPlan.monthlyEV>=0?G:R,fontWeight:800,fontSize:13}}>{profitPlan.monthlyEV>=0?"+":""}${profitPlan.monthlyEV}</div>
-              </div>
-              <div style={{background:"#0d1420",borderRadius:7,padding:"5px 10px",flex:1,textAlign:"center"}}>
-                <div style={{color:"#6b7a9a",fontSize:8}}>OVERTRADING</div>
-                <div style={{color:profitPlan.overtradeDays>3?R:G,fontWeight:800,fontSize:13}}>{profitPlan.overtradeDays} Tage</div>
-              </div>
-            </div>}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
-              {[{l:"TREFFERQUOTE",v:profitPlan.wr+"%",c:profitPlan.wr>=50?G:R},
-                {l:"DEIN R:R",v:profitPlan.rr+":1",c:parseFloat(profitPlan.rr)>=1?G:Y},
-                {l:"BREAK-EVEN WR",v:profitPlan.neededWR+"%",c:profitPlan.wr>=profitPlan.neededWR?G:Y}
-              ].map(s=>(
-                <div key={s.l} style={{background:"#0d1420",borderRadius:8,padding:"8px 6px",textAlign:"center",border:"1px solid #1e2030"}}>
-                  <div style={{color:"#6b7a9a",fontSize:9,marginBottom:2}}>{s.l}</div>
-                  <div style={{color:s.c,fontWeight:800,fontSize:16}}>{s.v}</div>
-                </div>
-              ))}
-            </div>
-            {(profExpanded||isDesktop)&&(()=>{
-              const wr=profitPlan.wr/100;
-              const slT=40,tpT=80,slD=20,tpD=40,crv=2;
-              const evT=Math.round(wr*tpD-(1-wr)*slD);
-              const evD=evT*DAILY_LIMIT;
-              const today=new Date();const endM=new Date(today.getFullYear(),today.getMonth()+1,0);
-              let dLeft=0;for(let d=new Date(today);d<=endM;d.setDate(d.getDate()+1)){const dw=d.getDay();if(dw!==0&&dw!==6)dLeft++;}
-              const projM=Math.round(dLeft*evD);
-              const missingNow=Math.max(0,goals.targetBalance-saldo);
-              const monateBis=evD>0?Math.ceil(missingNow/(evD*22)):null;
-              return(
-                <div style={{marginTop:12}}>
-                  {profitPlan.overtradeDays>0&&<div style={{background:"rgba(239,68,68,0.12)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:8,padding:"8px 12px",display:"flex",gap:8,marginBottom:10,alignItems:"center"}}>
-                    <span style={{fontSize:14}}>⚠️</span>
-                    <div style={{color:"#fca5a5",fontSize:11,fontWeight:600}}>{profitPlan.overtradeDays}/{profitPlan.totalDays} Tage Overtrading – Dein #1 Problem</div>
-                  </div>}
-                  <div style={{background:"#0d1420",borderRadius:10,padding:12,marginBottom:10,border:"1px solid #1e2030"}}>
-                    <div style={{color:"#6366f1",fontWeight:700,fontSize:11,marginBottom:8,letterSpacing:"0.5px"}}>{profitPlan.instName} ({profitPlan.instrument}) · {acct.lotSize||1} Kontrakt{(acct.lotSize||1)>1?'e':''}</div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
-                      {[{l:"STOP LOSS",v:profitPlan.slTicks+" Ticks",s:"$"+profitPlan.slAmt,c:R},{l:"TAKE PROFIT",v:profitPlan.tpTicks+" Ticks",s:"$"+profitPlan.tpAmt,c:G},{l:"CRV",v:profitPlan.crvConfig+":1",s:"Risk/Reward",c:Y}].map(s=>(
-                        <div key={s.l} style={{background:"#0f1828",borderRadius:7,padding:"8px 6px",textAlign:"center"}}>
-                          <div style={{color:"#6b7a9a",fontSize:8,marginBottom:2}}>{s.l}</div>
-                          <div style={{color:s.c,fontWeight:800,fontSize:isDesktop?20:14}}>{s.v}</div>
-                          <div style={{color:s.c,fontSize:9,opacity:0.7}}>{s.s}</div>
-                        </div>
-                      ))}
+          {profitPlan&&(()=>{
+            const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
+            const ls=acct.lotSize||1;
+            const slAmt=profitPlan.slAmt;
+            const tpAmt=profitPlan.tpAmt;
+            const wr=profitPlan.wr/100;
+            const crv=profitPlan.crvConfig;
+            // 3 Szenarien WR
+            const last10=t09.slice(-10);
+            const wrPess=last10.length?Math.round(last10.filter(t=>t.pnl>0).length/last10.length*100):profitPlan.wr;
+            const wrReal=profitPlan.wr;
+            const best10=[...t09].sort((a,b)=>b.pnl-a.pnl).slice(0,10);
+            const wrOpt=Math.min(85,Math.round(best10.filter(t=>t.pnl>0).length/Math.max(best10.length,1)*100));
+            // EV pro Tag für jeden Szenario
+            const evDay=(wrPct)=>Math.round((wrPct/100*tpAmt-(1-wrPct/100)*slAmt)*(acct.maxTrades||2));
+            // Challenge Wahrscheinlichkeit
+            const missing=Math.max(0,acct.target-saldo);
+            const today2=new Date();
+            const endM=new Date(today2.getFullYear(),today2.getMonth()+1,0);
+            let dLeft=0;for(let d=new Date(today2);d<=endM;d.setDate(d.getDate()+1)){if(d.getDay()!==0&&d.getDay()!==6)dLeft++;}
+            const evReal=evDay(wrReal);
+            const projReal=Math.round(dLeft*evReal);
+            const challengeProb=evReal>0?Math.min(99,Math.max(1,Math.round((1-missing/Math.max(1,dLeft*evReal+missing))*100))):5;
+            // Overtrading Kosten
+            const otDays=profitPlan.overtradeDays;
+            const otCost=otDays>0?Math.round(otDays*(evDay(wrReal)*-0.5)):0;
+            // Disziplin Einfluss
+            const discBonus=disc>=80?Math.round(evReal*0.2):disc>=60?0:Math.round(evReal*-0.15);
+            return(
+              <Card style={{borderColor:"#6366f133",background:"linear-gradient(135deg,#0d1020,#0f1117)"}} onClick={()=>setProfExpanded(p=>!p)}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{width:4,height:4,borderRadius:"50%",background:B,flexShrink:0,marginTop:5,marginLeft:5,animation:"watchDots 2.5s ease-in-out infinite",boxShadow:"0 0 4px rgba(99,102,241,0.8)"}}/>
+                    <div>
+                      <div style={{fontWeight:800,fontSize:15,color:"#f0f4ff"}}>Weg zur Profitabilität</div>
+                      <div style={{color:B,fontSize:9,fontWeight:600,letterSpacing:"0.5px"}}>POWERED BY MINDRISK AI · {profitPlan.instName}</div>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  </div>
+                  {!isDesktop&&<span style={{color:B,fontSize:11,fontWeight:600}}>{profExpanded?"▲":"▼"}</span>}
+                </div>
+
+                {/* CHALLENGE WAHRSCHEINLICHKEIT - immer sichtbar */}
+                <div style={{background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.08))",borderRadius:12,padding:"12px 14px",marginBottom:10,border:"1px solid rgba(99,102,241,0.25)"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <div style={{color:"#8b96b0",fontSize:11,fontWeight:700}}>CHALLENGE ERFOLG</div>
+                    <div style={{color:challengeProb>=70?G:challengeProb>=40?Y:R,fontWeight:900,fontSize:24}}>{challengeProb}%</div>
+                  </div>
+                  <div style={{height:8,borderRadius:4,background:"rgba(255,255,255,0.05)",overflow:"hidden",marginBottom:6}}>
+                    <div style={{height:"100%",width:challengeProb+"%",background:challengeProb>=70?"linear-gradient(90deg,"+G+",#00a871)":challengeProb>=40?"linear-gradient(90deg,"+Y+",#f59e0b)":"linear-gradient(90deg,"+R+",#dc2626)",borderRadius:4,transition:"width .6s"}}/>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#6b7a9a"}}>
+                    <span>EV/Tag: <span style={{color:evReal>=0?G:R,fontWeight:700}}>{evReal>=0?"+":""}${evReal}</span></span>
+                    <span>Noch: <span style={{color:"#f0f4ff",fontWeight:700}}>${Math.round(missing).toLocaleString()}</span></span>
+                    <span>Tage: <span style={{color:dLeft>5?G:Y,fontWeight:700}}>{dLeft}d</span></span>
+                  </div>
+                </div>
+
+                {/* 3 SZENARIEN */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:10}}>
+                  {[
+                    {l:"PESSIMISTISCH",wr:wrPess,sub:"Letzte 10 Trades",c:R},
+                    {l:"REALISTISCH",wr:wrReal,sub:"Challenge gesamt",c:Y},
+                    {l:"OPTIMISTISCH",wr:wrOpt,sub:"Beste Form",c:G},
+                  ].map(s=>{
+                    const ev=evDay(s.wr);
+                    const proj=Math.round(dLeft*ev);
+                    return(
+                      <div key={s.l} style={{background:"rgba(0,0,0,0.2)",borderRadius:10,padding:"8px 6px",textAlign:"center",border:"1px solid "+(s.c+"33")}}>
+                        <div style={{color:s.c,fontSize:8,fontWeight:700,marginBottom:4}}>{s.l}</div>
+                        <div style={{color:s.c,fontSize:18,fontWeight:900}}>{s.wr}%</div>
+                        <div style={{color:"#6b7a9a",fontSize:8,marginBottom:4}}>{s.sub}</div>
+                        <div style={{color:ev>=0?G:R,fontSize:11,fontWeight:700}}>EV {ev>=0?"+":""}${ev}/Tag</div>
+                        <div style={{color:proj>=0?G:R,fontSize:10,fontWeight:600}}>{proj>=0?"+":""}${proj} Monat</div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {(profExpanded||isDesktop)&&<>
+                  {/* SETUP KONFIGURATION */}
+                  <div style={{background:"rgba(0,0,0,0.2)",borderRadius:10,padding:10,marginBottom:10,border:"1px solid #1e2030"}}>
+                    <div style={{color:B,fontWeight:700,fontSize:11,marginBottom:8}}>{ls}x {profitPlan.instrument} — {profitPlan.slTicks}T SL / {profitPlan.tpTicks}T TP / {crv}:1 CRV</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
                       {[
-                        {l:"EV / TRADE",v:(evT>=0?"+":"")+"$"+evT,c:evT>=0?G:R,s:"Ø Gewinn pro Trade"},
-                        {l:"EV / TAG",v:(evD>=0?"+":"")+"$"+evD,c:evD>=0?G:R,s:"2 Trades · Expected Value"},
-                        {l:"PROGNOSE MONAT",v:(projM>=0?"+":"")+"$"+projM,c:projM>=0?G:R,s:dLeft+" Handelstage"},
-                        {l:"MONATE BIS ZIEL",v:monateBis?monateBis+"Mo":"∞",c:monateBis&&monateBis<=6?G:Y,s:"bei akt. Performance"},
-                        {l:"HANDELSTAGE NOCH",v:dLeft+" Tage",c:dLeft>5?G:dLeft>2?Y:R,s:"bis Monatsende"},
+                        {l:"SL",v:"$"+slAmt,c:R},
+                        {l:"TP",v:"$"+tpAmt,c:G},
+                        {l:"BREAK-EVEN WR",v:profitPlan.neededWR+"%",c:profitPlan.wr>=profitPlan.neededWR?G:Y},
+                        {l:"EV/TRADE",v:(profitPlan.evPerTrade>=0?"+":"")+"$"+profitPlan.evPerTrade,c:profitPlan.evPerTrade>=0?G:R},
+                        {l:"EV/TAG",v:(evReal>=0?"+":"")+"$"+evReal,c:evReal>=0?G:R},
+                        {l:"EV/MONAT",v:(profitPlan.monthlyEV>=0?"+":"")+"$"+profitPlan.monthlyEV,c:profitPlan.monthlyEV>=0?G:R},
                       ].map(s=>(
-                        <div key={s.l} style={{background:"#0f1828",borderRadius:7,padding:"8px 10px",border:"1px solid #1e2030"}}>
-                          <div style={{color:"#6b7a9a",fontSize:9}}>{s.l}</div>
-                          <div style={{color:s.c,fontWeight:800,fontSize:15}}>{s.v}</div>
-                          <div style={{color:"#8b96b0",fontSize:9}}>{s.s}</div>
+                        <div key={s.l} style={{background:"#0f1828",borderRadius:7,padding:"7px 6px",textAlign:"center"}}>
+                          <div style={{color:"#6b7a9a",fontSize:8,marginBottom:2}}>{s.l}</div>
+                          <div style={{color:s.c,fontWeight:800,fontSize:13}}>{s.v}</div>
                         </div>
                       ))}
                     </div>
                   </div>
+
+                  {/* DISZIPLIN & OVERTRADING EINFLUSS */}
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                    <div style={{background:"rgba(0,0,0,0.2)",borderRadius:10,padding:10,border:"1px solid #1e2030"}}>
+                      <div style={{color:"#8b96b0",fontSize:10,fontWeight:700,marginBottom:6}}>REGELQUOTE EINFLUSS</div>
+                      <div style={{color:discBonus>=0?G:R,fontSize:18,fontWeight:900}}>{discBonus>=0?"+":""}${discBonus}/Mon</div>
+                      <div style={{color:"#6b7a9a",fontSize:10,marginTop:4}}>bei {disc}% Disziplin</div>
+                      <div style={{height:4,borderRadius:2,background:"rgba(255,255,255,0.05)",marginTop:6,overflow:"hidden"}}>
+                        <div style={{height:"100%",width:disc+"%",background:sc(disc),borderRadius:2}}/>
+                      </div>
+                    </div>
+                    <div style={{background:"rgba(0,0,0,0.2)",borderRadius:10,padding:10,border:"1px solid "+(otDays>3?"rgba(239,68,68,0.3)":"#1e2030")}}>
+                      <div style={{color:"#8b96b0",fontSize:10,fontWeight:700,marginBottom:6}}>OVERTRADING KOSTEN</div>
+                      <div style={{color:otDays>0?R:G,fontSize:18,fontWeight:900}}>{otDays>0?"-":""}${Math.abs(otCost)}/Mon</div>
+                      <div style={{color:"#6b7a9a",fontSize:10,marginTop:4}}>{otDays} Extra-Trade-Tage</div>
+                      <div style={{color:otDays>3?R:G,fontSize:10,marginTop:4,fontWeight:700}}>{otDays>3?"🔴 Kritisch":"✅ Gut"}</div>
+                    </div>
+                  </div>
+
+                  {/* KI ANALYSE */}
                   <div style={{background:"linear-gradient(135deg,rgba(99,102,241,0.08),rgba(168,85,247,0.05))",borderRadius:10,padding:12,border:"1px solid rgba(99,102,241,0.15)"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
                       <div style={{width:8,height:8,borderRadius:"50%",background:B,animation:"pulse 2s infinite"}}/>
-                      <div style={{color:B,fontSize:11,fontWeight:700,letterSpacing:"0.5px"}}>MINDRISK AI ANALYSE</div>
+                      <div style={{color:B,fontSize:11,fontWeight:700}}>MINDRISK KI ANALYSE</div>
                     </div>
                     {[
-                      profitPlan.wr<profitPlan.neededWR&&"📊 WR "+profitPlan.wr+"% liegt unter Break-Even "+profitPlan.neededWR+"%. Fokus auf Setup-Qualität statt Quantität.",
-                      profitPlan.overtradeDays>5&&"⚠️ "+profitPlan.overtradeDays+" Overtrading-Tage destroyen deinen EV. Strikt max "+DAILY_LIMIT+" Trades/Tag.",
-                      evT>0&&"✅ Positive Edge vorhanden. Mit Disziplin wirst du langfristig profitabel.",
-                      evT<=0&&"🔴 Negativer EV – Verluste übersteigen Gewinne statistisch. Setup oder Disziplin optimieren.",
-                    ].filter(Boolean).map((t,i)=>(
+                      challengeProb<40&&"🔴 Hohe Gefahr Challenge zu verlieren. EV negativ bei "+wrReal+"% WR. Fokus auf Setup-Qualität.",
+                      challengeProb>=40&&challengeProb<70&&"⚠️ Challenge möglich aber knapp. "+dLeft+" Tage, brauche $"+Math.max(0,Math.round(missing/Math.max(1,dLeft)))+" täglich.",
+                      challengeProb>=70&&"✅ Auf Kurs! Bei "+wrReal+"% WR und $"+evReal+" EV/Tag ist das Ziel realistisch.",
+                      otDays>5&&"🔴 "+otDays+" Overtrading-Tage = -$"+Math.abs(otCost)+"/Monat Verlust. Stopp bei 2 Trades/Tag.",
+                      profitPlan.wr<profitPlan.neededWR&&"📊 WR "+wrReal+"% unter Break-Even "+profitPlan.neededWR+"%. Weniger aber bessere Trades.",
+                      disc<60&&"⚠️ Regelquote "+disc+"% kostet dich geschätzt $"+Math.abs(discBonus)+"/Monat.",
+                      disc>=80&&evReal>0&&"💪 Starke Disziplin ("+disc+"%) + positiver EV = profitable Kombination.",
+                      wrPess<wrReal-10&&"📉 Letzte 10 Trades ("+wrPess+"% WR) deutlich unter Schnitt. Form überprüfen.",
+                    ].filter(Boolean).slice(0,3).map((t,i)=>(
                       <div key={i} style={{color:"#cbd5e1",fontSize:11,marginBottom:4,lineHeight:1.5}}>{t}</div>
                     ))}
-                    <div style={{color:"#6366f1",fontSize:11,fontWeight:600,marginTop:6}}>Ziel: {profitPlan.neededWR}%+ WR = automatisch profitabel bei 2:1 CRV.</div>
                   </div>
-                </div>
-              );
-            })()}
-          </Card>}
-
+                </>}
+              </Card>
+            );
+          })()}
 
           {/* MEIN MONATSZIEL */}
           <Card style={{borderColor:P+"33",background:"#0d0a14"}} onClick={()=>setMonatExp(p=>!p)}>
