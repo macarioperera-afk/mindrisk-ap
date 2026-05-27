@@ -18,7 +18,50 @@ const DAILY_LIMIT=2;
 const OVERTRADING_AT=3;
 const PAUSE_MINS=15;
 
-const SETUPS=["Heatmap Correlation SP","Break & Retest","VWAP Bounce","Opening Range Break","Momentum Scalp","Support/Resistance"];
+
+// ============================================================
+// FUTURES INSTRUMENTS - Tick & Tickwert Konfiguration
+// ============================================================
+const INSTRUMENTS = {
+  // Nasdaq
+  'MNQ': { name:'Micro Nasdaq',    exchange:'CME', tick:0.25, tickValue:0.50,  currency:'USD', micro:true,  full:'NQ' },
+  'NQ':  { name:'Nasdaq 100',      exchange:'CME', tick:0.25, tickValue:5.00,  currency:'USD', micro:false, full:'NQ' },
+  // S&P 500
+  'MES': { name:'Micro S&P 500',   exchange:'CME', tick:0.25, tickValue:1.25,  currency:'USD', micro:true,  full:'ES' },
+  'ES':  { name:'S&P 500',         exchange:'CME', tick:0.25, tickValue:12.50, currency:'USD', micro:false, full:'ES' },
+  // Dow Jones
+  'MYM': { name:'Micro Dow Jones', exchange:'CME', tick:1.00, tickValue:0.50,  currency:'USD', micro:true,  full:'YM' },
+  'YM':  { name:'Dow Jones',       exchange:'CME', tick:1.00, tickValue:5.00,  currency:'USD', micro:false, full:'YM' },
+  // Russell 2000
+  'M2K': { name:'Micro Russell',   exchange:'CME', tick:0.10, tickValue:0.50,  currency:'USD', micro:true,  full:'RTY' },
+  'RTY': { name:'Russell 2000',    exchange:'CME', tick:0.10, tickValue:5.00,  currency:'USD', micro:false, full:'RTY' },
+  // Gold
+  'MGC': { name:'Micro Gold',      exchange:'CME', tick:0.10, tickValue:1.00,  currency:'USD', micro:true,  full:'GC' },
+  'GC':  { name:'Gold',            exchange:'CME', tick:0.10, tickValue:10.00, currency:'USD', micro:false, full:'GC' },
+  // Silber
+  'SIL': { name:'Micro Silber',    exchange:'CME', tick:0.005,tickValue:1.25,  currency:'USD', micro:true,  full:'SI' },
+  'SI':  { name:'Silber',          exchange:'CME', tick:0.005,tickValue:25.00, currency:'USD', micro:false, full:'SI' },
+  // Crude Oil
+  'MCL': { name:'Micro Crude Oil', exchange:'CME', tick:0.01, tickValue:1.00,  currency:'USD', micro:true,  full:'CL' },
+  'CL':  { name:'Crude Oil',       exchange:'CME', tick:0.01, tickValue:10.00, currency:'USD', micro:false, full:'CL' },
+  // Euro FX
+  'M6E': { name:'Micro Euro/USD',  exchange:'CME', tick:0.0001,tickValue:1.25, currency:'USD', micro:true,  full:'6E' },
+  '6E':  { name:'Euro/USD',        exchange:'CME', tick:0.0001,tickValue:12.50,currency:'USD', micro:false, full:'6E' },
+};
+
+// Helper: Ticks → Dollar
+const ticksToDollar = (ticks, symbol, qty=1) => {
+  const inst = INSTRUMENTS[symbol] || INSTRUMENTS['MNQ'];
+  return Math.round(ticks * inst.tickValue * qty * 100) / 100;
+};
+
+// Helper: Dollar → Ticks
+const dollarToTicks = (dollar, symbol, qty=1) => {
+  const inst = INSTRUMENTS[symbol] || INSTRUMENTS['MNQ'];
+  return Math.round(dollar / (inst.tickValue * qty) * 10) / 10;
+};
+
+const SETUPS=["Heatmap Correlation SP","Break & Retest","VWAP Bounce","Opening Range Break","Momentum Scalp","Support/Resistance","ICT Concept","Order Block","Fair Value Gap","Liquidity Sweep"];
 const RULES=[
   {id:"r1",label:"Geplantes Setup – kein Impuls"},
   {id:"r2",label:"Stop Loss gesetzt"},
@@ -174,7 +217,7 @@ export default function App(){
   const[authWorking,setAuthWorking]=useState(false);
   const[showOnboarding,setShowOnboarding]=useState(()=>!localStorage.getItem('ttp_onboarding_done'));
   const[onboardStep,setOnboardStep]=useState(0);
-  const[onboardData,setOnboardData]=useState({name:'',firm:'TTP',firmOther:'',size:50000,maxDD:2000,dailyDD:1000,target:54000,number:'',psychAnswers:{}});
+  const[onboardData,setOnboardData]=useState({name:'',firm:'TTP',firmOther:'',size:50000,maxDD:2000,dailyDD:1000,target:54000,number:'',instrument:'MNQ',psychAnswers:{}});
   const[showSplash,setShowSplash]=useState(true);
   const[tab,setTab]=useState("dash");
   const[toast,setToast]=useState("");
@@ -257,7 +300,10 @@ export default function App(){
       dailyDD:onboardData.dailyDD,
       target:onboardData.target,
       targetDays:30,
-      lotSize:1
+      lotSize:1,
+      instrument:onboardData.instrument||'MNQ',
+      slTicks:40,
+      tpTicks:80
     };
     saveAcct(newAcct);
     setSaldo(onboardData.size);
@@ -298,7 +344,8 @@ export default function App(){
   const[acct,setAcct]=useState(()=>{
     try{return JSON.parse(localStorage.getItem('ttp_account')||'null')||{
       type:'challenge',broker:'',number:'',name:'',
-      size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30,lotSize:1
+      size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30,lotSize:1,
+      instrument:'MNQ',slTicks:40,tpTicks:80
     };}catch(e){return{type:'challenge',broker:'',number:'',size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30};}
   });
   const saveAcct=(a)=>{setAcct(a);localStorage.setItem('ttp_account',JSON.stringify(a));};
@@ -515,20 +562,43 @@ export default function App(){
   const equity=useMemo(()=>{let c=0;return t09.map((t,i)=>({i:i+1,v:Math.round((c+=t.pnl)*100)/100}));},[t09]);
   const monthPnl=useMemo(()=>Math.round(t09.filter(t=>t.date.startsWith(todayISO().slice(0,7))).reduce((s,t)=>s+t.pnl,0)*100)/100,[t09]);
   const profitPlan=useMemo(()=>{
-    const dataSet=t09.length>=2?t09:allT09; // Use challenge trades, fall back to all
-    if(dataSet.length<2)return null;
+    if(t09.length<2)return null;
+    const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
+    const ls=acct.lotSize||1;
+    const slTicks=acct.slTicks||40;
+    const tpTicks=acct.tpTicks||80;
+    const slAmt=Math.round(slTicks*inst.tickValue*ls*100)/100;
+    const tpAmt=Math.round(tpTicks*inst.tickValue*ls*100)/100;
     const wins=t09.filter(t=>t.pnl>0),losses=t09.filter(t=>t.pnl<=0);
     const wr=wins.length/t09.length;
-    const ls=acct.lotSize||1;const avgW=wins.length?wins.reduce((s,t)=>s+t.pnl,0)/wins.length:0;
+    const avgW=wins.length?wins.reduce((s,t)=>s+t.pnl,0)/wins.length:0;
     const avgL=losses.length?Math.abs(losses.reduce((s,t)=>s+t.pnl,0)/losses.length):1;
     const rr=avgW/avgL;
-    const m={};t09.forEach(t=>{m[t.date]=(m[t.date]||0)+1;});
-    const dailyEV=Math.round(2*(wr*avgW-(1-wr)*avgL));const slAmt=ls*20;const tpAmt=ls*40;
+    // EV basierend auf echten Daten ODER konfigurierten SL/TP
+    const evPerTrade=Math.round(wr*avgW-(1-wr)*avgL);
+    const evPerTradeConfig=Math.round(wr*tpAmt-(1-wr)*slAmt);
+    const dailyEV=Math.round(evPerTrade*(acct.maxTrades||2));
     const monthlyEV=Math.round(dailyEV*22);
-    return{wr:Math.round(wr*100),rr:rr.toFixed(1),neededWR:Math.round(100/(1+rr)),
-      dailyEV,monthlyEV,avgW:Math.round(avgW),avgL:Math.round(avgL),
-      overtradeDays:Object.values(m).filter(n=>n>3).length,totalDays:Object.keys(m).length};
-  },[t09,allT09]);
+    const m={};t09.forEach(t=>{m[t.date]=(m[t.date]||0)+1;});
+    const crv=tpTicks/slTicks;
+    const neededWR=Math.round(100/(1+crv));
+    return{
+      wr:Math.round(wr*100),
+      rr:rr.toFixed(1),
+      crvConfig:crv.toFixed(1),
+      neededWR,
+      neededWRConfig:neededWR,
+      dailyEV,monthlyEV,
+      avgW:Math.round(avgW),avgL:Math.round(avgL),
+      slAmt,tpAmt,slTicks,tpTicks,
+      instrument:acct.instrument||'MNQ',
+      instName:inst.name,
+      tickValue:inst.tickValue,
+      evPerTrade,evPerTradeConfig,
+      overtradeDays:Object.values(m).filter(n=>n>3).length,
+      totalDays:Object.keys(m).length
+    };
+  },[t09,acct]);
 
   const durBuckets=useMemo(()=>{
     const bkts=[{lbl:"<30s",mn:0,mx:30},{lbl:"30s-2m",mn:30,mx:120},{lbl:"2-5m",mn:120,mx:300},{lbl:"5m+",mn:300,mx:999999}];
@@ -1093,6 +1163,20 @@ const sendAiMessage=async()=>{
               <input value={onboardData.name} onChange={e=>setOnboardData(p=>({...p,name:e.target.value}))} placeholder="z.B. Max" style={{background:"transparent",border:"none",fontSize:16,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/>
             </div>
             <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid #2d3548"}}>
+              <div style={{color:"#6b7a9a",fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>HAUPT-INSTRUMENT</div>
+              <select value={onboardData.instrument||'MNQ'} onChange={e=>setOnboardData(p=>({...p,instrument:e.target.value}))} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}>
+                <option value="MNQ">MNQ — Micro Nasdaq (Tick: $0.50)</option>
+                <option value="NQ">NQ — Nasdaq 100 (Tick: $5.00)</option>
+                <option value="MES">MES — Micro S&P 500 (Tick: $1.25)</option>
+                <option value="ES">ES — S&P 500 (Tick: $12.50)</option>
+                <option value="MGC">MGC — Micro Gold (Tick: $1.00)</option>
+                <option value="GC">GC — Gold (Tick: $10.00)</option>
+                <option value="MCL">MCL — Micro Crude Oil (Tick: $1.00)</option>
+                <option value="MYM">MYM — Micro Dow Jones (Tick: $0.50)</option>
+                <option value="M2K">M2K — Micro Russell (Tick: $0.50)</option>
+              </select>
+            </div>
+            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid #2d3548"}}>
               <div style={{color:"#6b7a9a",fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>PROP FIRM</div>
               <select value={onboardData.firm} onChange={e=>setOnboardData(p=>({...p,firm:e.target.value}))} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}>
                 <option value="TTP">The Trading Pit (TTP)</option>
@@ -1364,7 +1448,7 @@ const sendAiMessage=async()=>{
               return(
                 <div style={{marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                    <span style={{color:"#6b7a9a",fontSize:9,fontWeight:700,letterSpacing:"0.5px"}}>TTP EOD TRAILING DD</span>
+                    <span style={{color:"#6b7a9a",fontSize:9,fontWeight:700,letterSpacing:"0.5px"}}>{acct.broker||"Prop Firm"} EOD TRAILING DD</span>
                     <span style={{color:isLocked?G:Y,fontSize:9,fontWeight:700}}>{isLocked?"⊠ DD eingefroren $"+ddLockAt.toLocaleString():"⚠️ DD läuft mit"}</span>
                   </div>
                   <div style={{position:"relative",height:12,borderRadius:6,overflow:"hidden",marginBottom:4,background:"rgba(255,255,255,0.05)"}}>
@@ -1488,9 +1572,9 @@ const sendAiMessage=async()=>{
                     <div style={{color:"#fca5a5",fontSize:11,fontWeight:600}}>{profitPlan.overtradeDays}/{profitPlan.totalDays} Tage Overtrading – Dein #1 Problem</div>
                   </div>}
                   <div style={{background:"#0d1420",borderRadius:10,padding:12,marginBottom:10,border:"1px solid #1e2030"}}>
-                    <div style={{color:"#6366f1",fontWeight:700,fontSize:11,marginBottom:8,letterSpacing:"0.5px"}}>SETUP 1 MNQ</div>
+                    <div style={{color:"#6366f1",fontWeight:700,fontSize:11,marginBottom:8,letterSpacing:"0.5px"}}>{profitPlan.instName} ({profitPlan.instrument}) · {acct.lotSize||1} Kontrakt{(acct.lotSize||1)>1?'e':''}</div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
-                      {[{l:"STOP LOSS",v:"40 Ticks",s:"$20",c:R},{l:"TAKE PROFIT",v:"80 Ticks",s:"$40",c:G},{l:"CRV",v:"2:1",s:"Risk/Reward",c:Y}].map(s=>(
+                      {[{l:"STOP LOSS",v:profitPlan.slTicks+" Ticks",s:"$"+profitPlan.slAmt,c:R},{l:"TAKE PROFIT",v:profitPlan.tpTicks+" Ticks",s:"$"+profitPlan.tpAmt,c:G},{l:"CRV",v:profitPlan.crvConfig+":1",s:"Risk/Reward",c:Y}].map(s=>(
                         <div key={s.l} style={{background:"#0f1828",borderRadius:7,padding:"8px 6px",textAlign:"center"}}>
                           <div style={{color:"#6b7a9a",fontSize:8,marginBottom:2}}>{s.l}</div>
                           <div style={{color:s.c,fontWeight:800,fontSize:isDesktop?20:14}}>{s.v}</div>
@@ -1798,7 +1882,14 @@ const sendAiMessage=async()=>{
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <Field label="KONTRAKT">
                   <select value={form.contract} onChange={e=>setForm(f=>({...f,contract:e.target.value}))}>
-                    <option value="MNQ">MNQ ✓</option><option value="NQ">NQ</option><option value="ES">ES</option>
+                    <optgroup label="Nasdaq"><option value="MNQ">MNQ (Micro) ✓</option><option value="NQ">NQ (Full)</option></optgroup>
+                    <optgroup label="S&P 500"><option value="MES">MES (Micro)</option><option value="ES">ES (Full)</option></optgroup>
+                    <optgroup label="Dow Jones"><option value="MYM">MYM (Micro)</option><option value="YM">YM (Full)</option></optgroup>
+                    <optgroup label="Russell"><option value="M2K">M2K (Micro)</option><option value="RTY">RTY (Full)</option></optgroup>
+                    <optgroup label="Gold"><option value="MGC">MGC (Micro)</option><option value="GC">GC (Full)</option></optgroup>
+                    <optgroup label="Silber"><option value="SIL">SIL (Micro)</option><option value="SI">SI (Full)</option></optgroup>
+                    <optgroup label="Crude Oil"><option value="MCL">MCL (Micro)</option><option value="CL">CL (Full)</option></optgroup>
+                    <optgroup label="Euro FX"><option value="M6E">M6E (Micro)</option><option value="6E">6E (Full)</option></optgroup>
                   </select>
                 </Field>
                 <Field label="RICHTUNG">
@@ -1815,9 +1906,17 @@ const sendAiMessage=async()=>{
               <Field label="NETTO P&L ($) *">
                 <input type="number" step="0.01" value={form.pnl} onChange={e=>setForm(f=>({...f,pnl:e.target.value}))} placeholder="z.B. 40 oder -20" style={{borderColor:form.pnl?(parseFloat(form.pnl)>=0?G+"88":R+"88"):"#1e2d48"}}/>
               </Field>
-              <div style={{background:"#0a160f",borderRadius:10,padding:"10px 12px",border:"1px solid "+G+"33"}}>
-                <div style={{color:G,fontSize:11,fontWeight:600}}>1 MNQ: SL 40 Ticks ($20) | TP 80 Ticks ($40)</div>
-              </div>
+              {(()=>{
+                const inst=INSTRUMENTS[form.contract]||INSTRUMENTS['MNQ'];
+                const ls=acct.lotSize||1;
+                const sl=Math.round((acct.slTicks||40)*inst.tickValue*ls*100)/100;
+                const tp=Math.round((acct.tpTicks||80)*inst.tickValue*ls*100)/100;
+                return(
+                  <div style={{background:"#0a160f",borderRadius:10,padding:"10px 12px",border:"1px solid "+G+"33"}}>
+                    <div style={{color:G,fontSize:11,fontWeight:600}}>{ls}x {form.contract}: SL {acct.slTicks||40} Ticks (${sl}) | TP {acct.tpTicks||80} Ticks (${tp}) | CRV {((acct.tpTicks||80)/(acct.slTicks||40)).toFixed(1)}:1</div>
+                  </div>
+                );
+              })()}
               <div style={{background:"#0d1320",borderRadius:10,padding:12,border:"1px solid #2d3548"}}>
                 <div style={{color:"#8b96b0",fontSize:11,marginBottom:6,fontWeight:600}}>REGELN EINGEHALTEN?</div>
                 {RULES.map(r=>(<Chk key={r.id} checked={form.rules[r.id]} onClick={()=>setForm(f=>({...f,rules:{...f.rules,[r.id]:!f.rules[r.id]}}))} label={r.label}/>))}
@@ -2206,11 +2305,21 @@ const sendAiMessage=async()=>{
                     <button key={l} onClick={()=>saveAcct({...acct,lotSize:l})} style={{padding:"6px 4px",borderRadius:7,fontSize:11,fontWeight:700,background:acct.lotSize===l?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(acct.lotSize===l?"#6366f1":"#2d3548"),color:acct.lotSize===l?"#a5b4fc":"#6b7a9a"}}>{l} MNQ</button>
                   ))}
                 </div>
-                <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",marginBottom:8}}>
-                  <div style={{color:"#8b96b0",fontSize:10}}>
-                    {acct.lotSize||1} MNQ → SL: <span style={{color:R,fontWeight:700}}>-${((acct.lotSize||1)*20).toFixed(0)}</span> | TP: <span style={{color:G,fontWeight:700}}>+${((acct.lotSize||1)*40).toFixed(0)}</span> | EV/Trade: <span style={{color:B,fontWeight:700}}>{(()=>{const w=t09.length?t09.filter(t=>t.pnl>0).length/t09.length:0.5;return((w*(acct.lotSize||1)*40-(1-w)*(acct.lotSize||1)*20)).toFixed(0);})()} $</span>
-                  </div>
-                </div>
+                {(()=>{
+                  const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
+                  const ls=acct.lotSize||1;
+                  const sl=Math.round((acct.slTicks||40)*inst.tickValue*ls);
+                  const tp=Math.round((acct.tpTicks||80)*inst.tickValue*ls);
+                  const w=t09.length?t09.filter(t=>t.pnl>0).length/t09.length:0.5;
+                  const ev=Math.round(w*tp-(1-w)*sl);
+                  return(
+                    <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",marginBottom:8}}>
+                      <div style={{color:"#8b96b0",fontSize:10}}>
+                        {ls}x {acct.instrument||'MNQ'} → SL: <span style={{color:R,fontWeight:700}}>-${sl}</span> | TP: <span style={{color:G,fontWeight:700}}>+${tp}</span> | EV/Trade: <span style={{color:ev>=0?G:R,fontWeight:700}}>{ev>=0?'+':''}{ev}$</span>
+                      </div>
+                    </div>
+                  );
+                })()}
                 {acct.type==='challenge'&&<div>
                   <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:8}}>CHALLENGE ZIEL</div>
                   <Field label="ZIEL SALDO ($)"><input type="number" defaultValue={acct.target} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,target:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
