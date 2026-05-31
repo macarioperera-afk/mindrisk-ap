@@ -1608,7 +1608,7 @@ const sendAiMessage=async()=>{
           <Card style={{borderColor:B+"44"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
               <div>
-                <div style={{color:"#8b96b0",fontSize:isDesktop?12:10,fontWeight:600,letterSpacing:1,marginBottom:3}}>KONTO 09</div>
+                <div style={{color:"#8b96b0",fontSize:isDesktop?12:10,fontWeight:600,letterSpacing:1,marginBottom:3}}>{(acct.propFirm||"KONTO")+( acct.number?" · "+acct.number:"")}</div>
                 <div style={{color:pc(netPnl),fontWeight:800,fontSize:isDesktop?52:28}}>{netPnl>=0?"+":"-"}${Math.round(Math.abs(netPnl)).toLocaleString()}</div>
                 <div style={{color:"#8b96b0",fontSize:isDesktop?13:10,marginTop:1}}>Saldo: ${Math.round(saldo).toLocaleString()}</div>
               </div>
