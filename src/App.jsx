@@ -679,19 +679,19 @@ export default function App(){
     }
     // --- Top-3 Empfehlungen ---
     const recs=[];
-    recs.push({icon:'📊',title:'Empfohlene Größe',text:`${recQty}x ${recSym} — SL $${recSL} / TP $${recTP}. Max. ${maxT} Trades im Fenster ${settings.windowStart||'16:15'}–${settings.windowEnd||'17:30'} Uhr.`});
+    recs.push({icon:'📊',title:'Empfohlene Größe',text:recQty+'x '+recSym+' — SL $'+recSL+' / TP $'+recTP+'. Max. '+maxT+' Trades im Fenster '+(settings.windowStart||'16:15')+'–'+(settings.windowEnd||'17:30')+' Uhr.'});
     if(accountType==='challenge'&&profitNeeded>0){
       const onTrack=dailyNeeded<=recTP*maxT;
-      recs.push({icon:onTrack?'🎯':'⚡',title:onTrack?'Pace realistisch':'Pace erhöhen nötig',text:onTrack?`$${dailyNeeded}/Tag nötig. Bei ${maxT} Trades à $${recTP} TP erreichbar. ${challengeDaysLeft} Tage übrig.`:`$${dailyNeeded}/Tag nötig. ${challengeDaysLeft} Tage übrig. Fokus auf A+ Setups – kein Overtrading.`});
+      recs.push({icon:onTrack?'🎯':'⚡',title:onTrack?'Pace realistisch':'Pace erhöhen nötig',text:onTrack?('$'+dailyNeeded+'/Tag nötig. Bei '+maxT+' Trades à $'+recTP+' TP erreichbar. '+challengeDaysLeft+' Tage übrig.'):('$'+dailyNeeded+'/Tag nötig. '+challengeDaysLeft+' Tage übrig. Fokus auf A+ Setups.')});
     } else {
-      recs.push({icon:weekPnl>=0?'📈':'📉',title:`Woche ${weekPnl>=0?'positiv':'negativ'}`,text:`${weekPnl>=0?'+':''}$${weekPnl} diese Woche. Ziel: $${weeklyTarget}. ${weekT.length} Trades, ${tradDaysLeftWeek} Tage noch.`});
+      recs.push({icon:weekPnl>=0?'📈':'📉',title:'Woche '+(weekPnl>=0?'positiv':'negativ'),text:(weekPnl>=0?'+':'')+'$'+weekPnl+' diese Woche. Ziel: $'+weeklyTarget+'. '+weekT.length+' Trades, '+tradDaysLeftWeek+' Tage noch.'});
     }
     if(ddPct>30||dailyDDPct>20){
-      recs.push({icon:'🛡️',title:'DD-Warnung',text:`Max-DD: ${ddPct}% ($${Math.round(ddUsed)} von $${acct.maxDD}). ${ddType==='trailing'?'Trailing DD — vorsicht nach Gewinnen.':'EOD DD — Positionen halten ok.'} Tages-DD: ${dailyDDPct}%.`});
+      recs.push({icon:'🛡️',title:'DD-Warnung',text:'Max-DD: '+ddPct+'% ($'+Math.round(ddUsed)+' von $'+acct.maxDD+'). '+(ddType==='trailing'?'Trailing DD — vorsicht nach Gewinnen.':'EOD DD — Positionen halten ok.')+' Tages-DD: '+dailyDDPct+'%.'});
     } else if(disc<70){
-      recs.push({icon:'📋',title:'Regelquote verbessern',text:`${disc}% Regelquote. Konsequent im Fenster ${settings.windowStart||'16:15'}–${settings.windowEnd||'17:30'} Uhr + max. ${maxT} Trades = direkt mehr Profit.`});
+      recs.push({icon:'📋',title:'Regelquote verbessern',text:disc+'% Regelquote. Konsequent im Fenster '+(settings.windowStart||'16:15')+'–'+(settings.windowEnd||'17:30')+' Uhr + max. '+maxT+' Trades = direkt mehr Profit.'});
     } else {
-      recs.push({icon:'✅',title:'Risiko im Griff',text:`Max-DD ${ddPct}% verbraucht. ${ddType==='eod'?'EOD DD — du kannst Positionen über den Tag halten.':'Trailing DD — DD-Level steigt mit jedem neuen Gewinn.'}`});
+      recs.push({icon:'✅',title:'Risiko im Griff',text:'Max-DD '+ddPct+'% verbraucht. '+(ddType==='eod'?'EOD DD — du kannst Positionen halten.':'Trailing DD — DD-Level steigt mit Gewinnen.')});
     }
     return{ampel,ampelMsg,weekPnl,weekTradeCount:weekT.length,weekWR,weeklyTarget,weeklyPct,profitTarget,profitSoFar,profitNeeded,challengeDaysLeft,dailyNeeded,recSym,recQty,recSL,recTP,ddPct,dailyDDPct,ddUsed:Math.round(ddUsed),recs,accountType,ddType,tradDaysLeftWeek};
   },[t09,acct,saldo,settings,disc,monthPnl,challengeStart,goals,todPnl]);
@@ -1706,7 +1706,7 @@ const sendAiMessage=async()=>{
 
 
           {/* TAGESPLAN – KERN DER APP */}
-          {(()=>{
+          {(()=>{try{
             // ── Kern-Kalkulation ──────────────────────────────────
             const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
             const maxT=acct.maxTrades||settings.maxTrades||2;
@@ -1959,7 +1959,7 @@ const sendAiMessage=async()=>{
 
               </Card>
             );
-          })()}
+          }catch(e){return(<div style={{padding:16,color:'#ef4444',fontSize:12}}>Tagesplan Ladefehler – bitte App neu laden.</div>);}}})()}
 
           {/* MEIN MONATSZIEL */}
           <Card style={{borderColor:P+"33",background:"#0d0a14"}} onClick={()=>setMonatExp(p=>!p)}>
