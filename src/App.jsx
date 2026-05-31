@@ -1706,249 +1706,147 @@ const sendAiMessage=async()=>{
 
 
           {/* TAGESPLAN – KERN DER APP */}
-          {(()=>{try{
-            // ── Kern-Kalkulation ──────────────────────────────────
+          {wzpCalc&&(()=>{
+            const wz=wzpCalc;
             const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
             const maxT=acct.maxTrades||settings.maxTrades||2;
-            const dailyDD=acct.dailyDD||1000;
-            const maxDD=acct.maxDD||2000;
-            const ddType=acct.ddType||'eod';
-            const accountType=acct.type||'challenge';
-
-            // Trades dieser Woche
-            const now=new Date();
-            const dow=now.getDay();
-            const wkStart=new Date(now);wkStart.setDate(now.getDate()-(dow===0?6:dow-1));wkStart.setHours(0,0,0,0);
-            const wkISO=wkStart.toISOString().split('T')[0];
-            const wkTrades=t09.filter(t=>t.date>=wkISO);
-            const wkPnl=Math.round(wkTrades.reduce((s,t)=>s+t.pnl,0)*100)/100;
-            const wkWins=wkTrades.filter(t=>t.pnl>0).length;
-            const wkWR=wkTrades.length?Math.round(wkWins/wkTrades.length*100):0;
-
-            // Win Rate & EV aus echten Daten
-            const allWins=t09.filter(t=>t.pnl>0);
-            const allLosses=t09.filter(t=>t.pnl<0);
-            const totalWR=t09.length?Math.round(allWins.length/t09.length*100):0;
-            const avgWin=allWins.length?Math.round(allWins.reduce((s,t)=>s+t.pnl,0)/allWins.length):0;
-            const avgLoss=allLosses.length?Math.round(Math.abs(allLosses.reduce((s,t)=>s+t.pnl,0)/allLosses.length)):0;
-
-            // Challenge Fortschritt
-            const profitTarget=accountType==='challenge'
-              ?Math.round(acct.size*((acct.profitTargetPct||8)/100))
-              :(goals.monthlyGoal||1500);
-            const profitSoFar=accountType==='challenge'
-              ?Math.max(0,Math.round(saldo-acct.size))
-              :Math.max(0,Math.round(monthPnl));
-            const profitNeeded=Math.max(0,profitTarget-profitSoFar);
-            const challengePct=Math.min(100,Math.round(profitSoFar/Math.max(1,profitTarget)*100));
-
-            // Tage übrig
-            let daysLeft=0;
-            if(accountType==='challenge'&&challengeStart&&challengeStart!=='2000-01-01'){
-              const cEnd=new Date(challengeStart);cEnd.setDate(cEnd.getDate()+(acct.challengeDays||30));
-              for(let d=new Date(now);d<=cEnd;d.setDate(d.getDate()+1)){const dw=d.getDay();if(dw!==0&&dw!==6&&d>now)daysLeft++;}
-            } else {
-              const endM=new Date(now.getFullYear(),now.getMonth()+1,0);
-              for(let d=new Date(now);d<=endM;d.setDate(d.getDate()+1)){const dw=d.getDay();if(dw!==0&&dw!==6)daysLeft++;}
-            }
-            const dailyNeeded=daysLeft>0?Math.ceil(profitNeeded/daysLeft):profitNeeded;
-
-            // ── SETUP KALKULATION ──────────────────────────────────
-            // Max Risiko pro Trade: 40% des Daily-DD (sicherer Puffer)
-            const maxRiskTrade=Math.floor(dailyDD/maxT*0.4);
-            // Empfohlene Kontrakte
-            const tickVal=inst.tickValue;
             const slT=acct.slTicks||40;
             const tpT=acct.tpTicks||80;
-            const slPerContract=slT*tickVal;
-            const tpPerContract=tpT*tickVal;
-            const recContracts=Math.max(1,Math.floor(maxRiskTrade/Math.max(0.01,slPerContract)));
-            const recSL=Math.round(slPerContract*recContracts);
-            const recTP=Math.round(tpPerContract*recContracts);
+            const maxRisk=Math.floor((acct.dailyDD||1000)/maxT*0.4);
+            const slPer=slT*inst.tickValue;
+            const tpPer=tpT*inst.tickValue;
+            const recC=Math.max(1,Math.floor(maxRisk/Math.max(0.01,slPer)));
+            const recSL=Math.round(slPer*recC);
+            const recTP=Math.round(tpPer*recC);
             const crv=(tpT/slT).toFixed(1);
-
-            // EV pro Tag
-            const useWR=totalWR>0?totalWR/100:0.5;
-            const evPerTrade=Math.round(useWR*recTP-(1-useWR)*recSL);
-            const evDay=evPerTrade*maxT;
-
-            // DD Status
-            const ddUsed=Math.max(0,Math.round(acct.size-saldo));
-            const ddPct=Math.min(100,Math.round(ddUsed/maxDD*100));
-            const dailyDDUsed=Math.max(0,-todPnl);
-            const dailyDDPct=Math.min(100,Math.round(dailyDDUsed/dailyDD*100));
-            const ddFree=Math.max(0,maxDD-ddUsed);
-            const dailyDDFree=Math.max(0,dailyDD-dailyDDUsed);
-
-            // Ampel
-            let ampel='green',ampelMsg='';
-            if(ddPct>75||dailyDDPct>70){
-              ampel='red';ampelMsg=ddPct>75?'Max-DD kritisch — heute besser nicht traden!':'Tages-DD fast erreicht — STOP heute!';
-            } else if(ddPct>40||dailyDDPct>40||disc<60){
-              ampel='yellow';ampelMsg=ddPct>40?'DD-Warnung: vorsichtig bleiben':dailyDDPct>40?'Tages-DD erhöht — nur 1 Trade noch':('Regelquote '+disc+'% — Fokus auf Disziplin');
-            } else {
-              ampelMsg=accountType==='challenge'&&profitNeeded>0?'Auf Kurs — fokussiert bleiben!':'Alles grün — weiter so!';
-            }
-            const ampelColor=ampel==='green'?G:ampel==='yellow'?Y:R;
-
-            // Streak letzte Trades
-            let streak=0;
-            for(let i=t09.length-1;i>=0;i--){
-              if(t09[i].pnl>0&&(streak>=0)){streak++;}
-              else if(t09[i].pnl<=0&&(streak<=0)){streak--;}
-              else break;
-            }
-
+            const allWins=t09.filter(t=>t.pnl>0);
+            const allLoss=t09.filter(t=>t.pnl<0);
+            const wr=t09.length?Math.round(allWins.length/t09.length*100):0;
+            const avgW=allWins.length?Math.round(allWins.reduce((s,t)=>s+t.pnl,0)/allWins.length):0;
+            const avgL=allLoss.length?Math.round(Math.abs(allLoss.reduce((s,t)=>s+t.pnl,0)/allLoss.length)):0;
+            const useWR=wr>0?wr/100:0.5;
+            const evTrade=Math.round(useWR*recTP-(1-useWR)*recSL);
+            const evDay=evTrade*maxT;
+            const ac=wz.ampel==='green'?G:wz.ampel==='yellow'?Y:R;
+            const cd=wzpData;
             return(
-              <Card style={{borderColor:ampelColor+'55',background:'linear-gradient(160deg,#0a0e1a,#0d1117)',padding:0,overflow:'hidden'}}>
+              <Card style={{borderColor:ac+'55',background:'linear-gradient(160deg,#0a0e1a,#0d1117)',padding:0,overflow:'hidden'}}>
 
-                {/* ── HEADER ──────────────────────────────────────── */}
-                <div style={{padding:'14px 16px 10px',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                {/* HEADER */}
+                <div style={{padding:'12px 16px 10px',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <div style={{width:10,height:10,borderRadius:'50%',background:ampelColor,animation:'pulse 2s infinite',boxShadow:'0 0 10px '+ampelColor,flexShrink:0}}/>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div style={{width:10,height:10,borderRadius:'50%',background:ac,animation:'pulse 2s infinite',boxShadow:'0 0 8px '+ac,flexShrink:0}}/>
                       <div>
-                        <div style={{fontWeight:900,fontSize:16,color:'#f0f4ff',letterSpacing:'-0.3px'}}>Tagesplan</div>
+                        <div style={{fontWeight:900,fontSize:16,color:'#f0f4ff'}}>Tagesplan</div>
                         <div style={{fontSize:9,color:B,fontWeight:700,letterSpacing:'0.8px',marginTop:1}}>
-                          {acct.propFirm||'CHALLENGE'} · {acct.instrument||'MNQ'} · {ddType==='eod'?'EOD':'TRAILING'} DD
+                          {acct.propFirm||'CHALLENGE'} · {acct.instrument||'MNQ'} · {(acct.ddType||'eod')==='eod'?'EOD':'TRAILING'} DD
                         </div>
                       </div>
                     </div>
                     <div style={{display:'flex',gap:6,alignItems:'center'}}>
                       <button onClick={e=>{e.stopPropagation();wzpAnalyze();}}
                         style={{background:wzpLoading?'rgba(255,255,255,0.04)':'rgba(99,102,241,0.2)',border:'1px solid rgba(99,102,241,0.35)',borderRadius:8,padding:'5px 10px',color:wzpLoading?'#4b5568':'#a5b4fc',fontSize:10,fontWeight:700}}>
-                        {wzpLoading?'⟳ Lädt...':'🤖 KI'}
+                        {wzpLoading?'⟳ KI...':'🤖 KI'}
                       </button>
-                      <div style={{fontSize:18}}>{ampel==='green'?'🟢':ampel==='yellow'?'🟡':'🔴'}</div>
+                      <span style={{fontSize:16}}>{wz.ampel==='green'?'🟢':wz.ampel==='yellow'?'🟡':'🔴'}</span>
                     </div>
                   </div>
-                  <div style={{marginTop:8,color:ampelColor,fontSize:11,fontWeight:700}}>{ampelMsg}</div>
-                  {wzpData&&<div style={{fontSize:8,color:'#4b5568',marginTop:2}}>🤖 Claude · {wzpData.date} <button onClick={e=>{e.stopPropagation();setWzpData(null);localStorage.removeItem('ttp_wzp_data');}} style={{color:'#4b5568',background:'none',padding:0,fontSize:8}}>· zurücksetzen</button></div>}
+                  <div style={{marginTop:6,color:ac,fontSize:11,fontWeight:700}}>{wz.ampelMsg}</div>
                 </div>
 
-                {/* ── CHALLENGE PROGRESS ───────────────────────────── */}
-                <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                    <span style={{color:'#6b7a9a',fontSize:10,fontWeight:700}}>{accountType==='challenge'?'CHALLENGE':'MONATSZIEL'}</span>
-                    <span style={{fontWeight:900,fontSize:13,color:profitNeeded<=0?G:'#f0f4ff'}}>
-                      {profitNeeded<=0?'✅ GESCHAFFT!':'+$'+profitSoFar+' / $'+profitTarget}
+                {/* CHALLENGE FORTSCHRITT */}
+                <div style={{padding:'10px 16px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
+                    <span style={{color:'#6b7a9a',fontSize:9,fontWeight:700}}>{wz.accountType==='challenge'?'CHALLENGE FORTSCHRITT':'MONATSZIEL'}</span>
+                    <span style={{fontWeight:900,fontSize:12,color:wz.profitNeeded<=0?G:'#f0f4ff'}}>
+                      {wz.profitNeeded<=0?'✅ GESCHAFFT!':'+$'+wz.profitSoFar+' / $'+wz.profitTarget}
                     </span>
                   </div>
-                  <div style={{height:5,borderRadius:3,background:'rgba(255,255,255,0.04)',overflow:'hidden',marginBottom:6}}>
-                    <div style={{height:'100%',width:challengePct+'%',background:'linear-gradient(90deg,'+G+',#00c97a)',borderRadius:3,transition:'width .6s'}}/>
+                  <div style={{height:5,borderRadius:3,background:'rgba(255,255,255,0.05)',overflow:'hidden',marginBottom:5}}>
+                    <div style={{height:'100%',width:Math.min(100,Math.round(wz.profitSoFar/Math.max(1,wz.profitTarget)*100))+'%',background:'linear-gradient(90deg,'+G+',#00c97a)',borderRadius:3,transition:'width .6s'}}/>
                   </div>
                   <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#6b7a9a'}}>
-                    <span>Noch: <b style={{color:profitNeeded<=0?G:R}}>${profitNeeded}</b></span>
-                    <span>Tägl. nötig: <b style={{color:dailyNeeded<=evDay?G:dailyNeeded<=evDay*1.5?Y:R}}>${dailyNeeded}</b></span>
-                    <span>Tage: <b style={{color:daysLeft>5?G:daysLeft>2?Y:R}}>{daysLeft}d</b></span>
+                    <span>Noch: <b style={{color:wz.profitNeeded<=0?G:R}}>${wz.profitNeeded}</b></span>
+                    <span>Tägl. nötig: <b style={{color:wz.dailyNeeded<=Math.max(0,evDay)?G:wz.dailyNeeded<=Math.max(0,evDay)*1.5?Y:R}}>${wz.dailyNeeded}</b></span>
+                    <span>Tage: <b style={{color:wz.challengeDaysLeft>5?G:wz.challengeDaysLeft>2?Y:R}}>{wz.challengeDaysLeft}d</b></span>
                   </div>
                 </div>
 
-                {/* ── DEIN SETUP HEUTE ─────────────────────────────── */}
-                <div style={{padding:'14px 16px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                  <div style={{color:'#6b7a9a',fontSize:9,fontWeight:700,letterSpacing:'0.8px',marginBottom:10}}>DEIN SETUP HEUTE</div>
-
-                  {/* 3 Setup-Karten nebeneinander */}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginBottom:10}}>
+                {/* DEIN SETUP */}
+                <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+                  <div style={{color:'#6b7a9a',fontSize:9,fontWeight:700,letterSpacing:'0.8px',marginBottom:8}}>DEIN SETUP HEUTE</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginBottom:8}}>
                     <div style={{background:'rgba(99,102,241,0.12)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(99,102,241,0.3)'}}>
-                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:3}}>KONTRAKTE</div>
-                      <div style={{color:'#f0f4ff',fontWeight:900,fontSize:18,lineHeight:1}}>{recContracts}x</div>
-                      <div style={{color:B,fontSize:9,fontWeight:700,marginTop:2}}>{acct.instrument||'MNQ'}</div>
+                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>KONTRAKTE</div>
+                      <div style={{color:'#f0f4ff',fontWeight:900,fontSize:20}}>{cd?cd.recContracts:recC}x</div>
+                      <div style={{color:B,fontSize:9,fontWeight:700,marginTop:1}}>{cd?cd.recSymbol:(acct.instrument||'MNQ')}</div>
                     </div>
-                    <div style={{background:'rgba(239,68,68,0.08)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(239,68,68,0.25)'}}>
-                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:3}}>STOP LOSS</div>
-                      <div style={{color:R,fontWeight:900,fontSize:18,lineHeight:1}}>{slT}T</div>
-                      <div style={{color:R,fontSize:9,fontWeight:700,marginTop:2}}>= -${recSL}</div>
+                    <div style={{background:'rgba(239,68,68,0.08)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(239,68,68,0.2)'}}>
+                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>STOP LOSS</div>
+                      <div style={{color:R,fontWeight:900,fontSize:20}}>{cd?cd.adaptiveSL:slT}T</div>
+                      <div style={{color:R,fontSize:9,fontWeight:700,marginTop:1}}>-${cd?Math.round(cd.adaptiveSL*(INSTRUMENTS[cd.recSymbol]||inst).tickValue*(cd.recContracts||1)):recSL}</div>
                     </div>
-                    <div style={{background:'rgba(0,211,149,0.08)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(0,211,149,0.25)'}}>
-                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:3}}>TAKE PROFIT</div>
-                      <div style={{color:G,fontWeight:900,fontSize:18,lineHeight:1}}>{tpT}T</div>
-                      <div style={{color:G,fontSize:9,fontWeight:700,marginTop:2}}>= +${recTP}</div>
+                    <div style={{background:'rgba(0,211,149,0.08)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(0,211,149,0.2)'}}>
+                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>TAKE PROFIT</div>
+                      <div style={{color:G,fontWeight:900,fontSize:20}}>{cd?cd.adaptiveTP:tpT}T</div>
+                      <div style={{color:G,fontSize:9,fontWeight:700,marginTop:1}}>+${cd?Math.round(cd.adaptiveTP*(INSTRUMENTS[cd.recSymbol]||inst).tickValue*(cd.recContracts||1)):recTP}</div>
                     </div>
                   </div>
-
-                  {/* Trades / Tag + Fenster */}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:10}}>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
                     <div style={{background:'rgba(0,0,0,0.2)',borderRadius:8,padding:'8px 10px',border:'1px solid #1e2030'}}>
                       <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>MAX TRADES / TAG</div>
                       <div style={{color:'#f0f4ff',fontWeight:900,fontSize:16}}>{maxT} Trades</div>
                       <div style={{color:'#4b5568',fontSize:9,marginTop:1}}>Heute: {todT.length}/{maxT}</div>
                     </div>
                     <div style={{background:'rgba(0,0,0,0.2)',borderRadius:8,padding:'8px 10px',border:'1px solid #1e2030'}}>
-                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>HANDELSFENSTER</div>
-                      <div style={{color:'#f0f4ff',fontWeight:700,fontSize:13}}>{settings.windowStart||'16:15'}–{settings.windowEnd||'17:30'}</div>
-                      <div style={{color:'#4b5568',fontSize:9,marginTop:1}}>Nur in diesem Fenster</div>
+                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>ERWARTUNG HEUTE</div>
+                      <div style={{color:evDay>=0?G:R,fontWeight:900,fontSize:16}}>{evDay>=0?'+':''}{cd?cd.evPerDay:evDay}$</div>
+                      <div style={{color:'#4b5568',fontSize:9,marginTop:1}}>CRV {cd?(cd.adaptiveTP/cd.adaptiveSL).toFixed(1):crv}:1</div>
                     </div>
-                  </div>
-
-                  {/* EV Erwartung heute */}
-                  <div style={{background:'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(168,85,247,0.06))',borderRadius:10,padding:'10px 12px',border:'1px solid rgba(99,102,241,0.2)'}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <div>
-                        <div style={{color:'#8b96b0',fontSize:9,marginBottom:2}}>ERWARTETER GEWINN HEUTE</div>
-                        <div style={{color:evDay>=0?G:R,fontWeight:900,fontSize:20}}>{evDay>=0?'+':''}{wzpData?((wzpData.evPerDay>=0?'+':'')+wzpData.evPerDay):evDay}$</div>
-                        <div style={{color:'#6b7a9a',fontSize:9,marginTop:2}}>
-                          {totalWR>0?('bei '+totalWR+'% WR aus '+t09.length+' Trades'):'(wird mit mehr Trades genauer)'}
-                        </div>
-                      </div>
-                      <div style={{textAlign:'right'}}>
-                        <div style={{color:'#6b7a9a',fontSize:9,marginBottom:2}}>CRV</div>
-                        <div style={{color:Y,fontWeight:800,fontSize:16}}>{crv}:1</div>
-                        <div style={{color:'#4b5568',fontSize:9,marginTop:2}}>Risiko / Reward</div>
-                      </div>
-                    </div>
-                    {totalWR>0&&<div style={{marginTop:8,padding:'6px 0 0',borderTop:'1px solid rgba(255,255,255,0.04)',display:'flex',gap:16}}>
-                      <span style={{fontSize:9,color:'#6b7a9a'}}>WR: <b style={{color:totalWR>=50?G:totalWR>=40?Y:R}}>{totalWR}%</b></span>
-                      <span style={{fontSize:9,color:'#6b7a9a'}}>Ø Win: <b style={{color:G}}>+${wzpData?wzpData.avgWin:avgWin}</b></span>
-                      <span style={{fontSize:9,color:'#6b7a9a'}}>Ø Loss: <b style={{color:R}}>-${wzpData?wzpData.avgLoss:avgLoss}</b></span>
-                      <span style={{fontSize:9,color:'#6b7a9a'}}>Streak: <b style={{color:streak>0?G:streak<0?R:Y}}>{streak>0?'+'+streak:streak}</b></span>
-                    </div>}
                   </div>
                 </div>
 
-                {/* ── WARUM DIESES SETUP? ──────────────────────────── */}
-                <div style={{padding:'10px 16px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                  <div style={{color:'#6b7a9a',fontSize:9,fontWeight:700,letterSpacing:'0.8px',marginBottom:6}}>WARUM DIESES SETUP?</div>
-                  <div style={{fontSize:10,color:'#8b96b0',lineHeight:1.7}}>
-                    {'Daily-DD $'+dailyDD+' ÷ '+maxT+' Trades × 40% Puffer = $'+maxRiskPerTrade+' max/Trade'}
-                    <br/>
-                    {recContracts+'x '+( acct.instrument||'MNQ')+' mit '+slT+'T SL = $'+recSL+' Risiko ✓'}
-                    {recContracts===1&&slPerContract>maxRiskPerTrade*1.5&&<><br/><span style={{color:Y}}>{'⚠ Kleiner SL oder weniger Kontrakte empfohlen'}</span></>}
-                    {wzpData&&wzpData.insight&&<><br/><span style={{color:B,fontStyle:'italic'}}>{wzpData.insight}</span></>}
-                  </div>
-                </div>
-
-                {/* ── DD SICHERHEIT ────────────────────────────────── */}
+                {/* STATS + DD */}
                 <div style={{padding:'10px 16px'}}>
-                  <div style={{color:'#6b7a9a',fontSize:9,fontWeight:700,letterSpacing:'0.8px',marginBottom:8}}>DD SICHERHEIT</div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:5,marginBottom:8}}>
+                    {[
+                      {l:'WIN RATE',v:wr+'%',c:wr>=50?G:wr>=40?Y:R},
+                      {l:'Ø WIN',v:'+$'+avgW,c:G},
+                      {l:'Ø LOSS',v:'-$'+avgL,c:R},
+                    ].map(s=>(
+                      <div key={s.l} style={{background:'rgba(0,0,0,0.2)',borderRadius:7,padding:'6px 4px',textAlign:'center',border:'1px solid #1e2030'}}>
+                        <div style={{color:'#6b7a9a',fontSize:8,marginBottom:2}}>{s.l}</div>
+                        <div style={{color:s.c,fontWeight:800,fontSize:12}}>{s.v}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
                     <div>
-                      <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                      <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
                         <span style={{color:'#6b7a9a',fontSize:9}}>Max DD</span>
-                        <span style={{color:ddPct>50?R:ddPct>25?Y:G,fontSize:9,fontWeight:700}}>{ddPct}%</span>
+                        <span style={{color:wz.ddPct>50?R:wz.ddPct>25?Y:G,fontSize:9,fontWeight:700}}>{wz.ddPct}%</span>
                       </div>
-                      <div style={{height:4,borderRadius:2,background:'rgba(255,255,255,0.04)',overflow:'hidden',marginBottom:3}}>
-                        <div style={{height:'100%',width:ddPct+'%',background:ddPct>50?R:ddPct>25?Y:G,borderRadius:2}}/>
+                      <div style={{height:4,borderRadius:2,background:'rgba(255,255,255,0.04)',overflow:'hidden'}}>
+                        <div style={{height:'100%',width:wz.ddPct+'%',background:wz.ddPct>50?R:wz.ddPct>25?Y:G,borderRadius:2}}/>
                       </div>
-                      <div style={{fontSize:9,color:'#4b5568'}}>
-                        ${ddFree} frei · <span style={{color:ddType==='eod'?G:Y}}>{ddType==='eod'?'EOD':'TRAILING'}</span>
-                      </div>
+                      <div style={{fontSize:9,color:'#4b5568',marginTop:2}}>${Math.round(wz.ddUsed)} verbraucht · {(acct.ddType||'eod')==='eod'?'EOD':'TRAILING'}</div>
                     </div>
                     <div>
-                      <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                      <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
                         <span style={{color:'#6b7a9a',fontSize:9}}>Tages DD</span>
-                        <span style={{color:dailyDDPct>50?R:dailyDDPct>25?Y:G,fontSize:9,fontWeight:700}}>{dailyDDPct}%</span>
+                        <span style={{color:wz.dailyDDPct>50?R:wz.dailyDDPct>25?Y:G,fontSize:9,fontWeight:700}}>{wz.dailyDDPct}%</span>
                       </div>
-                      <div style={{height:4,borderRadius:2,background:'rgba(255,255,255,0.04)',overflow:'hidden',marginBottom:3}}>
-                        <div style={{height:'100%',width:dailyDDPct+'%',background:dailyDDPct>50?R:dailyDDPct>25?Y:G,borderRadius:2}}/>
+                      <div style={{height:4,borderRadius:2,background:'rgba(255,255,255,0.04)',overflow:'hidden'}}>
+                        <div style={{height:'100%',width:wz.dailyDDPct+'%',background:wz.dailyDDPct>50?R:wz.dailyDDPct>25?Y:G,borderRadius:2}}/>
                       </div>
-                      <div style={{fontSize:9,color:'#4b5568'}}>${dailyDDFree} noch frei heute</div>
+                      <div style={{fontSize:9,color:'#4b5568',marginTop:2}}>${Math.max(0,(acct.dailyDD||1000)-Math.round(Math.max(0,-todPnl)))} frei heute</div>
                     </div>
                   </div>
-                  {wzpData&&wzpData.recs&&<div style={{marginTop:10}}>
-                    <div style={{color:'#6b7a9a',fontSize:9,fontWeight:700,letterSpacing:'0.8px',marginBottom:6}}>🤖 KI EMPFEHLUNGEN</div>
-                    {wzpData.recs.map((r,i)=>(
-                      <div key={i} style={{marginBottom:6,padding:'8px 10px',background:'rgba(99,102,241,0.08)',borderRadius:8,border:'1px solid rgba(99,102,241,0.15)'}}>
+                  {cd&&cd.recs&&<div style={{marginTop:8}}>
+                    <div style={{color:'#6b7a9a',fontSize:9,fontWeight:700,letterSpacing:'0.8px',marginBottom:5}}>🤖 KI EMPFEHLUNGEN</div>
+                    {cd.recs.map((r,i)=>(
+                      <div key={i} style={{marginBottom:5,padding:'7px 10px',background:'rgba(99,102,241,0.08)',borderRadius:8,border:'1px solid rgba(99,102,241,0.15)'}}>
                         <span style={{fontSize:11}}>{r.icon} </span>
                         <span style={{color:'#f0f4ff',fontSize:10,fontWeight:700}}>{r.title}: </span>
                         <span style={{color:'#8b96b0',fontSize:10}}>{r.text}</span>
@@ -1959,9 +1857,9 @@ const sendAiMessage=async()=>{
 
               </Card>
             );
-          }catch(e){return(<div style={{padding:16,color:'#ef4444',fontSize:12}}>Tagesplan Ladefehler – bitte App neu laden.</div>);}})()}
+          })()}
 
-          {/* MEIN MONATSZIEL */}
+          {/* MEIN MONATSZIEL */}          {/* MEIN MONATSZIEL */}
           <Card style={{borderColor:P+"33",background:"#0d0a14"}} onClick={()=>setMonatExp(p=>!p)}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
