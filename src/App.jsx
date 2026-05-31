@@ -343,7 +343,7 @@ export default function App(){
   const[challengeStart,setChallengeStart]=useState(()=>localStorage.getItem('ttp_challenge_start')||'2000-01-01');
   const[acct,setAcct]=useState(()=>{
     try{return JSON.parse(localStorage.getItem('ttp_account')||'null')||{
-      type:'challenge',broker:'',number:'',name:'',
+      type:'challenge',broker:'',number:'',name:'',propFirm:'TTP',ddType:'eod',profitTargetPct:8,challengeDays:30,
       size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30,lotSize:1,
       instrument:'MNQ',slTicks:40,tpTicks:80
     };}catch(e){return{type:'challenge',broker:'',number:'',size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30};}
@@ -599,6 +599,95 @@ export default function App(){
       totalDays:Object.keys(m).length
     };
   },[t09,acct]);
+
+  const[wzpExp,setWzpExp]=useState(false);
+
+  const wzpCalc=useMemo(()=>{
+    const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
+    const maxT=acct.maxTrades||settings.maxTrades||2;
+    const ddType=acct.ddType||'eod';
+    const accountType=acct.type||'challenge';
+    // --- Woche ---
+    const now=new Date();
+    const dow=now.getDay();
+    const daysSinceMon=dow===0?6:dow-1;
+    const weekStart=new Date(now);weekStart.setDate(now.getDate()-daysSinceMon);weekStart.setHours(0,0,0,0);
+    const weekStartISO=weekStart.toISOString().split('T')[0];
+    const weekT=t09.filter(t=>t.date>=weekStartISO);
+    const weekPnl=Math.round(weekT.reduce((s,t)=>s+t.pnl,0)*100)/100;
+    const weekWins=weekT.filter(t=>t.pnl>0).length;
+    const weekWR=weekT.length?Math.round(weekWins/weekT.length*100):0;
+    const tradDaysLeftWeek=[2,3,4,5].filter(d=>d>dow).length;
+    // --- Ziele je Kontotyp ---
+    let profitTarget=0,profitSoFar=0,profitNeeded=0,challengeDaysLeft=0,dailyNeeded=0,weeklyTarget=0;
+    if(accountType==='challenge'){
+      profitTarget=Math.round(acct.size*((acct.profitTargetPct||8)/100));
+      profitSoFar=Math.max(0,Math.round(saldo-acct.size));
+      profitNeeded=Math.max(0,profitTarget-profitSoFar);
+      if(challengeStart&&challengeStart!=='2000-01-01'){
+        const cEnd=new Date(challengeStart);cEnd.setDate(cEnd.getDate()+(acct.challengeDays||30));
+        for(let d=new Date(now);d<=cEnd;d.setDate(d.getDate()+1)){const dw=d.getDay();if(dw!==0&&dw!==6&&d>now)challengeDaysLeft++;}
+      } else {challengeDaysLeft=15;}
+      dailyNeeded=challengeDaysLeft>0?Math.ceil(profitNeeded/challengeDaysLeft):profitNeeded;
+      weeklyTarget=dailyNeeded*Math.min(5,tradDaysLeftWeek+1);
+    } else {
+      const mGoal=goals.monthlyGoal||(Math.max(0,goals.targetBalance-saldo))||1500;
+      const today2=new Date();const endM=new Date(today2.getFullYear(),today2.getMonth()+1,0);
+      let dLeft=0;for(let d=new Date(today2);d<=endM;d.setDate(d.getDate()+1)){if(d.getDay()!==0&&d.getDay()!==6)dLeft++;}
+      const mRem=Math.max(0,mGoal-monthPnl);
+      dailyNeeded=dLeft>0?Math.ceil(mRem/dLeft):0;
+      weeklyTarget=dailyNeeded*5;profitTarget=mGoal;profitSoFar=Math.max(0,Math.round(monthPnl));profitNeeded=Math.round(mRem);
+    }
+    // --- Kontrakt-Empfehlung ---
+    const maxRisk=Math.round((acct.dailyDD||1000)/maxT*0.6);
+    const slPerMicro=Math.round((acct.slTicks||40)*inst.tickValue);
+    const tpPerMicro=Math.round((acct.tpTicks||80)*inst.tickValue);
+    const recMicro=Math.max(1,Math.floor(maxRisk/Math.max(1,slPerMicro)));
+    const fullSym=inst.full;const fullInst=INSTRUMENTS[fullSym];
+    const slPerFull=fullInst?Math.round((acct.slTicks||40)*fullInst.tickValue):9999;
+    const canFull=fullInst&&slPerFull<=maxRisk;
+    const recFull=canFull?Math.max(1,Math.floor(maxRisk/slPerFull)):0;
+    const recSym=canFull&&recMicro>=8?fullSym:(acct.instrument||'MNQ');
+    const recQty=recSym===fullSym?recFull:recMicro;
+    const recTickVal=(INSTRUMENTS[recSym]||inst).tickValue;
+    const recSL=Math.round((acct.slTicks||40)*recTickVal*recQty);
+    const recTP=Math.round((acct.tpTicks||80)*recTickVal*recQty);
+    // --- DD Status ---
+    const ddUsed=Math.max(0,acct.size-saldo);
+    const ddPct=Math.min(100,Math.round(ddUsed/(acct.maxDD||2000)*100));
+    const dailyDDUsed=Math.max(0,-todPnl);
+    const dailyDDPct=Math.min(100,Math.round(dailyDDUsed/(acct.dailyDD||1000)*100));
+    // --- Wochenfortschritt ---
+    const weeklyPct=weeklyTarget>0?Math.min(100,Math.max(0,Math.round(weekPnl/weeklyTarget*100))):weekPnl>=0?100:0;
+    // --- AMPEL ---
+    let ampel='green',ampelMsg='';
+    if(ddPct>75||dailyDDPct>65||(accountType==='challenge'&&profitNeeded>0&&challengeDaysLeft<4&&dailyNeeded>200)){
+      ampel='red';
+      ampelMsg=ddPct>75?`Max-DD ${ddPct}% verbraucht – Kapital schützen!`:dailyDDPct>65?`Tages-DD ${dailyDDPct}% – Heute STOP!`:`Challenge-Deadline kritisch: $${profitNeeded} in ${challengeDaysLeft} Tagen`;
+    } else if(ddPct>40||dailyDDPct>35||disc<65||(weekPnl<0&&weekT.length>=3)){
+      ampel='yellow';
+      ampelMsg=ddPct>40?`DD ${ddPct}% – vorsichtig`:dailyDDPct>35?`Tages-DD ${dailyDDPct}% – aufpassen`:disc<65?`Regelquote ${disc}% – unter Ziel`:`Woche negativ – Setup-Qualität prüfen`;
+    } else {
+      ampelMsg=accountType==='challenge'?`Challenge auf Kurs – $${profitSoFar} von $${profitTarget} erreicht`:`Alles grün – weiter so!`;
+    }
+    // --- Top-3 Empfehlungen ---
+    const recs=[];
+    recs.push({icon:'📊',title:'Empfohlene Größe',text:`${recQty}x ${recSym} — SL $${recSL} / TP $${recTP}. Max. ${maxT} Trades im Fenster ${settings.windowStart||'16:15'}–${settings.windowEnd||'17:30'} Uhr.`});
+    if(accountType==='challenge'&&profitNeeded>0){
+      const onTrack=dailyNeeded<=recTP*maxT;
+      recs.push({icon:onTrack?'🎯':'⚡',title:onTrack?'Pace realistisch':'Pace erhöhen nötig',text:onTrack?`$${dailyNeeded}/Tag nötig. Bei ${maxT} Trades à $${recTP} TP erreichbar. ${challengeDaysLeft} Tage übrig.`:`$${dailyNeeded}/Tag nötig. ${challengeDaysLeft} Tage übrig. Fokus auf A+ Setups – kein Overtrading.`});
+    } else {
+      recs.push({icon:weekPnl>=0?'📈':'📉',title:`Woche ${weekPnl>=0?'positiv':'negativ'}`,text:`${weekPnl>=0?'+':''}$${weekPnl} diese Woche. Ziel: $${weeklyTarget}. ${weekT.length} Trades, ${tradDaysLeftWeek} Tage noch.`});
+    }
+    if(ddPct>30||dailyDDPct>20){
+      recs.push({icon:'🛡️',title:'DD-Warnung',text:`Max-DD: ${ddPct}% ($${Math.round(ddUsed)} von $${acct.maxDD}). ${ddType==='trailing'?'Trailing DD — vorsicht nach Gewinnen.':'EOD DD — Positionen halten ok.'} Tages-DD: ${dailyDDPct}%.`});
+    } else if(disc<70){
+      recs.push({icon:'📋',title:'Regelquote verbessern',text:`${disc}% Regelquote. Konsequent im Fenster ${settings.windowStart||'16:15'}–${settings.windowEnd||'17:30'} Uhr + max. ${maxT} Trades = direkt mehr Profit.`});
+    } else {
+      recs.push({icon:'✅',title:'Risiko im Griff',text:`Max-DD ${ddPct}% verbraucht. ${ddType==='eod'?'EOD DD — du kannst Positionen über den Tag halten.':'Trailing DD — DD-Level steigt mit jedem neuen Gewinn.'}`});
+    }
+    return{ampel,ampelMsg,weekPnl,weekTradeCount:weekT.length,weekWR,weeklyTarget,weeklyPct,profitTarget,profitSoFar,profitNeeded,challengeDaysLeft,dailyNeeded,recSym,recQty,recSL,recTP,ddPct,dailyDDPct,ddUsed:Math.round(ddUsed),recs,accountType,ddType,tradDaysLeftWeek};
+  },[t09,acct,saldo,settings,disc,monthPnl,challengeStart,goals,todPnl]);
 
   const durBuckets=useMemo(()=>{
     const bkts=[{lbl:"<30s",mn:0,mx:30},{lbl:"30s-2m",mn:30,mx:120},{lbl:"2-5m",mn:120,mx:300},{lbl:"5m+",mn:300,mx:999999}];
@@ -1518,144 +1607,107 @@ const sendAiMessage=async()=>{
           </Card>
 
 
-          {/* WEG ZUR PROFITABILITÄT */}
-          {profitPlan&&(()=>{
-            const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
-            const ls=acct.lotSize||1;
-            const slAmt=profitPlan.slAmt;
-            const tpAmt=profitPlan.tpAmt;
-            const wr=profitPlan.wr/100;
-            const crv=profitPlan.crvConfig;
-            // 3 Szenarien WR
-            const last10=t09.slice(-10);
-            const wrPess=last10.length?Math.round(last10.filter(t=>t.pnl>0).length/last10.length*100):profitPlan.wr;
-            const wrReal=profitPlan.wr;
-            const best10=[...t09].sort((a,b)=>b.pnl-a.pnl).slice(0,10);
-            const wrOpt=Math.min(85,Math.round(best10.filter(t=>t.pnl>0).length/Math.max(best10.length,1)*100));
-            // EV pro Tag für jeden Szenario
-            const evDay=(wrPct)=>Math.round((wrPct/100*tpAmt-(1-wrPct/100)*slAmt)*(acct.maxTrades||2));
-            // Challenge Wahrscheinlichkeit
-            const missing=Math.max(0,acct.target-saldo);
-            const today2=new Date();
-            const endM=new Date(today2.getFullYear(),today2.getMonth()+1,0);
-            let dLeft=0;for(let d=new Date(today2);d<=endM;d.setDate(d.getDate()+1)){if(d.getDay()!==0&&d.getDay()!==6)dLeft++;}
-            const evReal=evDay(wrReal);
-            const projReal=Math.round(dLeft*evReal);
-            const challengeProb=evReal>0?Math.min(99,Math.max(1,Math.round((1-missing/Math.max(1,dLeft*evReal+missing))*100))):5;
-            // Overtrading Kosten
-            const otDays=profitPlan.overtradeDays;
-            const otCost=otDays>0?Math.round(otDays*(evDay(wrReal)*-0.5)):0;
-            // Disziplin Einfluss
-            const discBonus=disc>=80?Math.round(evReal*0.2):disc>=60?0:Math.round(evReal*-0.15);
+          {/* WZP – WOCHENPLAN */}
+          {wzpCalc&&(()=>{
+            const wz=wzpCalc;
+            const ampelColor=wz.ampel==='green'?G:wz.ampel==='yellow'?Y:R;
+            const ampelBg=wz.ampel==='green'?'rgba(0,211,149,0.08)':wz.ampel==='yellow'?'rgba(245,158,11,0.08)':'rgba(239,68,68,0.08)';
+            const ampelEmoji=wz.ampel==='green'?'🟢':wz.ampel==='yellow'?'🟡':'🔴';
             return(
-              <Card style={{borderColor:"#6366f133",background:"linear-gradient(135deg,#0d1020,#0f1117)"}} onClick={()=>setProfExpanded(p=>!p)}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{width:4,height:4,borderRadius:"50%",background:B,flexShrink:0,marginTop:5,marginLeft:5,animation:"watchDots 2.5s ease-in-out infinite",boxShadow:"0 0 4px rgba(99,102,241,0.8)"}}/>
+              <Card style={{borderColor:ampelColor+'44',background:'linear-gradient(135deg,#0d1020,#0f1117)'}} onClick={()=>setWzpExp(p=>!p)}>
+                {/* HEADER */}
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div style={{width:12,height:12,borderRadius:'50%',background:ampelColor,flexShrink:0,animation:'pulse 2s infinite',boxShadow:'0 0 8px '+ampelColor}}/>
                     <div>
-                      <div style={{fontWeight:800,fontSize:15,color:"#f0f4ff"}}>Weg zur Profitabilität</div>
-                      <div style={{color:B,fontSize:9,fontWeight:600,letterSpacing:"0.5px"}}>POWERED BY MINDRISK AI · {profitPlan.instName}</div>
+                      <div style={{fontWeight:800,fontSize:15,color:'#f0f4ff'}}>Wochenplan</div>
+                      <div style={{color:B,fontSize:9,fontWeight:600,letterSpacing:'0.5px'}}>WZP · {(wz.accountType==='challenge'?'CHALLENGE':(wz.accountType==='pa'?'PERFORMANCE':'EIGENKAPITAL'))} · {wz.ddType==='eod'?'EOD DD':'TRAILING DD'}</div>
                     </div>
                   </div>
-                  {!isDesktop&&<span style={{color:B,fontSize:11,fontWeight:600}}>{profExpanded?"▲":"▼"}</span>}
-                </div>
-
-                {/* CHALLENGE WAHRSCHEINLICHKEIT - immer sichtbar */}
-                <div style={{background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.08))",borderRadius:12,padding:"12px 14px",marginBottom:10,border:"1px solid rgba(99,102,241,0.25)"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                    <div style={{color:"#8b96b0",fontSize:11,fontWeight:700}}>CHALLENGE ERFOLG</div>
-                    <div style={{color:challengeProb>=70?G:challengeProb>=40?Y:R,fontWeight:900,fontSize:24}}>{challengeProb}%</div>
-                  </div>
-                  <div style={{height:8,borderRadius:4,background:"rgba(255,255,255,0.05)",overflow:"hidden",marginBottom:6}}>
-                    <div style={{height:"100%",width:challengeProb+"%",background:challengeProb>=70?"linear-gradient(90deg,"+G+",#00a871)":challengeProb>=40?"linear-gradient(90deg,"+Y+",#f59e0b)":"linear-gradient(90deg,"+R+",#dc2626)",borderRadius:4,transition:"width .6s"}}/>
-                  </div>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#6b7a9a"}}>
-                    <span>EV/Tag: <span style={{color:evReal>=0?G:R,fontWeight:700}}>{evReal>=0?"+":""}${evReal}</span></span>
-                    <span>Noch: <span style={{color:"#f0f4ff",fontWeight:700}}>${Math.round(missing).toLocaleString()}</span></span>
-                    <span>Tage: <span style={{color:dLeft>5?G:Y,fontWeight:700}}>{dLeft}d</span></span>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>
+                    <div style={{fontSize:20}}>{ampelEmoji}</div>
+                    {!isDesktop&&<span style={{color:B,fontSize:11,fontWeight:600}}>{wzpExp?'▲':'▼'}</span>}
                   </div>
                 </div>
 
-                {/* 3 SZENARIEN */}
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:10}}>
+                {/* AMPEL STATUS */}
+                <div style={{background:ampelBg,borderRadius:10,padding:'10px 12px',marginBottom:10,border:'1px solid '+ampelColor+'33'}}>
+                  <div style={{color:ampelColor,fontWeight:700,fontSize:12}}>{wz.ampelMsg}</div>
+                </div>
+
+                {/* WOCHE STATS – immer sichtbar */}
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginBottom:10}}>
                   {[
-                    {l:"PESSIMISTISCH",wr:wrPess,sub:"Letzte 10 Trades",c:R},
-                    {l:"REALISTISCH",wr:wrReal,sub:"Challenge gesamt",c:Y},
-                    {l:"OPTIMISTISCH",wr:wrOpt,sub:"Beste Form",c:G},
-                  ].map(s=>{
-                    const ev=evDay(s.wr);
-                    const proj=Math.round(dLeft*ev);
-                    return(
-                      <div key={s.l} style={{background:"rgba(0,0,0,0.2)",borderRadius:10,padding:"8px 6px",textAlign:"center",border:"1px solid "+(s.c+"33")}}>
-                        <div style={{color:s.c,fontSize:8,fontWeight:700,marginBottom:4}}>{s.l}</div>
-                        <div style={{color:s.c,fontSize:18,fontWeight:900}}>{s.wr}%</div>
-                        <div style={{color:"#6b7a9a",fontSize:8,marginBottom:4}}>{s.sub}</div>
-                        <div style={{color:ev>=0?G:R,fontSize:11,fontWeight:700}}>EV {ev>=0?"+":""}${ev}/Tag</div>
-                        <div style={{color:proj>=0?G:R,fontSize:10,fontWeight:600}}>{proj>=0?"+":""}${proj} Monat</div>
-                      </div>
-                    );
-                  })}
+                    {l:'WOCHE P&L',v:(wz.weekPnl>=0?'+':'')+'$'+wz.weekPnl,c:wz.weekPnl>=0?G:R},
+                    {l:'WOCHE WR',v:wz.weekWR+'%',c:wz.weekWR>=50?G:wz.weekWR>=35?Y:R},
+                    {l:'ZIEL WOCHE',v:'$'+wz.weeklyTarget,c:B},
+                  ].map(s=>(
+                    <div key={s.l} style={{background:'rgba(0,0,0,0.25)',borderRadius:8,padding:'8px 6px',textAlign:'center',border:'1px solid #1e2030'}}>
+                      <div style={{color:'#6b7a9a',fontSize:8,marginBottom:2}}>{s.l}</div>
+                      <div style={{color:s.c,fontWeight:800,fontSize:13}}>{s.v}</div>
+                    </div>
+                  ))}
                 </div>
 
-                {(profExpanded||isDesktop)&&<>
-                  {/* SETUP KONFIGURATION */}
-                  <div style={{background:"rgba(0,0,0,0.2)",borderRadius:10,padding:10,marginBottom:10,border:"1px solid #1e2030"}}>
-                    <div style={{color:B,fontWeight:700,fontSize:11,marginBottom:8}}>{ls}x {profitPlan.instrument} — {profitPlan.slTicks}T SL / {profitPlan.tpTicks}T TP / {crv}:1 CRV</div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-                      {[
-                        {l:"SL",v:"$"+slAmt,c:R},
-                        {l:"TP",v:"$"+tpAmt,c:G},
-                        {l:"BREAK-EVEN WR",v:profitPlan.neededWR+"%",c:profitPlan.wr>=profitPlan.neededWR?G:Y},
-                        {l:"EV/TRADE",v:(profitPlan.evPerTrade>=0?"+":"")+"$"+profitPlan.evPerTrade,c:profitPlan.evPerTrade>=0?G:R},
-                        {l:"EV/TAG",v:(evReal>=0?"+":"")+"$"+evReal,c:evReal>=0?G:R},
-                        {l:"EV/MONAT",v:(profitPlan.monthlyEV>=0?"+":"")+"$"+profitPlan.monthlyEV,c:profitPlan.monthlyEV>=0?G:R},
-                      ].map(s=>(
-                        <div key={s.l} style={{background:"#0f1828",borderRadius:7,padding:"7px 6px",textAlign:"center"}}>
-                          <div style={{color:"#6b7a9a",fontSize:8,marginBottom:2}}>{s.l}</div>
-                          <div style={{color:s.c,fontWeight:800,fontSize:13}}>{s.v}</div>
-                        </div>
-                      ))}
+                {/* WOCHENFORTSCHRITT BAR */}
+                <div style={{marginBottom:10}}>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                    <span style={{color:'#8b96b0',fontSize:10}}>Wochenfortschritt</span>
+                    <span style={{color:ampelColor,fontWeight:700,fontSize:10}}>{wz.weeklyPct}%</span>
+                  </div>
+                  <div style={{height:6,borderRadius:3,background:'rgba(255,255,255,0.05)',overflow:'hidden'}}>
+                    <div style={{height:'100%',width:wz.weeklyPct+'%',background:'linear-gradient(90deg,'+ampelColor+','+ampelColor+'aa)',borderRadius:3,transition:'width .5s'}}/>
+                  </div>
+                </div>
+
+                {/* CHALLENGE / PA PROGRESS */}
+                {wz.accountType==='challenge'&&(
+                  <div style={{background:'linear-gradient(135deg,rgba(99,102,241,0.12),rgba(168,85,247,0.06))',borderRadius:10,padding:'10px 12px',marginBottom:10,border:'1px solid rgba(99,102,241,0.2)'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                      <span style={{color:'#8b96b0',fontSize:10,fontWeight:700}}>CHALLENGE FORTSCHRITT</span>
+                      <span style={{color:wz.profitNeeded<=0?G:Y,fontWeight:800,fontSize:12}}>{wz.profitNeeded<=0?'✅ ERREICHT!':'$'+wz.profitSoFar+' / $'+wz.profitTarget}</span>
+                    </div>
+                    <div style={{height:6,borderRadius:3,background:'rgba(255,255,255,0.05)',overflow:'hidden',marginBottom:6}}>
+                      <div style={{height:'100%',width:Math.min(100,Math.round(wz.profitSoFar/Math.max(1,wz.profitTarget)*100))+'%',background:'linear-gradient(90deg,'+G+',#00a871)',borderRadius:3,transition:'width .5s'}}/>
+                    </div>
+                    <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#6b7a9a'}}>
+                      <span>Noch: <span style={{color:wz.profitNeeded<=0?G:R,fontWeight:700}}>${wz.profitNeeded}</span></span>
+                      <span>Tägl. nötig: <span style={{color:wz.dailyNeeded<100?G:wz.dailyNeeded<200?Y:R,fontWeight:700}}>${wz.dailyNeeded}</span></span>
+                      <span>Tage: <span style={{color:wz.challengeDaysLeft>5?G:Y,fontWeight:700}}>{wz.challengeDaysLeft}d</span></span>
                     </div>
                   </div>
+                )}
 
-                  {/* DISZIPLIN & OVERTRADING EINFLUSS */}
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-                    <div style={{background:"rgba(0,0,0,0.2)",borderRadius:10,padding:10,border:"1px solid #1e2030"}}>
-                      <div style={{color:"#8b96b0",fontSize:10,fontWeight:700,marginBottom:6}}>REGELQUOTE EINFLUSS</div>
-                      <div style={{color:discBonus>=0?G:R,fontSize:18,fontWeight:900}}>{discBonus>=0?"+":""}${discBonus}/Mon</div>
-                      <div style={{color:"#6b7a9a",fontSize:10,marginTop:4}}>bei {disc}% Disziplin</div>
-                      <div style={{height:4,borderRadius:2,background:"rgba(255,255,255,0.05)",marginTop:6,overflow:"hidden"}}>
-                        <div style={{height:"100%",width:disc+"%",background:sc(disc),borderRadius:2}}/>
+                {/* TOP-3 EMPFEHLUNGEN – aufklappbar */}
+                {(wzpExp||isDesktop)&&(
+                  <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:4}}>
+                    <div style={{color:'#8b96b0',fontSize:10,fontWeight:700,marginBottom:2}}>TOP EMPFEHLUNGEN</div>
+                    {wz.recs.map((rec,i)=>(
+                      <div key={i} style={{background:'rgba(0,0,0,0.2)',borderRadius:10,padding:'10px 12px',border:'1px solid #1e2030'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                          <span style={{fontSize:14}}>{rec.icon}</span>
+                          <span style={{color:'#f0f4ff',fontWeight:700,fontSize:11}}>{rec.title}</span>
+                        </div>
+                        <div style={{color:'#8b96b0',fontSize:10,lineHeight:1.5}}>{rec.text}</div>
+                      </div>
+                    ))}
+                    {/* DD DETAIL */}
+                    <div style={{background:'rgba(0,0,0,0.2)',borderRadius:10,padding:'10px 12px',border:'1px solid '+(wz.ddPct>50?R+'44':'#1e2030')}}>
+                      <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+                        <span style={{color:'#8b96b0',fontSize:10,fontWeight:700}}>MAX DD</span>
+                        <span style={{color:wz.ddPct>50?R:wz.ddPct>25?Y:G,fontWeight:800,fontSize:11}}>{wz.ddPct}% verbraucht</span>
+                      </div>
+                      <div style={{height:5,borderRadius:3,background:'rgba(255,255,255,0.05)',overflow:'hidden',marginBottom:4}}>
+                        <div style={{height:'100%',width:wz.ddPct+'%',background:wz.ddPct>50?R:wz.ddPct>25?Y:G,borderRadius:3}}/>
+                      </div>
+                      <div style={{display:'flex',justifyContent:'space-between',fontSize:9,color:'#6b7a9a'}}>
+                        <span>Verbraucht: <span style={{color:'#f0f4ff',fontWeight:700}}>${wz.ddUsed}</span></span>
+                        <span>Tages-DD: <span style={{color:wz.dailyDDPct>50?R:G,fontWeight:700}}>{wz.dailyDDPct}%</span></span>
+                        <span style={{color:wz.ddType==='eod'?G:Y,fontWeight:700}}>{wz.ddType==='eod'?'EOD':'TRAILING'}</span>
                       </div>
                     </div>
-                    <div style={{background:"rgba(0,0,0,0.2)",borderRadius:10,padding:10,border:"1px solid "+(otDays>3?"rgba(239,68,68,0.3)":"#1e2030")}}>
-                      <div style={{color:"#8b96b0",fontSize:10,fontWeight:700,marginBottom:6}}>OVERTRADING KOSTEN</div>
-                      <div style={{color:otDays>0?R:G,fontSize:18,fontWeight:900}}>{otDays>0?"-":""}${Math.abs(otCost)}/Mon</div>
-                      <div style={{color:"#6b7a9a",fontSize:10,marginTop:4}}>{otDays} Extra-Trade-Tage</div>
-                      <div style={{color:otDays>3?R:G,fontSize:10,marginTop:4,fontWeight:700}}>{otDays>3?"🔴 Kritisch":"✅ Gut"}</div>
-                    </div>
                   </div>
-
-                  {/* KI ANALYSE */}
-                  <div style={{background:"linear-gradient(135deg,rgba(99,102,241,0.08),rgba(168,85,247,0.05))",borderRadius:10,padding:12,border:"1px solid rgba(99,102,241,0.15)"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-                      <div style={{width:8,height:8,borderRadius:"50%",background:B,animation:"pulse 2s infinite"}}/>
-                      <div style={{color:B,fontSize:11,fontWeight:700}}>MINDRISK KI ANALYSE</div>
-                    </div>
-                    {[
-                      challengeProb<40&&"🔴 Hohe Gefahr Challenge zu verlieren. EV negativ bei "+wrReal+"% WR. Fokus auf Setup-Qualität.",
-                      challengeProb>=40&&challengeProb<70&&"⚠️ Challenge möglich aber knapp. "+dLeft+" Tage, brauche $"+Math.max(0,Math.round(missing/Math.max(1,dLeft)))+" täglich.",
-                      challengeProb>=70&&"✅ Auf Kurs! Bei "+wrReal+"% WR und $"+evReal+" EV/Tag ist das Ziel realistisch.",
-                      otDays>5&&"🔴 "+otDays+" Overtrading-Tage = -$"+Math.abs(otCost)+"/Monat Verlust. Stopp bei 2 Trades/Tag.",
-                      profitPlan.wr<profitPlan.neededWR&&"📊 WR "+wrReal+"% unter Break-Even "+profitPlan.neededWR+"%. Weniger aber bessere Trades.",
-                      disc<60&&"⚠️ Regelquote "+disc+"% kostet dich geschätzt $"+Math.abs(discBonus)+"/Monat.",
-                      disc>=80&&evReal>0&&"💪 Starke Disziplin ("+disc+"%) + positiver EV = profitable Kombination.",
-                      wrPess<wrReal-10&&"📉 Letzte 10 Trades ("+wrPess+"% WR) deutlich unter Schnitt. Form überprüfen.",
-                    ].filter(Boolean).slice(0,3).map((t,i)=>(
-                      <div key={i} style={{color:"#cbd5e1",fontSize:11,marginBottom:4,lineHeight:1.5}}>{t}</div>
-                    ))}
-                  </div>
-                </>}
+                )}
               </Card>
             );
           })()}
@@ -2250,6 +2302,7 @@ const sendAiMessage=async()=>{
 
           {/* ZIELE – ACCORDION */}
           {[
+            {id:"wzp",label:"Konto & WZP",sub:"Firma, DD-Typ, Gewinnziel"},
             {id:"goals",label:"Meine Ziele",sub:"Monatsziel, 3M, 6M"},
             {id:"rules",label:"Trading Regeln",sub:"Limits, Zeiten, Pause"},
             {id:"coach",label:"Coach Profil",sub:"Wer du bist & KI-Gedächtnis"},
@@ -2265,6 +2318,94 @@ const sendAiMessage=async()=>{
                 <div style={{color:settingsSection===sec.id?B:"#6b7a9a",fontSize:12,fontWeight:700,transform:settingsSection===sec.id?"rotate(180deg)":"none",transition:"transform .2s"}}>▼</div>
               </div>
 
+              {settingsSection==="wzp"&&sec.id==="wzp"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#0d1320"}}>
+                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>KONTO TYP</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,marginBottom:12}}>
+                  {[{k:"challenge",l:"🎯 Challenge"},{k:"pa",l:"💰 Performance"},{k:"own",l:"💼 Eigenkapital"}].map(t=>(
+                    <button key={t.k} onClick={()=>saveAcct({...acct,type:t.k})}
+                      style={{padding:"7px 4px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.type===t.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(acct.type===t.k?"#6366f1":"#2d3548"),color:acct.type===t.k?"#a5b4fc":"#6b7a9a"}}>{t.l}</button>
+                  ))}
+                </div>
+                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>PROP FIRMA</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:12}}>
+                  {[{k:"FTMO",l:"FTMO"},{k:"TTP",l:"The Trading Pit"},{k:"TopStep",l:"TopStep"},{k:"Apex",l:"Apex"},{k:"MyFundedFX",l:"MyFundedFX"},{k:"Eigenes",l:"Eigenes Kapital"}].map(f=>(
+                    <button key={f.k} onClick={()=>saveAcct({...acct,propFirm:f.k})}
+                      style={{padding:"6px 4px",borderRadius:7,fontSize:10,fontWeight:700,background:acct.propFirm===f.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(acct.propFirm===f.k?"#6366f1":"#2d3548"),color:acct.propFirm===f.k?"#a5b4fc":"#6b7a9a"}}>{f.l}</button>
+                  ))}
+                </div>
+                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>DD TYP</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
+                  {[{k:"eod",l:"📅 EOD (End of Day)",sub:"DD zählt am Tagesende"},{k:"trailing",l:"📈 Trailing",sub:"DD steigt mit Gewinnen"}].map(d=>(
+                    <button key={d.k} onClick={()=>saveAcct({...acct,ddType:d.k})}
+                      style={{padding:"8px 6px",borderRadius:8,fontSize:10,fontWeight:700,textAlign:"left",background:acct.ddType===d.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(acct.ddType===d.k?"#6366f1":"#2d3548"),color:acct.ddType===d.k?"#a5b4fc":"#6b7a9a"}}>
+                      <div>{d.l}</div><div style={{color:"#4b5568",fontSize:9,marginTop:2}}>{d.sub}</div>
+                    </button>
+                  ))}
+                </div>
+                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>INSTRUMENT</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:12}}>
+                  {['MNQ','NQ','MES','ES','MYM','YM','MGC','GC'].map(sym=>(
+                    <button key={sym} onClick={()=>saveAcct({...acct,instrument:sym})}
+                      style={{padding:"6px 3px",borderRadius:7,fontSize:10,fontWeight:700,background:acct.instrument===sym?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(acct.instrument===sym?"#6366f1":"#2d3548"),color:acct.instrument===sym?"#a5b4fc":"#6b7a9a"}}>{sym}</button>
+                  ))}
+                </div>
+                {acct.type==='challenge'&&<>
+                  <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>CHALLENGE EINSTELLUNGEN</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                    <div style={{background:"rgba(99,102,241,0.06)",borderRadius:8,padding:"8px 10px"}}>
+                      <div style={{color:"#8b96b0",fontSize:9,marginBottom:4}}>GEWINNZIEL (%)</div>
+                      <input type="number" step="0.5" defaultValue={acct.profitTargetPct||8} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v))saveAcct({...acct,profitTargetPct:v});}}
+                        style={{background:"transparent",border:"none",fontSize:16,fontWeight:800,color:"#f0f4ff",width:"100%",outline:"none"}}/>
+                      <div style={{color:"#6b7a9a",fontSize:9,marginTop:2}}>= ${Math.round(acct.size*((acct.profitTargetPct||8)/100))}</div>
+                    </div>
+                    <div style={{background:"rgba(99,102,241,0.06)",borderRadius:8,padding:"8px 10px"}}>
+                      <div style={{color:"#8b96b0",fontSize:9,marginBottom:4}}>LAUFZEIT (TAGE)</div>
+                      <input type="number" defaultValue={acct.challengeDays||30} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,challengeDays:v});}}
+                        style={{background:"transparent",border:"none",fontSize:16,fontWeight:800,color:"#f0f4ff",width:"100%",outline:"none"}}/>
+                      <div style={{color:"#6b7a9a",fontSize:9,marginTop:2}}>Kalendertage</div>
+                    </div>
+                  </div>
+                  <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",marginBottom:8}}>
+                    <div style={{color:"#8b96b0",fontSize:10}}>
+                      Ziel: <span style={{color:G,fontWeight:700}}>${(acct.size*(1+(acct.profitTargetPct||8)/100)).toFixed(0)}</span> 
+                      {' '}· Gewinn nötig: <span style={{color:Y,fontWeight:700}}>${Math.round(acct.size*(acct.profitTargetPct||8)/100)}</span>
+                      {' '}· Tage: <span style={{color:"#f0f4ff",fontWeight:700}}>{acct.challengeDays||30}</span>
+                    </div>
+                  </div>
+                </>}
+                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>SL / TP KONFIGURATION</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                  <div style={{background:"rgba(239,68,68,0.06)",borderRadius:8,padding:"8px 10px"}}>
+                    <div style={{color:"#8b96b0",fontSize:9,marginBottom:4}}>STOP LOSS (TICKS)</div>
+                    <input type="number" defaultValue={acct.slTicks||40} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,slTicks:v});}}
+                      style={{background:"transparent",border:"none",fontSize:16,fontWeight:800,color:"#ef4444",width:"100%",outline:"none"}}/>
+                    <div style={{color:"#6b7a9a",fontSize:9,marginTop:2}}>= ${Math.round((acct.slTicks||40)*(INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ']).tickValue*(acct.lotSize||1))}</div>
+                  </div>
+                  <div style={{background:"rgba(0,211,149,0.06)",borderRadius:8,padding:"8px 10px"}}>
+                    <div style={{color:"#8b96b0",fontSize:9,marginBottom:4}}>TAKE PROFIT (TICKS)</div>
+                    <input type="number" defaultValue={acct.tpTicks||80} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,tpTicks:v});}}
+                      style={{background:"transparent",border:"none",fontSize:16,fontWeight:800,color:"#00d395",width:"100%",outline:"none"}}/>
+                    <div style={{color:"#6b7a9a",fontSize:9,marginTop:2}}>= ${Math.round((acct.tpTicks||80)*(INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ']).tickValue*(acct.lotSize||1))}</div>
+                  </div>
+                </div>
+                {(()=>{
+                  const inst2=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
+                  const maxR=Math.round((acct.dailyDD||1000)/(acct.maxTrades||settings.maxTrades||2)*0.6);
+                  const slC=Math.round((acct.slTicks||40)*inst2.tickValue);
+                  const rec=Math.max(1,Math.floor(maxR/Math.max(1,slC)));
+                  const tpC=Math.round((acct.tpTicks||80)*inst2.tickValue*rec);
+                  const slCost=Math.round(slC*rec);
+                  return(
+                    <div style={{background:"rgba(99,102,241,0.1)",borderRadius:8,padding:"8px 10px"}}>
+                      <div style={{color:"#a5b4fc",fontSize:10,fontWeight:700,marginBottom:4}}>WZP EMPFEHLUNG</div>
+                      <div style={{color:"#8b96b0",fontSize:10}}>
+                        {rec}x {acct.instrument||'MNQ'} → SL: <span style={{color:R,fontWeight:700}}>-${slCost}</span> | TP: <span style={{color:G,fontWeight:700}}>+${tpC}</span>
+                        <span style={{color:"#6b7a9a"}}> (basiert auf Daily-DD $${acct.dailyDD||1000})</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>}
               {settingsSection==="goals"&&sec.id==="goals"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#0d1320"}}>
                 <div style={{marginBottom:12}}>
                   <div style={{color:"#8b96b0",fontSize:10,fontWeight:600,marginBottom:6}}>ZIEL-ZEITRAUM</div>
