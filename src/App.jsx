@@ -1959,7 +1959,7 @@ const sendAiMessage=async()=>{
 
               </Card>
             );
-          }catch(e){return(<div style={{padding:16,color:'#ef4444',fontSize:12}}>Tagesplan Ladefehler – bitte App neu laden.</div>);}}})()}
+          }catch(e){return(<div style={{padding:16,color:'#ef4444',fontSize:12}}>Tagesplan Ladefehler – bitte App neu laden.</div>);}})()}
 
           {/* MEIN MONATSZIEL */}
           <Card style={{borderColor:P+"33",background:"#0d0a14"}} onClick={()=>setMonatExp(p=>!p)}>
