@@ -958,7 +958,29 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
         todayTrades:(todT.map(t=>t.time+' '+t.dir+' $'+Math.round(t.pnl)).join(', ')||'Keine Trades heute'),
         coachProfile:sanitize(coachProfile||''),
         coachMemory:sanitize(coachMemory.slice(0,8).map(m=>m.note).join(' | ')),
-        chatHistorySummary:sanitize(aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100)).join(' | '))
+        chatHistorySummary:sanitize(aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100)).join(' | ')),
+        // Account & Instrument — damit Claude NICHT raten muss
+        instrument:acct.instrument||'MNQ',
+        tickValue:(INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ']).tickValue,
+        slTicks:acct.slTicks||40,
+        tpTicks:acct.tpTicks||80,
+        lotSize:acct.lotSize||1,
+        slDollar:Math.round((acct.slTicks||40)*(INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ']).tickValue*(acct.lotSize||1)),
+        tpDollar:Math.round((acct.tpTicks||80)*(INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ']).tickValue*(acct.lotSize||1)),
+        maxTrades:acct.maxTrades||settings.maxTrades||2,
+        maxDD:acct.maxDD||2000,
+        dailyDD:acct.dailyDD||1000,
+        ddType:acct.ddType||'eod',
+        propFirm:acct.propFirm||'',
+        accountType:acct.type||'challenge',
+        profitTarget:acct.type==='challenge'?Math.round(acct.size*((acct.profitTargetPct||8)/100)):goals.monthlyGoal||1500,
+        profitSoFar:Math.max(0,Math.round(saldo-acct.size)),
+        challengeDaysLeft:wzpCalc?wzpCalc.challengeDaysLeft:0,
+        dailyNeeded:wzpCalc?wzpCalc.dailyNeeded:0,
+        windowStart:settings.windowStart||'16:15',
+        windowEnd:settings.windowEnd||'17:30',
+        broker:acct.propFirm||acct.broker||'',
+        accountNumber:acct.number||''
       };
       const res=await fetch('/api/chat',{
         method:'POST',headers:{'Content-Type':'application/json'},
