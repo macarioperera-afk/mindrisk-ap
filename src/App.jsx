@@ -222,6 +222,40 @@ export default function App(){
   const[tab,setTab]=useState("dash");
   const[dm,setDm]=useState(()=>localStorage.getItem('ttp_dm')!=='light');
   const saveDm=(v)=>{setDm(v);localStorage.setItem('ttp_dm',v?'dark':'light');};
+  useEffect(()=>{
+    const id='mr-lm';
+    let el=document.getElementById(id);
+    if(!el){el=document.createElement('style');el.id=id;document.head.appendChild(el);}
+    if(!dm){
+      const LT='[data-theme="light"]';
+      const rules=[
+        LT+' [style*="#141e35"],'+LT+' [style*="#0f1828"],'+LT+' [style*="#0f1117"]{background:#ffffff!important;box-shadow:0 1px 6px rgba(0,0,0,0.06)!important}',
+        LT+' [style*="linear-gradient(145deg,#141e35"]{background:#ffffff!important;box-shadow:0 1px 6px rgba(0,0,0,0.06)!important}',
+        LT+' [style*="linear-gradient(135deg,#141e35"]{background:#ffffff!important}',
+        LT+' [style*="#131d30"],'+LT+' [style*="#13162a"],'+LT+' [style*="#1a2235"],'+LT+' [style*="#0d1117"]{background:#f5f7fc!important}',
+        LT+' [style*="background:\"#0d1320\""],'+LT+' [style*="#0a0e1a"],'+LT+' [style*="#0b0d14"]{background:#f0f2f7!important}',
+        LT+' [style*="linear-gradient(160deg,#0a0e1a"]{background:#ffffff!important}',
+        LT+' [style*="linear-gradient(135deg,#0a0e1a"]{background:#f5f7fc!important}',
+        LT+' [style*="linear-gradient(180deg,#0f1830"]{background:#ffffff!important;border-bottom:0.5px solid #e0e4f0!important}',
+        LT+' [style*="linear-gradient(180deg,rgba(8,12,20"]{background:rgba(240,242,247,0.97)!important}',
+        LT+' [style*="rgba(0,0,0,0.2)"],'+LT+' [style*="rgba(0,0,0,0.25)"]{background:rgba(0,0,0,0.04)!important}',
+        LT+' [style*="rgba(13,18,32"]{background:#f5f7fc!important}',
+        LT+' [style*="background:\"#2d3548\""],'+LT+' [style*="borderColor:\"#2d3548\""],'+LT+' [style*="#1e2235"]{border-color:#e0e4f0!important}',
+        LT+' [style*="color: #f0f4ff"],'+LT+' [style*="color:#f0f4ff"],'+LT+' [style*="color: \"#f0f4ff"]{color:#1a1d2a!important}',
+        LT+' [style*="color: #e8eaf2"],'+LT+' [style*="color:#e8eaf2"]{color:#1a1d2a!important}',
+        LT+' [style*="color: #8b96b0"],'+LT+' [style*="color:#8b96b0"],'+LT+' [style*="color: #6b7a9a"],'+LT+' [style*="color:#6b7a9a"]{color:#6b7280!important}',
+        LT+' [style*="color: #4a5568"],'+LT+' [style*="color:#4a5568"],'+LT+' [style*="color: #374151"],'+LT+' [style*="color:#374151"]{color:#9ca3af!important}',
+        LT+' [style*="color: #4b5568"],'+LT+' [style*="color:#4b5568"]{color:#9ca3af!important}',
+        LT+' input,'+LT+' textarea{color:#1a1d2a!important}',
+        LT+' [style*="borderBottom:\"1px solid #2d3548\""],'+LT+' [style*="borderTop:\"1px solid #2d3548\""]{border-color:#e0e4f0!important}',
+        LT+' [style*="border:\"1px solid #2d3548\""],'+LT+' [style*="border:1px solid #2d3548"]{border-color:#e0e4f0!important}',
+        LT+' [style*="boxShadow:\"0 4px 24px"]{box-shadow:0 1px 8px rgba(0,0,0,0.08)!important}',
+      ].join('\n');
+      el.textContent=rules;
+    } else {
+      el.textContent='';
+    }
+  },[dm]);
 
   const DK={bg:dm?'#0b0d14':'#f0f2f7',nav:dm?'#0e1020':'#ffffff',card:dm?'#141e35':'#ffffff',cardBorder:dm?'rgba(99,102,241,0.18)':'#e0e4f0',mini:dm?'#13162a':'#f5f7fc',miniBorder:dm?'#1e2235':'#e0e4f0',text:dm?'#f0f4ff':'#1a1d2a',muted:dm?'#6b7a9a':'#6b7280',divider:dm?'#1e2235':'#e8eaf0'};
   const[toast,setToast]=useState("");
@@ -964,8 +998,7 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
         coachMemory:sanitize(coachMemory.slice(0,8).map(m=>m.note).join(' | ')),
         chatHistorySummary:sanitize(aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100)).join(' | ')),
         // Account & Instrument — damit Claude NICHT raten muss
-        instrument:acct.instrument||'MNQ',
-        tickValue:(INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ']).tickValue,
+        instrument:acct.instrument||'MNQ',tickValue:(INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ']).tickValue,
         slTicks:acct.slTicks||40,
         tpTicks:acct.tpTicks||80,
         lotSize:acct.lotSize||1,
@@ -986,7 +1019,8 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
         broker:acct.propFirm||acct.broker||'',
         accountNumber:acct.number||''
       };
-      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      const res=await fetch('/api/chat',{
+        method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({messages:[{role:"user",content:prompt}],context:ctx})
       });
       const rawText=await res.text();
@@ -1318,7 +1352,7 @@ const sendAiMessage=async()=>{
 ];
 
   return(
-    <div style={{background:DK.bg,minHeight:"100vh",color:DK.text,fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",fontSize:isDesktop?15:14,paddingBottom:"calc(70px + env(safe-area-inset-bottom,0px))",width:"100%",overflowX:"hidden"}}>
+    <div data-theme={dm?"dark":"light"} style={{background:DK.bg,minHeight:"100vh",color:DK.text,fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",fontSize:isDesktop?15:14,paddingBottom:"calc(70px + env(safe-area-inset-bottom,0px))",width:"100%",overflowX:"hidden"}}>
       {authLoading&&<div style={{position:"fixed",inset:0,zIndex:9999,background:"#080c14",display:"flex",alignItems:"center",justifyContent:"center"}}>
         <div style={{width:40,height:40,borderRadius:"50%",border:"3px solid #2d3548",borderTopColor:B,animation:"spin .8s linear infinite"}}/>
       </div>}
@@ -1959,13 +1993,7 @@ const sendAiMessage=async()=>{
                     ].map(s=>(
                       <div key={s.l} style={{background:"#0f1428",borderRadius:8,padding:"7px 6px",textAlign:"center",border:"1px solid #1e1428"}}>
                         <div style={{color:"#6b7a9a",fontSize:9,marginBottom:2}}>{s.l}</div>
-                        <div style={{color:s.c,fontWeight:800,fontSize:13}}>{s.v}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{marginBottom:6}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                      <span style={{color:"#8b96b0",fontSize:10}}>Monatsfortschritt</span>
+                        <div style={{color:s.c,fontWeight:800,fontSize:13}}>{s.v}</div><span style={{color:"#8b96b0",fontSize:10}}>Monatsfortschritt</span>
                       <span style={{color:monthPct>=100?G:P,fontWeight:700,fontSize:10}}>{monthPct}% ({monthPnl>=0?"+":""}${Math.round(monthPnl)} von ${monthNeeded} nötig)</span>                    </div>
                     <div style={{height:6,borderRadius:3,background:"#1e2540",overflow:"hidden"}}>
                       <div style={{height:"100%",borderRadius:3,width:monthPct+"%",background:"linear-gradient(90deg,"+B+","+P+")",transition:"width .4s"}}/>
@@ -1974,7 +2002,8 @@ const sendAiMessage=async()=>{
                   {(monatExp||isDesktop)&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #1e1428"}}>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
                       {[
-                        {l:"HANDELSTAGE NOCH",v:dLeft2+" Tage",c:dLeft2>5?G:dLeft2>2?Y:R,s:"diesen Monat"},{l:"GEWINN/TAG NÖTIG",v:missing<=0?"✅ Erreicht":"$"+dailyNeed,c:missing<=0?G:dailyNeed<100?G:Y,s:"um Ziel zu erreichen"},
+                        {l:"HANDELSTAGE NOCH",v:dLeft2+" Tage",c:dLeft2>5?G:dLeft2>2?Y:R,s:"diesen Monat"},
+                        {l:"GEWINN/TAG NÖTIG",v:missing<=0?"✅ Erreicht":"$"+dailyNeed,c:missing<=0?G:dailyNeed<100?G:Y,s:"um Ziel zu erreichen"},
                         {l:"GEWINN/TRADE NÖTIG",v:missing<=0?"✓":"$"+tradeNeed,c:missing<=0?G:tradeNeed<50?G:Y,s:"bei 2 Trades/Tag"},
                         {l:"MAX. TRADES NOCH",v:dLeft2*DAILY_LIMIT,c:"#f0f4ff",s:dLeft2+" Tage × "+DAILY_LIMIT},
                         {l:"DIESEN MONAT P&L",v:(monthPnl>=0?"+":"")+"$"+monthPnl,c:pc(monthPnl),s:"seit Monatsstart"},
@@ -2965,3 +2994,8 @@ const sendAiMessage=async()=>{
     </div>
   );
 }
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{marginBottom:6}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
