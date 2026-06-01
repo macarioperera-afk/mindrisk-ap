@@ -1,5 +1,5 @@
 // MindRisk Trading Coach - Claude API Bridge
-// VERSION 6 - Weekly Economic Calendar + 15min Warning
+// VERSION 7 - Full Account Context (Instrument, Tick-Wert, SL/TP in $, Challenge)
 
 const FMP_KEY = 'jnJ8yz9FNsoe2uuZQ3A1eYPb1oKlIf3A';
 let newsCache = { data: null, date: null };
@@ -28,25 +28,18 @@ async function getWeeklyNews() {
   if (newsCache.date === todayStr && newsCache.data) return newsCache.data;
 
   try {
-    // Try Forex Factory public calendar (this week + next week)
     const urls = [
       'https://nfs.faireconomy.media/ff_calendar_thisweek.json',
       'https://nfs.faireconomy.media/ff_calendar_nextweek.json'
     ];
-    
     let allEvents = [];
     for (const url of urls) {
       try {
         const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (res.ok) {
-          const data = await res.json();
-          allEvents = allEvents.concat(data);
-        }
+        if (res.ok) allEvents = allEvents.concat(await res.json());
       } catch(e) {}
     }
-
     if (allEvents.length === 0) {
-      // Fallback: FMP API
       const end = new Date(today);
       end.setDate(end.getDate() + 14);
       const endStr = end.toISOString().split('T')[0];
@@ -57,14 +50,10 @@ async function getWeeklyNews() {
         allEvents = data.map(e => ({
           date: e.date?.split('T')[0] || '',
           time: e.date?.split('T')[1]?.slice(0,5) || '',
-          title: e.event,
-          impact: e.impact,
-          country: 'USD'
+          title: e.event, impact: e.impact, country: 'USD'
         }));
       }
     }
-
-    // Filter HIGH impact USD only
     const events = allEvents
       .filter(e => {
         const imp = (e.impact || '').toLowerCase();
@@ -80,30 +69,22 @@ async function getWeeklyNews() {
       }))
       .filter(e => e.date >= todayStr)
       .sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-
     if (events.length > 0) {
       newsCache = { data: events, date: todayStr };
       return events;
     }
     return null;
-  } catch(e) {
-    return null;
-  }
+  } catch(e) { return null; }
 }
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY fehlt' });
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY fehlt' });
-  }
-
-  // Special endpoint: just return news for frontend
   if (req.body?.newsOnly) {
     const news = await getWeeklyNews();
     return res.status(200).json({ news: news || [] });
@@ -111,15 +92,13 @@ export default async function handler(req, res) {
 
   try {
     const { messages, context } = req.body;
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    if (!messages || !Array.isArray(messages) || messages.length === 0)
       return res.status(400).json({ error: 'messages Array erforderlich' });
-    }
 
     const cleanMessages = sanitize(messages).filter(hasContent);
     const cleanContext = sanitize(context || {});
-    if (cleanMessages.length === 0) {
+    if (cleanMessages.length === 0)
       return res.status(400).json({ error: 'Keine gültigen Nachrichten' });
-    }
 
     const weeklyNews = await getWeeklyNews();
     const systemPrompt = buildSystemPrompt(cleanContext, weeklyNews);
@@ -162,53 +141,99 @@ function buildSystemPrompt(ctx, news) {
   const isWeekend = today.getDay() === 0 || today.getDay() === 6;
   const todayStr = today.toISOString().split('T')[0];
 
-  // Today's news
   const todayNews = news?.filter(n => n.date === todayStr) || [];
   const weekNews = news?.filter(n => n.date > todayStr) || [];
-
   const todayNewsText = todayNews.length > 0
     ? todayNews.map(n => `⚠️ ${n.time} ET: ${n.name}${n.forecast?' (Prognose: '+n.forecast+')':''}`).join('\n')
     : 'Keine HIGH Impact News heute.';
-
   const weekNewsText = weekNews.length > 0
     ? weekNews.map(n => `📅 ${n.date} ${n.time} ET: ${n.name}`).join('\n')
     : 'Keine weiteren HIGH Impact News diese Woche.';
 
-  const marketStatus = isWeekend
-    ? `🔴 MÄRKTE GESCHLOSSEN (${dayName})`
-    : `🟢 Märkte offen (${dayName})`;
+  // ── Instrument & Setup ───────────────────────────────────
+  const instrument = ctx.instrument || 'MNQ';
+  const tickValue = ctx.tickValue || 0.50;
+  const slTicks = ctx.slTicks || 40;
+  const tpTicks = ctx.tpTicks || 80;
+  const lots = ctx.lotSize || 1;
+  const slDollar = ctx.slDollar || Math.round(slTicks * tickValue * lots);
+  const tpDollar = ctx.tpDollar || Math.round(tpTicks * tickValue * lots);
+  const maxTrades = ctx.maxTrades || 2;
+  const crv = (tpTicks / slTicks).toFixed(1);
+  const maxRiskDay = slDollar * maxTrades;
+  const maxGainDay = tpDollar * maxTrades;
 
-  return `Du bist ${ctx.traderName||'Trader'}s persönlicher Trading Coach in der MindRisk App.
+  // ── Challenge / Account ──────────────────────────────────
+  const isChallenge = ctx.accountType === 'challenge';
+  const propFirm = ctx.propFirm || ctx.broker || '';
+  const profitTarget = ctx.profitTarget || 0;
+  const profitSoFar = ctx.profitSoFar || 0;
+  const profitNeeded = Math.max(0, profitTarget - profitSoFar);
+  const daysLeft = ctx.challengeDaysLeft || 0;
+  const dailyNeeded = ctx.dailyNeeded || (daysLeft > 0 ? Math.ceil(profitNeeded / daysLeft) : 0);
+  const onTrack = dailyNeeded <= tpDollar * maxTrades;
+
+  const challengeSection = isChallenge ? `
+CHALLENGE (${propFirm || 'Prop Firm'}):
+- Gewinnziel: $${profitTarget} | Erreicht: $${profitSoFar} | Noch: $${profitNeeded}
+- Tage übrig: ${daysLeft} | Tägl. nötig: $${dailyNeeded}
+- Status: ${onTrack ? '✅ Auf Kurs' : '⚡ Pace erhöhen nötig'}
+- DD-Typ: ${ctx.ddType === 'eod' ? 'EOD (End of Day)' : 'Trailing'}
+- Max DD: $${ctx.maxDD || 2000} | Daily DD: $${ctx.dailyDD || 1000}` : `
+PERFORMANCE KONTO (${propFirm}):
+- Monatsziel: $${profitTarget} | Erreicht: $${profitSoFar}
+- Max DD: $${ctx.maxDD || 2000} | Daily DD: $${ctx.dailyDD || 1000}`;
+
+  return `Du bist der persönliche Trading Coach in der MindRisk App.
 
 ANTWORTSTIL:
-- IMMER auf Deutsch
-- Maximal 3 Sätze
-- Direkt wie ein Mentor
+- IMMER auf Deutsch, direkt wie ein Mentor
+- Maximal 3-4 Sätze, kein Smalltalk
 - Max 1 Emoji
-- KEINE Krisenhotlines
+- KEINE Krisenhotlines, KEINE Ausweichformulierungen
 
 HEUTE: ${dayName}, ${today.toLocaleDateString('de-DE')}
-MARKT: ${marketStatus}
+MARKT: ${isWeekend ? '🔴 MÄRKTE GESCHLOSSEN — Kein Trading heute!' : '🟢 Märkte offen'}
 
-HIGH IMPACT NEWS HEUTE (3 Sterne, nur USD):
+HIGH IMPACT NEWS HEUTE (USD, 3 Sterne):
 ${todayNewsText}
 
 HIGH IMPACT NEWS DIESE WOCHE:
 ${weekNewsText}
 
-TRADER PROFIL: ${ctx.coachProfile||'Noch nicht eingerichtet'}
-GEDÄCHTNIS: ${ctx.coachMemory||'Keine Erkenntnisse'}
+══════════════════════════════════════
+TRADER SETUP — DIESE ZAHLEN SIND EXAKT, NICHT RATEN:
+══════════════════════════════════════
+INSTRUMENT: ${lots}x ${instrument}
+TICK-WERT: $${tickValue} pro Tick (${instrument})
+STOP LOSS: ${slTicks} Ticks = $${slDollar} pro Trade (KEIN anderer Wert!)
+TAKE PROFIT: ${tpTicks} Ticks = $${tpDollar} pro Trade (KEIN anderer Wert!)
+CRV: ${crv}:1
+MAX TRADES/TAG: ${maxTrades}
+MAX RISIKO/TAG: $${maxRiskDay} (wenn alle ${maxTrades} Trades verlieren)
+MAX GEWINN/TAG: $${maxGainDay} (wenn alle ${maxTrades} Trades gewinnen)
+HANDELSFENSTER: ${ctx.windowStart || '16:15'}–${ctx.windowEnd || '17:30'} Uhr CET
+${challengeSection}
 
-KONTO: $${ctx.saldo||'?'} | Trades: ${ctx.tradeCount||0}/${ctx.maxTrades||2} | P&L: ${ctx.todayPnl>=0?'+':''}$${ctx.todayPnl||0}
-WR: ${ctx.winRate||0}% | DD Abstand: $${ctx.kontoabstand||'?'}
-PROP FIRM: ${ctx.broker||'-'} | ${ctx.accountNumber||''}
+KONTO HEUTE:
+Saldo: $${ctx.saldo || '?'} | Heute: ${ctx.todPnl >= 0 ? '+' : ''}$${ctx.todPnl || 0}
+Trades heute: ${ctx.tradeCount || 0}/${maxTrades} | DD Abstand: $${ctx.kontoabstand || '?'}
+Win Rate (gesamt): ${ctx.winRate || 0}% | Ø Win: $${ctx.avgWin || 0} | Ø Loss: $${ctx.avgLoss || 0}
+Monat P&L: ${ctx.monthPnl >= 0 ? '+' : ''}$${ctx.monthPnl || 0}
 
-REGELN: Max ${ctx.maxTrades||2} Trades | ${ctx.windowStart||'16:15'}-${ctx.windowEnd||'17:30'} Uhr | SL ${ctx.slTicks||40} Ticks | TP ${ctx.tpTicks||80} Ticks
+TRADER PROFIL: ${ctx.coachProfile || 'Noch nicht eingerichtet'}
+GEDÄCHTNIS: ${ctx.coachMemory || 'Keine Erkenntnisse'}
 
-WENN WOCHENENDE: Klar sagen Märkte geschlossen, keine Trade-Empfehlung.
-WENN NEWS IN <2H: Warnen, Uhrzeit nennen, empfehlen davor oder danach zu traden.
-WENN NACH NEWS GEFRAGT: Exakte Zeiten und Namen aus dem Kalender nennen.
-WICHTIG: Die HIGH IMPACT NEWS oben kommen von einem LIVE-WIRTSCHAFTSKALENDER (Forex Factory API). Diese Daten sind aktuell und zuverlässig. Nutze sie - nicht dein Training.
+REGELN:
+1. Nur im Fenster ${ctx.windowStart || '16:15'}–${ctx.windowEnd || '17:30'} Uhr traden
+2. Max ${maxTrades} Trades pro Tag
+3. SL IMMER ${slTicks} Ticks = $${slDollar} — nie ohne SL!
+4. TP ${tpTicks} Ticks = $${tpDollar} — CRV ${crv}:1 einhalten
+5. 15 Min Pause zwischen Trades
+6. Bei ${maxTrades}+ Trades → nächster Tag gesperrt
 
-PSYCHOLOGIE: Verlust = Statistik. Overtrading sofort stoppen. 20% Strategie, 80% Psychologie.`;
+WICHTIG: Verwende NUR die obigen Zahlen. Erfinde KEINE anderen Tick-Werte, Lot-Größen oder Dollar-Beträge.
+WENN WOCHENENDE: Klar sagen Märkte geschlossen.
+WENN NEWS IN <2H: Warnen, Uhrzeit nennen.
+PSYCHOLOGIE: Verlust = Statistik. 20% Strategie, 80% Psychologie.`;
 }
