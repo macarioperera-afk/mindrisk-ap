@@ -175,8 +175,8 @@ const Chk=({checked,onClick,label})=>(
   </div>
 );
 
-const Field=({label,children})=>(
-  <div style={{background:dm?"#0d1320":"#f5f7fc",borderRadius:10,padding:"10px 12px",border:"1px solid #2d3548"}}>
+const Field=({label,children,dm:fdm})=>(
+  <div style={{background:fdm?"#0d1320":"#f5f7fc",borderRadius:10,padding:"10px 12px",border:"1px solid "+(fdm?"#2d3548":"#e0e4f0")}}>
     <div style={{color:"#8b96b0",fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:6}}>{label}</div>
     {children}
   </div>
@@ -1704,10 +1704,10 @@ const sendAiMessage=async()=>{
               </div>
             </div>
             <div style={{paddingTop:8,borderTop:"1px solid #2d3548",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Field label="SALDO ($)">
+              <Field dm={dm} label="SALDO ($)">
                 <input type="number" step="0.01" defaultValue={saldo} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)){setSaldo(v);localStorage.setItem("ttp_saldo",v);}}} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/>
               </Field>
-              <Field label="MAX DD ($)">
+              <Field dm={dm} label="MAX DD ($)">
                 <input type="number" step="0.01" defaultValue={maxDDLevel} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)){setMaxDDLevel(v);localStorage.setItem("ttp_maxdd_level",v);}}} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/>
               </Field>
             </div>
@@ -2181,15 +2181,15 @@ const sendAiMessage=async()=>{
             <div style={{fontWeight:700,fontSize:16,marginBottom:14}}>Trade loggen</div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                <Field label="DATUM">
+                <Field dm={dm} label="DATUM">
                   <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/>
                 </Field>
-                <Field label="UHRZEIT">
+                <Field dm={dm} label="UHRZEIT">
                   <input type="time" value={form.time} onChange={e=>setForm(f=>({...f,time:e.target.value}))} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/>
                 </Field>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                <Field label="KONTRAKT">
+                <Field dm={dm} label="KONTRAKT">
                   <select value={form.contract} onChange={e=>setForm(f=>({...f,contract:e.target.value}))}>
                     <optgroup label="Nasdaq"><option value="MNQ">MNQ (Micro) ✓</option><option value="NQ">NQ (Full)</option></optgroup>
                     <optgroup label="S&P 500"><option value="MES">MES (Micro)</option><option value="ES">ES (Full)</option></optgroup>
@@ -2201,18 +2201,18 @@ const sendAiMessage=async()=>{
                     <optgroup label="Euro FX"><option value="M6E">M6E (Micro)</option><option value="6E">6E (Full)</option></optgroup>
                   </select>
                 </Field>
-                <Field label="RICHTUNG">
+                <Field dm={dm} label="RICHTUNG">
                   <select value={form.dir} onChange={e=>setForm(f=>({...f,dir:e.target.value}))}>
                     <option value="LONG">LONG ↑</option><option value="SHORT">SHORT ↓</option>
                   </select>
                 </Field>
               </div>
-              <Field label="SETUP">
+              <Field dm={dm} label="SETUP">
                 <select value={form.setup} onChange={e=>setForm(f=>({...f,setup:e.target.value}))}>
                   {SETUPS.map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
               </Field>
-              <Field label="NETTO P&L ($) *">
+              <Field dm={dm} label="NETTO P&L ($) *">
                 <input type="number" step="0.01" value={form.pnl} onChange={e=>setForm(f=>({...f,pnl:e.target.value}))} placeholder="z.B. 40 oder -20" style={{borderColor:form.pnl?(parseFloat(form.pnl)>=0?G+"88":R+"88"):"#1e2d48"}}/>
               </Field>
               {(()=>{
@@ -2230,7 +2230,7 @@ const sendAiMessage=async()=>{
                 <div style={{color:"#8b96b0",fontSize:11,marginBottom:6,fontWeight:600}}>REGELN EINGEHALTEN?</div>
                 {RULES.map(r=>(<Chk key={r.id} checked={form.rules[r.id]} onClick={()=>setForm(f=>({...f,rules:{...f.rules,[r.id]:!f.rules[r.id]}}))} label={r.label}/>))}
               </div>
-              <Field label="NOTIZEN">
+              <Field dm={dm} label="NOTIZEN">
                 <textarea rows={2} value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Emotion? Was lief gut/schlecht?" style={{resize:"vertical"}}/>
               </Field>
               <button onClick={addTrade} style={{background:canTrade?B:"#4a5568",color:"#fff",padding:13,fontSize:14,fontWeight:700,width:"100%",borderRadius:10,opacity:canTrade?1:0.6}} disabled={!canTrade}>
@@ -2427,8 +2427,8 @@ const sendAiMessage=async()=>{
           <Card dk={{dm}}>
             <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>🔍 Filter</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-              <Field label="VON"><input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-              <Field label="BIS"><input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+              <Field dm={dm} label="VON"><input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+              <Field dm={dm} label="BIS"><input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
             </div>
             {(dateFrom||dateTo)&&<button onClick={()=>{setDateFrom("");setDateTo("");}} style={{background:"none",color:"#8b96b0",fontSize:11,padding:"4px 0",width:"100%"}}>Filter zurücksetzen ×</button>}
           </Card>
@@ -2668,14 +2668,14 @@ const sendAiMessage=async()=>{
                     ))}
                   </div>
                 </div>
-                <Field label="ZIEL-SALDO ($)">
+                <Field dm={dm} label="ZIEL-SALDO ($)">
                   <input type="number" defaultValue={goals.targetBalance} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)){const newG={...goals,targetBalance:v};setGoals(newG);localStorage.setItem('ttp_goals',JSON.stringify(newG));} }} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/>
                 </Field>
                 <div style={{marginTop:8,background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",border:"1px solid rgba(99,102,241,0.15)"}}>
                   <div style={{color:"#8b96b0",fontSize:10}}>Aktuell: <span style={{color:"#f0f4ff",fontWeight:700}}>${saldo.toFixed(0)}</span> · Noch fehlen: <span style={{color:R,fontWeight:700}}>${Math.max(0,goals.targetBalance-saldo).toFixed(0)}</span></div>
                 </div>
                 <div style={{marginTop:8}}>
-                  <Field label="REGELQUOTE-ZIEL (%)">
+                  <Field dm={dm} label="REGELQUOTE-ZIEL (%)">
                     <input type="number" defaultValue={goals.disc} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v)){const newG={...goals,disc:v};setGoals(newG);localStorage.setItem('ttp_goals',JSON.stringify(newG));}}} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/>
                   </Field>
                 </div>
@@ -2687,11 +2687,11 @@ const sendAiMessage=async()=>{
                   {ALL_RULES.map(r=>{const on=selectedRules.includes(r.k);const disabled=!on&&selectedRules.length>=5;return(<button key={r.k} onClick={()=>!disabled&&toggleRule(r.k)} style={{padding:"5px 8px",borderRadius:16,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3,background:on?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(on?"#6366f1":"rgba(255,255,255,0.1)"),color:on?"#a5b4fc":disabled?"#2d3548":"#6b7a9a",opacity:disabled?0.4:1}}>{r.icon} {r.l}</button>);})}
                 </div>
                 <div style={{color:"#4b5568",fontSize:9,marginBottom:8}}>{selectedRules.length}/5 gewählt – erscheinen im MIND Tab</div>
-                <Field label="MAX TRADES / TAG"><input type="number" value={settings.maxTrades} onChange={e=>saveSettings({...settings,maxTrades:parseInt(e.target.value)||2})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <Field label="PFLICHTPAUSE (MIN)"><input type="number" value={settings.pauseMins} onChange={e=>saveSettings({...settings,pauseMins:parseInt(e.target.value)||15})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="MAX TRADES / TAG"><input type="number" value={settings.maxTrades} onChange={e=>saveSettings({...settings,maxTrades:parseInt(e.target.value)||2})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="PFLICHTPAUSE (MIN)"><input type="number" value={settings.pauseMins} onChange={e=>saveSettings({...settings,pauseMins:parseInt(e.target.value)||15})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <Field label="FENSTER VON"><input type="time" value={settings.windowStart} onChange={e=>saveSettings({...settings,windowStart:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                  <Field label="FENSTER BIS"><input type="time" value={settings.windowEnd} onChange={e=>saveSettings({...settings,windowEnd:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                  <Field dm={dm} label="FENSTER VON"><input type="time" value={settings.windowStart} onChange={e=>saveSettings({...settings,windowStart:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                  <Field dm={dm} label="FENSTER BIS"><input type="time" value={settings.windowEnd} onChange={e=>saveSettings({...settings,windowEnd:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 </div>
               </div>}
 
@@ -2717,9 +2717,9 @@ const sendAiMessage=async()=>{
               {settingsSection==="data"&&sec.id==="data"&&<div style={{padding:"14px 16px",borderTop:"1px solid #2d3548",background:"#0a0e1a"}}>
 
                 <div style={{color:"#6b7a9a",fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:10}}>PERSÖNLICHE INFOS</div>
-                <Field label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <Field label="BROKER / PROP FIRMA (Text)"><input defaultValue={acct.broker||""} onBlur={e=>saveAcct({...acct,broker:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <Field label="KONTO NUMMER"><input defaultValue={acct.number||""} onBlur={e=>saveAcct({...acct,number:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="BROKER / PROP FIRMA (Text)"><input defaultValue={acct.broker||""} onBlur={e=>saveAcct({...acct,broker:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="KONTO NUMMER"><input defaultValue={acct.number||""} onBlur={e=>saveAcct({...acct,number:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
 
                 <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"10px 12px",margin:"12px 0",border:"1px solid rgba(99,102,241,0.2)"}}>
                   <div style={{color:"#8b96b0",fontSize:10}}>Challenge läuft seit: <span style={{color:"#a5b4fc",fontWeight:700}}>{challengeStart==="2000-01-01"?"Nicht gestartet":challengeStart}</span></div>
@@ -2745,14 +2745,14 @@ const sendAiMessage=async()=>{
                     ))}
                   </div>
                 </div>
-                <Field label="ZIEL-SALDO ($)">
+                <Field dm={dm} label="ZIEL-SALDO ($)">
                   <input type="number" defaultValue={goals.targetBalance} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)){const newG={...goals,targetBalance:v};setGoals(newG);localStorage.setItem('ttp_goals',JSON.stringify(newG));} }} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/>
                 </Field>
                 <div style={{marginTop:8,background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",border:"1px solid rgba(99,102,241,0.15)"}}>
                   <div style={{color:"#8b96b0",fontSize:10}}>Aktuell: <span style={{color:"#f0f4ff",fontWeight:700}}>${saldo.toFixed(0)}</span> · Noch fehlen: <span style={{color:R,fontWeight:700}}>${Math.max(0,goals.targetBalance-saldo).toFixed(0)}</span></div>
                 </div>
                 <div style={{marginTop:8}}>
-                  <Field label="REGELQUOTE-ZIEL (%)">
+                  <Field dm={dm} label="REGELQUOTE-ZIEL (%)">
                     <input type="number" defaultValue={goals.disc} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v)){const newG={...goals,disc:v};setGoals(newG);localStorage.setItem('ttp_goals',JSON.stringify(newG));}}} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/>
                   </Field>
                 </div>
@@ -2764,11 +2764,11 @@ const sendAiMessage=async()=>{
                   {ALL_RULES.map(r=>{const on=selectedRules.includes(r.k);const disabled=!on&&selectedRules.length>=5;return(<button key={r.k} onClick={()=>!disabled&&toggleRule(r.k)} style={{padding:"5px 8px",borderRadius:16,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3,background:on?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(on?"#6366f1":"rgba(255,255,255,0.1)"),color:on?"#a5b4fc":disabled?"#2d3548":"#6b7a9a",opacity:disabled?0.4:1}}>{r.icon} {r.l}</button>);})}
                 </div>
                 <div style={{color:"#4b5568",fontSize:9,marginBottom:8}}>{selectedRules.length}/5 gewählt – erscheinen im MIND Tab</div>
-                <Field label="MAX TRADES / TAG"><input type="number" value={settings.maxTrades} onChange={e=>saveSettings({...settings,maxTrades:parseInt(e.target.value)||2})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <Field label="PFLICHTPAUSE (MIN)"><input type="number" value={settings.pauseMins} onChange={e=>saveSettings({...settings,pauseMins:parseInt(e.target.value)||15})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="MAX TRADES / TAG"><input type="number" value={settings.maxTrades} onChange={e=>saveSettings({...settings,maxTrades:parseInt(e.target.value)||2})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="PFLICHTPAUSE (MIN)"><input type="number" value={settings.pauseMins} onChange={e=>saveSettings({...settings,pauseMins:parseInt(e.target.value)||15})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <Field label="FENSTER VON"><input type="time" value={settings.windowStart} onChange={e=>saveSettings({...settings,windowStart:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                  <Field label="FENSTER BIS"><input type="time" value={settings.windowEnd} onChange={e=>saveSettings({...settings,windowEnd:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                  <Field dm={dm} label="FENSTER VON"><input type="time" value={settings.windowStart} onChange={e=>saveSettings({...settings,windowStart:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                  <Field dm={dm} label="FENSTER BIS"><input type="time" value={settings.windowEnd} onChange={e=>saveSettings({...settings,windowEnd:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 </div>
               </div>}
 
@@ -2799,9 +2799,9 @@ const sendAiMessage=async()=>{
                       style={{padding:"8px",borderRadius:8,fontSize:11,fontWeight:700,background:acct.type===t.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(acct.type===t.k?"#6366f1":"#2d3548"),color:acct.type===t.k?"#a5b4fc":"#6b7a9a"}}>{t.l}</button>
                   ))}
                 </div>
-                <Field label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <Field label="BROKER"><input defaultValue={acct.broker} onBlur={e=>saveAcct({...acct,broker:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <Field label="KONTO NUMMER"><input defaultValue={acct.number} onBlur={e=>saveAcct({...acct,number:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="BROKER"><input defaultValue={acct.broker} onBlur={e=>saveAcct({...acct,broker:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="KONTO NUMMER"><input defaultValue={acct.number} onBlur={e=>saveAcct({...acct,number:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:8}}>KONTO GRÖßE</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5,marginBottom:10}}>
                   {[50000,75000,100000,125000,150000,200000].map(s=>(
@@ -2809,8 +2809,8 @@ const sendAiMessage=async()=>{
                   ))}
                 </div>
                 <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>RISIKO EINSTELLUNGEN</div>
-                <Field label={"MAX DD ($) – Level: $"+(acct.size-acct.maxDD).toLocaleString()}><input type="number" defaultValue={acct.maxDD} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,maxDD:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <Field label="DAILY DD LIMIT ($)"><input type="number" defaultValue={acct.dailyDD} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,dailyDD:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label={"MAX DD ($) – Level: $"+(acct.size-acct.maxDD).toLocaleString()}><input type="number" defaultValue={acct.maxDD} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,maxDD:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="DAILY DD LIMIT ($)"><input type="number" defaultValue={acct.dailyDD} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,dailyDD:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:6}}>LOT SIZE (für Kalkulationen)</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:8}}>
                   {[1,2,3,5].map(l=>(
@@ -2834,9 +2834,9 @@ const sendAiMessage=async()=>{
                 })()}
                 {acct.type==='challenge'&&<div>
                   <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:8}}>CHALLENGE ZIEL</div>
-                  <Field label="ZIEL SALDO ($)"><input type="number" defaultValue={acct.target} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,target:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                  <Field dm={dm} label="ZIEL SALDO ($)"><input type="number" defaultValue={acct.target} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,target:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                   <div style={{color:"#6b7a9a",fontSize:9,marginBottom:6}}>z.B. $50k + 8% Ziel = 54000 eingeben</div>
-                  <Field label="ZEITRAUM (TAGE)"><input type="number" defaultValue={acct.targetDays} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,targetDays:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                  <Field dm={dm} label="ZEITRAUM (TAGE)"><input type="number" defaultValue={acct.targetDays} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,targetDays:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
                 </div>}
                 <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",margin:"10px 0"}}>
                   <div style={{color:"#8b96b0",fontSize:10}}>Challenge läuft seit: <span style={{color:"#a5b4fc",fontWeight:700}}>{challengeStart==='2000-01-01'?'Nicht gestartet':challengeStart}</span></div>
