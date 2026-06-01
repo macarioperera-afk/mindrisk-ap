@@ -220,6 +220,9 @@ export default function App(){
   const[onboardData,setOnboardData]=useState({name:'',firm:'TTP',firmOther:'',size:50000,maxDD:2000,dailyDD:1000,target:54000,number:'',instrument:'MNQ',psychAnswers:{}});
   const[showSplash,setShowSplash]=useState(true);
   const[tab,setTab]=useState("dash");
+  const[dm,setDm]=useState(()=>localStorage.getItem('ttp_dm')!=='light');
+  const saveDm=(v)=>{setDm(v);localStorage.setItem('ttp_dm',v?'dark':'light');};
+  const DK={bg:dm?'#0b0d14':'#f0f2f7',nav:dm?'#0e1020':'#ffffff',card:dm?'#141e35':'#ffffff',cardBorder:dm?'rgba(99,102,241,0.18)':'#e0e4f0',mini:dm?'#13162a':'#f5f7fc',miniBorder:dm?'#1e2235':'#e0e4f0',text:dm?'#f0f4ff':'#1a1d2a',muted:dm?'#6b7a9a':'#6b7280',divider:dm?'#1e2235':'#e8eaf0'};
   const[toast,setToast]=useState("");
   const[delId,setDelId]=useState(null);
   const[expandedMonth,setExpandedMonth]=useState(null);
@@ -907,8 +910,7 @@ Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
 
 TRADE: ${tradeData.contract} ${tradeData.dir} um ${tradeData.time}
 P&L: ${tradeData.pnl>=0?"+":""}$${tradeData.pnl.toFixed(2)}
-Regelquote: ${rulePct}% (${ruleScore}/${totalRules} Regeln)
-Setup: ${tradeData.setup||"Nicht angegeben"}
+Regelquote: ${rulePct}% (${ruleScore}/${totalRules} Regeln)Setup: ${tradeData.setup||"Nicht angegeben"}
 Trade Nr. heute: ${tod2.length}/${DAILY_LIMIT}
 
 KONTEXT:
@@ -1315,7 +1317,7 @@ const sendAiMessage=async()=>{
 ];
 
   return(
-    <div style={{background:"#111725",minHeight:"100vh",color:"#f0f4ff",fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",fontSize:isDesktop?15:14,paddingBottom:"calc(70px + env(safe-area-inset-bottom,0px))",width:"100%",overflowX:"hidden"}}>
+    <div style={{background:DK.bg,minHeight:"100vh",color:DK.text,fontFamily:"-apple-system,BlinkMacSystemFont,sans-serif",fontSize:isDesktop?15:14,paddingBottom:"calc(70px + env(safe-area-inset-bottom,0px))",width:"100%",overflowX:"hidden"}}>
       {authLoading&&<div style={{position:"fixed",inset:0,zIndex:9999,background:"#080c14",display:"flex",alignItems:"center",justifyContent:"center"}}>
         <div style={{width:40,height:40,borderRadius:"50%",border:"3px solid #2d3548",borderTopColor:B,animation:"spin .8s linear infinite"}}/>
       </div>}
@@ -1546,7 +1548,7 @@ const sendAiMessage=async()=>{
       </div>}
 
       {/* HEADER */}
-      <div style={{background:"linear-gradient(180deg,#0f1830 0%,#0b1422 100%)",borderBottom:"1px solid #2d3548",padding:isDesktop?"16px 32px 14px":"14px 18px 12px",width:"100%",boxSizing:"border-box"}}>
+      <div style={{background:dm?"linear-gradient(180deg,#0f1830 0%,#0b1422 100%)":"#ffffff",borderBottom:"1px solid "+(dm?"#2d3548":"#e0e4f0"),padding:isDesktop?"16px 32px 14px":"14px 18px 12px",width:"100%",boxSizing:"border-box"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
           <div style={{flex:1}}>
             <div style={{fontWeight:900,fontSize:30,letterSpacing:"-1.5px",lineHeight:1}}><span style={{color:B}}>Mind</span><span style={{color:"#f0f4ff"}}>Risk</span></div>
@@ -1581,6 +1583,7 @@ const sendAiMessage=async()=>{
                 );
               })()}
             </div>
+            <button onClick={()=>saveDm(!dm)} style={{background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)",border:"1px solid "+(dm?"#2d3548":"#e0e4f0"),borderRadius:10,width:36,height:36,padding:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,marginRight:4}}>{dm?"☀️":"🌙"}</button>
             <button onClick={()=>setSettingsOpen(true)} style={{background:"linear-gradient(135deg,#6366f1,#a855f7)",borderRadius:12,width:40,height:40,padding:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:18,flexShrink:0}}>☰</button>
           </div>
         </div>
@@ -1602,7 +1605,7 @@ const sendAiMessage=async()=>{
       <div style={{padding:isDesktop?"20px 28px 30px":"16px 16px 20px",width:"100%",boxSizing:"border-box",maxWidth:"100%"}}>
 
         {/* DASHBOARD */}
-        {tab==="dash"&&<div style={{display:"flex",flexDirection:"column",gap:12,width:"100%"}}>
+        {tab==="dash"&&<div style={{display:"flex",flexDirection:"column",gap:0,width:"100%"}}>
           {dailyDDHit&&<div style={{background:"rgba(239,68,68,0.15)",border:"2px solid rgba(239,68,68,0.6)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M4.93 4.93l14.14 14.14"/></svg>
             <div><div style={{color:"#fca5a5",fontWeight:800,fontSize:14}}>Daily DD erreicht! -${Math.round(dailyLoss)} / $1.000 Limit</div><div style={{color:"#fca5a5",fontSize:11}}>Für heute KEIN weiterer Trade. Rechner aus, Coach fragen.</div></div>
@@ -1627,6 +1630,8 @@ const sendAiMessage=async()=>{
             </div>
           </div>}
 
+          <div style={isDesktop?{display:"grid",gridTemplateColumns:"1fr 1fr",gap:1,background:DK.divider}:{display:"flex",flexDirection:"column",gap:12,padding:12}}>
+          <div style={isDesktop?{background:DK.card,padding:"18px 20px",display:"flex",flexDirection:"column",gap:10}:{display:"contents"}}>
           <Card style={{borderColor:B+"44"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
               <div>
@@ -1717,7 +1722,44 @@ const sendAiMessage=async()=>{
             ))}
           </div>
 
+          {isDesktop&&(()=>{
+            const cumulT=[...allT09].sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
+            let cum=0;const pts=cumulT.map(t=>{cum+=t.pnl;return cum;});
+            const minV=Math.min(0,...pts),maxV=Math.max(0,...pts),range=Math.max(1,maxV-minV);
+            const W=280,H=56,pad=4;
+            const tx=(i)=>pts.length<2?W/2:pad+i*(W-pad*2)/Math.max(1,pts.length-1);
+            const ty=(v)=>H-pad-(v-minV)/range*(H-pad*2);
+            const pathD=pts.length>0?pts.map((v,i)=>(i===0?'M':'L')+tx(i).toFixed(1)+','+ty(v).toFixed(1)).join(' '):'';
+            const lastV=pts.length>0?pts[pts.length-1]:0;
+            const lc=lastV>=0?G:R;
+            return(
+              <div style={{background:dm?"rgba(0,0,0,0.25)":"rgba(0,0,0,0.04)",borderRadius:10,padding:"10px 12px",border:"0.5px solid "+DK.divider}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                  <span style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:"0.8px"}}>EQUITY KURVE</span>
+                  <span style={{fontSize:10,fontWeight:700,color:lc}}>{lastV>=0?"+":""}{Math.round(lastV)}$</span>
+                </div>
+                <svg width="100%" height={H} viewBox={"0 0 "+W+" "+H} preserveAspectRatio="none">
+                  <defs><linearGradient id="eqG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={lc} stopOpacity="0.25"/><stop offset="100%" stopColor={lc} stopOpacity="0.02"/></linearGradient></defs>
+                  {pathD&&<path d={pathD+" L"+tx(pts.length-1).toFixed(1)+","+H+" L"+pad+","+H+" Z"} fill="url(#eqG)"/>}
+                  {pathD&&<path d={pathD} fill="none" stroke={lc} strokeWidth="1.5" strokeLinejoin="round"/>}
+                  <line x1={pad} y1={ty(0).toFixed(1)} x2={W-pad} y2={ty(0).toFixed(1)} stroke={DK.divider} strokeWidth="0.5" strokeDasharray="3,3"/>
+                  {pts.length>0&&<circle cx={tx(pts.length-1)} cy={ty(lastV)} r="3" fill={lc}/>}
+                </svg>
+                <div style={{marginTop:8,paddingTop:6,borderTop:"0.5px solid "+DK.divider}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                    <span style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:"0.8px"}}>DISZIPLIN</span>
+                    <span style={{fontSize:11,fontWeight:900,color:disc>=70?G:disc>=40?Y:R}}>{disc}<span style={{fontSize:8,fontWeight:400,color:DK.muted}}>% / 80% Ziel</span></span>
+                  </div>
+                  <div style={{height:5,borderRadius:3,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.08)",overflow:"hidden"}}>
+                    <div style={{height:"100%",width:Math.min(100,disc)+"%",background:disc>=70?G:disc>=40?Y:R,borderRadius:3,transition:"width .5s"}}/>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
+          </div>{/* /BLOCK1 */}
+          <div style={isDesktop?{background:DK.card,padding:"18px 20px"}:{display:"contents"}}>
           <Card style={{breakInside:"avoid",height:isDesktop?"auto":"auto"}}>
             <div style={{fontWeight:isDesktop?800:700,marginBottom:isDesktop?14:10,fontSize:isDesktop?18:15}}>{now.toLocaleString("de-DE",{month:"long",year:"numeric"})}</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3,marginBottom:5}}>
@@ -1725,8 +1767,8 @@ const sendAiMessage=async()=>{
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:isDesktop?6:3}}>{renderCal()}</div>
           </Card>
-
-
+          </div>{/* /BLOCK2 */}
+          <div style={isDesktop?{background:DK.card,padding:"18px 20px"}:{display:"contents"}}>
           {/* TAGESPLAN – KERN DER APP */}
           {wzpCalc&&(()=>{
             const wz=wzpCalc;
@@ -1760,7 +1802,7 @@ const sendAiMessage=async()=>{
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
                       <div style={{width:10,height:10,borderRadius:'50%',background:ac,animation:'pulse 2s infinite',boxShadow:'0 0 8px '+ac,flexShrink:0}}/>
                       <div>
-                        <div style={{fontWeight:900,fontSize:16,color:'#f0f4ff'}}>Tagesplan</div>
+                        <div style={{fontWeight:900,fontSize:16,color:DK.text}}>Weg zur Profitabilität</div>
                         <div style={{fontSize:9,color:B,fontWeight:700,letterSpacing:'0.8px',marginTop:1}}>
                           {acct.propFirm||'CHALLENGE'} · {acct.instrument||'MNQ'} · {(acct.ddType||'eod')==='eod'?'EOD':'TRAILING'} DD
                         </div>
@@ -1775,12 +1817,12 @@ const sendAiMessage=async()=>{
                     </div>
                   </div>
                   <div style={{marginTop:6,color:ac,fontSize:11,fontWeight:700}}>{wz.ampelMsg}</div>
+                  <div style={{marginTop:2,fontSize:8,color:DK.muted}}>Powered by <span style={{color:B,fontWeight:700}}>MindRisk Coach</span> · {acct.propFirm||'Challenge'} · {acct.instrument||'MNQ'}</div>
                 </div>
 
                 {/* CHALLENGE FORTSCHRITT */}
                 <div style={{padding:'10px 16px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
-                    <span style={{color:'#6b7a9a',fontSize:9,fontWeight:700}}>{wz.accountType==='challenge'?'CHALLENGE FORTSCHRITT':'MONATSZIEL'}</span>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}><span style={{color:'#6b7a9a',fontSize:9,fontWeight:700}}>{wz.accountType==='challenge'?'CHALLENGE FORTSCHRITT':'MONATSZIEL'}</span>
                     <span style={{fontWeight:900,fontSize:12,color:wz.profitNeeded<=0?G:'#f0f4ff'}}>
                       {wz.profitNeeded<=0?'✅ GESCHAFFT!':'+$'+wz.profitSoFar+' / $'+wz.profitTarget}
                     </span>
@@ -1881,7 +1923,9 @@ const sendAiMessage=async()=>{
             );
           })()}
 
-          {/* MEIN MONATSZIEL */}          {/* MEIN MONATSZIEL */}
+          </div>{/* /BLOCK3 */}
+          <div style={isDesktop?{background:DK.card,padding:"18px 20px"}:{display:"contents"}}>
+          {/* MEIN MONATSZIEL */}
           <Card style={{borderColor:P+"33",background:"#0d0a14"}} onClick={()=>setMonatExp(p=>!p)}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -1955,6 +1999,8 @@ const sendAiMessage=async()=>{
               );
             })()}
           </Card>
+          </div>{/* /BLOCK4 */}
+          </div>{/* /GRID */}
         </div>}
 
 
@@ -2667,177 +2713,26 @@ const sendAiMessage=async()=>{
                 </div>}
               </div>}
 
-              {settingsSection==="data"&&sec.id==="data"&&<div style={{padding:"12px 14px",borderTop:"1px solid #2d3548",background:"#0d1320"}}>
-                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>KONTO TYP</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
-                  {[{k:"challenge",l:"🎯 Challenge"},{k:"pa",l:"💰 PA Account"}].map(t=>(
-                    <button key={t.k} onClick={()=>saveAcct({...acct,type:t.k})}
-                      style={{padding:"8px",borderRadius:8,fontSize:11,fontWeight:700,background:acct.type===t.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(acct.type===t.k?"#6366f1":"#2d3548"),color:acct.type===t.k?"#a5b4fc":"#6b7a9a"}}>{t.l}</button>
-                  ))}
-                </div>
-                <Field label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <Field label="BROKER"><input defaultValue={acct.broker} onBlur={e=>saveAcct({...acct,broker:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <Field label="KONTO NUMMER"><input defaultValue={acct.number} onBlur={e=>saveAcct({...acct,number:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:8}}>KONTO GRÖßE</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5,marginBottom:10}}>
-                  {[50000,75000,100000,125000,150000,200000].map(s=>(
-                    <button key={s} onClick={()=>saveAcct({...acct,size:s})} style={{padding:"6px 4px",borderRadius:7,fontSize:10,fontWeight:700,background:acct.size===s?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(acct.size===s?"#6366f1":"#2d3548"),color:acct.size===s?"#a5b4fc":"#6b7a9a"}}>${s/1000}k</button>
-                  ))}
-                </div>
-                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>RISIKO EINSTELLUNGEN</div>
-                <Field label={"MAX DD ($) – Level: $"+(acct.size-acct.maxDD).toLocaleString()}><input type="number" defaultValue={acct.maxDD} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,maxDD:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <Field label="DAILY DD LIMIT ($)"><input type="number" defaultValue={acct.dailyDD} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,dailyDD:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:6}}>LOT SIZE (für Kalkulationen)</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:8}}>
-                  {[1,2,3,5].map(l=>(
-                    <button key={l} onClick={()=>saveAcct({...acct,lotSize:l})} style={{padding:"6px 4px",borderRadius:7,fontSize:11,fontWeight:700,background:acct.lotSize===l?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.04)",border:"1px solid "+(acct.lotSize===l?"#6366f1":"#2d3548"),color:acct.lotSize===l?"#a5b4fc":"#6b7a9a"}}>{l}x {acct.instrument||"MNQ"}</button>
-                  ))}
-                </div>
-                {(()=>{
-                  const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
-                  const ls=acct.lotSize||1;
-                  const sl=Math.round((acct.slTicks||40)*inst.tickValue*ls);
-                  const tp=Math.round((acct.tpTicks||80)*inst.tickValue*ls);
-                  const w=t09.length?t09.filter(t=>t.pnl>0).length/t09.length:0.5;
-                  const ev=Math.round(w*tp-(1-w)*sl);
-                  return(
-                    <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",marginBottom:8}}>
-                      <div style={{color:"#8b96b0",fontSize:10}}>
-                        {ls}x {acct.instrument||'MNQ'} → SL: <span style={{color:R,fontWeight:700}}>-${sl}</span> | TP: <span style={{color:G,fontWeight:700}}>+${tp}</span> | EV/Trade: <span style={{color:ev>=0?G:R,fontWeight:700}}>{ev>=0?'+':''}{ev}$</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-                {acct.type==='challenge'&&<div>
-                  <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:8}}>CHALLENGE ZIEL</div>
-                  <Field label="ZIEL SALDO ($)"><input type="number" defaultValue={acct.target} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,target:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                  <div style={{color:"#6b7a9a",fontSize:9,marginBottom:6}}>z.B. $50k + 8% Ziel = 54000 eingeben</div>
-                  <Field label="ZEITRAUM (TAGE)"><input type="number" defaultValue={acct.targetDays} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,targetDays:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
-                </div>}
-                <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",margin:"10px 0"}}>
-                  <div style={{color:"#8b96b0",fontSize:10}}>Challenge läuft seit: <span style={{color:"#a5b4fc",fontWeight:700}}>{challengeStart==='2000-01-01'?'Nicht gestartet':challengeStart}</span></div>
-                </div>
-                <button onClick={()=>{if(window.confirm("Challenge starten:\nKonto: $"+acct.size.toLocaleString()+"\nMax DD: $"+acct.maxDD+"\nZiel: $"+acct.target+"\n\nAlles startet bei 0!")){startChallenge();}}} style={{marginBottom:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",padding:"12px",width:"100%",fontWeight:800,fontSize:13,borderRadius:10}}>🚀 Challenge starten / neu starten</button>
-                <button onClick={()=>{if(window.confirm("Alle Daten löschen?")){{localStorage.clear();window.location.reload();}}}} style={{background:"rgba(239,68,68,0.06)",color:R,border:"1px solid rgba(239,68,68,0.2)",padding:"10px",width:"100%",fontWeight:600,fontSize:11,borderRadius:10}}>Alle Daten löschen</button>
-              </div>}
-            </div>
-          ))}
-          <div style={{paddingTop:12,color:"#4a5568",fontSize:10,textAlign:"center"}}>MindRisk v2.0 · Claude AI ✅</div>
-        </div>
-      </div>}
+              {settingsSection==="data"&&sec.id==="data"&&<div style={{padding:"14px 16px",borderTop:"1px solid #2d3548",background:"#0a0e1a"}}>
 
-      {/* AI COACH – FUTURISTISCH */}
-      <div style={{position:"fixed",bottom:88,right:16,zIndex:200}}>
-        {!aiOpen&&(
-          <button onClick={()=>{setAiOpen(true);if(aiMessages.length===0){setAiMessages([{role:"assistant",content:smartCoach("","daily_motivation")}]);}}}
-            style={{width:54,height:54,borderRadius:"50%",border:"none",padding:0,position:"relative",overflow:"visible",cursor:"pointer",background:"transparent",WebkitTapHighlightColor:"transparent"}}>
-            {/* Pulsing rings – echter Herzschlag */}
-            <div style={{position:"absolute",inset:0,borderRadius:"50%",background:"rgba(99,102,241,0.5)",animation:"orbRing1 1.4s ease-out infinite",pointerEvents:"none"}}/>
-            <div style={{position:"absolute",inset:0,borderRadius:"50%",background:"rgba(168,85,247,0.4)",animation:"orbRing2 1.4s ease-out infinite 0.45s",pointerEvents:"none"}}/>
-            <div style={{position:"absolute",inset:0,borderRadius:"50%",background:"rgba(99,102,241,0.25)",animation:"orbRing3 1.4s ease-out infinite 0.9s",pointerEvents:"none"}}/>
-            {/* Main sphere – atmet */}
-            <div style={{position:"absolute",inset:0,borderRadius:"50%",background:"radial-gradient(circle at 35% 28%,#e0d4ff 0%,#c4b5fd 15%,#a78bfa 35%,#7c3aed 60%,#4c1d95 85%,#1e1b4b 100%)",animation:"livingOrb 2.2s ease-in-out infinite",boxShadow:"0 0 25px rgba(99,102,241,0.7),0 0 50px rgba(168,85,247,0.4),inset 0 0 15px rgba(255,255,255,0.15)"}}/>
-            {/* Rotierender Ring */}
-            <div style={{position:"absolute",inset:3,borderRadius:"50%",border:"1.5px solid transparent",borderTopColor:"rgba(255,255,255,0.6)",borderRightColor:"rgba(196,181,253,0.4)",animation:"orbSpin 4s linear infinite",pointerEvents:"none"}}/>
-            {/* Kern-Licht */}
-            <div style={{position:"absolute",top:"20%",left:"22%",width:20,height:20,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,255,255,0.95) 0%,rgba(221,214,254,0.6) 50%,transparent 75%)",filter:"blur(3px)",animation:"orbCore 2s ease-in-out infinite",pointerEvents:"none"}}/>
-          </button>
-        )}
-        {aiOpen&&(
-          <div style={{width:320,maxWidth:"calc(100vw - 32px)",background:"#131d30",border:"1px solid #6366f1",borderRadius:16,boxShadow:"0 8px 32px rgba(99,102,241,0.3)",display:"flex",flexDirection:"column",maxHeight:isDesktop?"88vh":"80vh",minHeight:360}}>
-            <div style={{padding:"12px 16px",borderBottom:"1px solid #2d3548",display:"flex",justifyContent:"space-between",alignItems:"center",background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.1))",borderRadius:"16px 16px 0 0"}}>
-              <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",animation:"orb 3s ease infinite",flexShrink:0}}>
-                  <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
-                    <circle cx="10" cy="12" r="2.5" fill="white" opacity="0.9"/>
-                    <circle cx="18" cy="12" r="2.5" fill="white" opacity="0.9"/>
-                    <path d="M9 17.5 Q14 21 19 17.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.9"/>
-                  </svg>
-                </div>
-                <div>
-                  <div style={{fontWeight:700,fontSize:13,color:"#f0f4ff"}}>MindRisk Coach</div>
-                  <div style={{color:B,fontSize:10,fontWeight:600}}>Claude AI ✦</div>
-                </div>
-              </div>
-              <button onClick={()=>setAiOpen(false)} style={{background:"rgba(255,255,255,0.08)",color:"#8b96b0",fontSize:16,padding:"4px 8px",borderRadius:6}}>×</button>
-            </div>
-            <div ref={chatContainerRef} onScroll={e=>{const el=e.target;const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;userScrolledUp.current=!atBottom;}} style={{flex:1,overflowY:"scroll",WebkitOverflowScrolling:"touch",padding:12,display:"flex",flexDirection:"column",gap:8,minHeight:0}}>
-              {checkedIn&&mindLight&&mindLight!=='green'&&(
-                <div style={{background:mindLight==='red'?"rgba(239,68,68,0.12)":"rgba(245,158,11,0.12)",border:"1px solid "+(mindLight==='red'?"rgba(239,68,68,0.4)":"rgba(245,158,11,0.4)"),borderRadius:10,padding:"8px 12px",marginBottom:4,display:"flex",gap:8,alignItems:"flex-start",flexShrink:0}}>
-                  <span style={{fontSize:16,flexShrink:0}}>{mindLight==='red'?"🚫":"⚠️"}</span>
-                  <div>
-                    <div style={{color:mindLight==='red'?R:Y,fontWeight:700,fontSize:11,marginBottom:2}}>{mindLight==='red'?"Heute NICHT traden!":"Heute vorsichtig sein"}</div>
-                    {mindMsg&&<div style={{color:"#a8b8d0",fontSize:10,lineHeight:1.4}}>{mindMsg}</div>}
-                  </div>
-                </div>
-              )}
-              {aiMessages.length===0&&!aiLoading&&(
-                <div style={{color:"#8b96b0",fontSize:12,textAlign:"center",padding:16}}>Tippe eine Frage – echte Claude KI antwortet!</div>
-              )}
-              {aiMessages.map((m,i)=>(
-                <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
-                  <div style={{maxWidth:"85%",padding:"8px 12px",borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",background:m.role==="user"?"linear-gradient(135deg,"+B+","+P+")":"#0d1825",border:"1px solid "+(m.role==="user"?"transparent":"#1e2d48"),fontSize:12,color:"#f0f4ff",lineHeight:1.5,whiteSpace:"pre-wrap"}}>
-                    {m.content}
-                  </div>
-                </div>
-              ))}
-              {aiLoading&&(
-                <div style={{display:"flex",gap:4,padding:"4px 8px"}}>
-                  <div style={{width:7,height:7,borderRadius:"50%",background:B,animation:"pulse 1s infinite"}}/>
-                  <div style={{width:7,height:7,borderRadius:"50%",background:P,animation:"pulse 1s infinite 0.2s"}}/>
-                  <div style={{width:7,height:7,borderRadius:"50%",background:B,animation:"pulse 1s infinite 0.4s"}}/>
-                </div>
-              )}
-              <div ref={aiMessagesEndRef}/>
-            </div>
-            <div style={{padding:"6px 12px",borderTop:"1px solid #2d3548"}}>
-              <div style={{display:"flex",gap:6}}>
-                <button onClick={()=>triggerAiPopup("daily_motivation")} style={{background:"rgba(0,211,149,0.15)",color:G,fontSize:10,padding:"5px 10px",borderRadius:20,border:"1px solid "+G+"44",fontWeight:700,flex:1}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg> Tages-Briefing</button>
-                <button onClick={()=>setAiInput("Soll ich traden?")} style={{background:"rgba(99,102,241,0.15)",color:B,fontSize:10,padding:"5px 10px",borderRadius:20,border:"1px solid "+B+"44",fontWeight:600,flex:1}}>Soll ich traden?</button>
-                <button onClick={()=>setShowMoreButtons(p=>!p)} style={{background:"rgba(255,255,255,0.05)",color:"#6b7a9a",fontSize:16,padding:"4px 10px",borderRadius:20,border:"1px solid #2d3548",flexShrink:0,lineHeight:1}}>{showMoreButtons?"▲":"···"}</button>
-              </div>
-              {showMoreButtons&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:5}}>
-                {["Analysiere meine Schwächen","Beste Handelszeit?","Diese Woche?"].map(q=>(
-                  <button key={q} onClick={()=>{setAiInput(q);setShowMoreButtons(false);}} style={{background:"rgba(99,102,241,0.15)",color:B,fontSize:10,padding:"4px 10px",borderRadius:20,border:"1px solid "+B+"44",fontWeight:600}}>{q}</button>
-                ))}
-                {t09.length>0&&<button onClick={()=>{const last=t09[t09.length-1];setAiInput("Analysiere: "+last.contract+" "+last.dir+" "+(last.pnl>=0?"+":"")+last.pnl.toFixed(2)+"$ um "+last.time+" am "+last.date);setShowMoreButtons(false);}} style={{background:"rgba(0,211,149,0.15)",color:G,fontSize:10,padding:"4px 10px",borderRadius:20,border:"1px solid "+G+"44",fontWeight:600}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="12" width="4" height="10" rx="1"/><rect x="9" y="7" width="4" height="15" rx="1"/><rect x="16" y="3" width="4" height="19" rx="1"/></svg> Letzter Trade</button>}
-              </div>}
-            </div>
+                <div style={{color:"#6b7a9a",fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:10}}>PERSÖNLICHE INFOS</div>
+                <Field label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field label="BROKER / PROP FIRMA (Text)"><input defaultValue={acct.broker||""} onBlur={e=>saveAcct({...acct,broker:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
+                <Field label="KONTO NUMMER"><input defaultValue={acct.number||""} onBlur={e=>saveAcct({...acct,number:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:"#f0f4ff",width:"100%",outline:"none"}}/></Field>
 
-            {aiImagePreview&&<div style={{padding:"6px 12px",borderTop:"1px solid #2d3548",display:"flex",alignItems:"center",gap:8}}>
-              <img src={aiImagePreview} alt="chart" style={{width:52,height:52,borderRadius:8,objectFit:"cover",border:"1px solid "+B+"44"}}/>
-              <div style={{fontSize:11,color:"#a8b8d0",flex:1}}>📊 Chart wird mitgeschickt...</div>
-              <button onClick={()=>{setAiImage(null);setAiImagePreview(null);}} style={{background:"none",color:"#ef4444",fontSize:18,padding:"2px 6px"}}>×</button>
-            </div>}
-            <div style={{padding:"8px 12px",borderTop:"1px solid #2d3548"}}>
-              <input type="file" id="chartUpload" accept="image/*" onChange={handleImageSelect} style={{display:"none"}}/>
-              <div style={{display:"flex",gap:8,marginBottom:8}}>
-                <button onClick={()=>document.getElementById("chartUpload").click()}
-                  style={{background:"#131d30",border:"1px solid #2d3548",color:"#a8b8d0",padding:"9px 0",borderRadius:10,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:11,fontWeight:600}}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                  Chart
+                <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"10px 12px",margin:"12px 0",border:"1px solid rgba(99,102,241,0.2)"}}>
+                  <div style={{color:"#8b96b0",fontSize:10}}>Challenge läuft seit: <span style={{color:"#a5b4fc",fontWeight:700}}>{challengeStart==="2000-01-01"?"Nicht gestartet":challengeStart}</span></div>
+                  <div style={{color:"#6b7a9a",fontSize:9,marginTop:3}}>Alle Challenge-Zahlen → Einstellungen "Konto & WZP"</div>
+                </div>
+
+                <button onClick={()=>{if(window.confirm("Challenge starten:\nKonto: $"+acct.size.toLocaleString()+"\nGewinnziel: $"+Math.round(acct.size*(acct.profitTargetPct||8)/100)+"\nMax DD: $"+acct.maxDD+"\n\nAlle Trade-Daten bleiben erhalten.\nNur der Challenge-Timer startet neu.")){startChallenge();}}}
+                  style={{marginBottom:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",padding:"12px",width:"100%",fontWeight:800,fontSize:13,borderRadius:10}}>
+                  🚀 Challenge starten / neu starten
                 </button>
-                <button onClick={startVoice}
-                  style={{background:isRecording?"rgba(239,68,68,0.3)":"#131d30",border:"1px solid "+(isRecording?"#ef4444":"#1e2d48"),color:isRecording?"#ef4444":"#a8b8d0",padding:"9px 0",borderRadius:10,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:11,fontWeight:600}}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                  {isRecording?"Aufnahme":"Sprechen"}
+
+                <button onClick={()=>{if(window.confirm("Alle Daten löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.")){localStorage.clear();window.location.reload();}}}
+                  style={{background:"rgba(239,68,68,0.06)",color:R,border:"1px solid rgba(239,68,68,0.2)",padding:"10px",width:"100%",fontWeight:600,fontSize:11,borderRadius:10}}>
+                  🗑 Alle Daten löschen
                 </button>
-                <button onClick={()=>{setAiMessages([]);localStorage.removeItem('ttp_chat_history');}}
-                  style={{background:"#131d30",border:"1px solid #2d3548",color:"#4b5568",padding:"9px 12px",borderRadius:10,fontSize:13,flexShrink:0}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
-              </div>
-              <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
-                <textarea value={aiInput} onChange={e=>setAiInput(e.target.value)}
-                  onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&(e.preventDefault(),sendAiMessage())}
-                  placeholder={isRecording?"🎤 Höre zu...":"Frag deinen Coach..."}
-                  rows={4}
-                  style={{flex:1,fontSize:13,padding:"12px 14px",borderRadius:14,background:"#0d1320",border:"1px solid #2d3548",resize:"none",lineHeight:1.5,maxHeight:140,overflowY:"auto",color:"#f0f4ff",fontFamily:"inherit"}}/>
-                <button id="aiSendBtn" onClick={sendAiMessage} disabled={aiLoading||(!aiInput.trim()&&!aiImage)}
-                  style={{background:"linear-gradient(135deg,"+B+","+P+")",color:"#fff",padding:"13px 15px",borderRadius:14,fontSize:16,fontWeight:700,opacity:aiLoading||(!aiInput.trim()&&!aiImage)?0.4:1,flexShrink:0}}>→</button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+              </div>}
+              {settingsSection==="goals"&&
