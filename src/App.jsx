@@ -167,7 +167,7 @@ const Bar2=({pct,color})=>(
   </div>
 );
 const Chk=({checked,onClick,label})=>(
-  <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:"1px solid "+DK.miniBorder,cursor:"pointer"}}>
+  <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:"1px solid #2d3548",cursor:"pointer"}}>
     <div style={{width:22,height:22,borderRadius:6,border:"2px solid "+(checked?G:"#1e2d48"),background:checked?G:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
       {checked&&<span style={{color:"#000",fontSize:14,fontWeight:900}}>✓</span>}
     </div>
@@ -177,7 +177,7 @@ const Chk=({checked,onClick,label})=>(
 
 const Field=({label,children,dm:fdm})=>(
   <div style={{background:fdm?"#0d1320":"#f5f7fc",borderRadius:10,padding:"10px 12px",border:"1px solid "+(fdm?"#2d3548":"#e0e4f0")}}>
-    <div style={{color:DK.muted,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:6}}>{label}</div>
+    <div style={{color:"#8b96b0",fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:6}}>{label}</div>
     {children}
   </div>
 );
