@@ -162,7 +162,7 @@ const Card=({children,style,onClick})=>(
   <div onClick={onClick} style={{background:"linear-gradient(145deg,#141e35 0%,#0f1828 100%)",border:"1px solid rgba(99,102,241,0.18)",borderRadius:14,padding:16,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.05)",...style}}>{children}</div>
 );
 const Bar2=({pct,color})=>(
-  <div style={{height:10,borderRadius:5,background:dm?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.07)",boxShadow:"inset 0 2px 4px rgba(0,0,0,0.4)"}}>
+  <div style={{height:10,borderRadius:5,background:"rgba(255,255,255,0.05)",boxShadow:"inset 0 2px 4px rgba(0,0,0,0.4)"}}>
     <div style={{height:"100%",borderRadius:5,width:Math.min(100,Math.max(0,pct))+"%",background:"linear-gradient(90deg,"+color+"aa,"+color+")",transition:"width .6s ease",boxShadow:"0 0 10px "+color+"55"}}/>
   </div>
 );
