@@ -998,7 +998,8 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
         coachMemory:sanitize(coachMemory.slice(0,8).map(m=>m.note).join(' | ')),
         chatHistorySummary:sanitize(aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100)).join(' | ')),
         // Account & Instrument — damit Claude NICHT raten muss
-        instrument:acct.instrument||'MNQ',tickValue:(INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ']).tickValue,
+        instrument:acct.instrument||'MNQ',
+        tickValue:(INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ']).tickValue,
         slTicks:acct.slTicks||40,
         tpTicks:acct.tpTicks||80,
         lotSize:acct.lotSize||1,
@@ -1993,7 +1994,13 @@ const sendAiMessage=async()=>{
                     ].map(s=>(
                       <div key={s.l} style={{background:"#0f1428",borderRadius:8,padding:"7px 6px",textAlign:"center",border:"1px solid #1e1428"}}>
                         <div style={{color:"#6b7a9a",fontSize:9,marginBottom:2}}>{s.l}</div>
-                        <div style={{color:s.c,fontWeight:800,fontSize:13}}>{s.v}</div><span style={{color:"#8b96b0",fontSize:10}}>Monatsfortschritt</span>
+                        <div style={{color:s.c,fontWeight:800,fontSize:13}}>{s.v}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{marginBottom:6}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                      <span style={{color:"#8b96b0",fontSize:10}}>Monatsfortschritt</span>
                       <span style={{color:monthPct>=100?G:P,fontWeight:700,fontSize:10}}>{monthPct}% ({monthPnl>=0?"+":""}${Math.round(monthPnl)} von ${monthNeeded} nötig)</span>                    </div>
                     <div style={{height:6,borderRadius:3,background:"#1e2540",overflow:"hidden"}}>
                       <div style={{height:"100%",borderRadius:3,width:monthPct+"%",background:"linear-gradient(90deg,"+B+","+P+")",transition:"width .4s"}}/>
@@ -2994,8 +3001,3 @@ const sendAiMessage=async()=>{
     </div>
   );
 }
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{marginBottom:6}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
