@@ -222,15 +222,7 @@ export default function App(){
   const[tab,setTab]=useState("dash");
   const[dm,setDm]=useState(()=>localStorage.getItem('ttp_dm')!=='light');
   const saveDm=(v)=>{setDm(v);localStorage.setItem('ttp_dm',v?'dark':'light');};
-  useEffect(()=>{
-    let s=document.getElementById('mr-theme');
-    if(!s){s=document.createElement('style');s.id='mr-theme';document.head.appendChild(s);}
-    s.textContent=dm?'':`
-      .mr-settings{background:#f5f7fc!important;color:#1a1d2a!important}
-      [style*="background:\"#2d3548\"]{background:#e0e4f0!important}
-      [style*="background:\"#1a2235\"],[style*="background:\"#141e35\"],[style*="background:\"#0f1828\"]{background:#ffffff!important}
-    `;
-  },[dm]);
+
   const DK={bg:dm?'#0b0d14':'#f0f2f7',nav:dm?'#0e1020':'#ffffff',card:dm?'#141e35':'#ffffff',cardBorder:dm?'rgba(99,102,241,0.18)':'#e0e4f0',mini:dm?'#13162a':'#f5f7fc',miniBorder:dm?'#1e2235':'#e0e4f0',text:dm?'#f0f4ff':'#1a1d2a',muted:dm?'#6b7a9a':'#6b7280',divider:dm?'#1e2235':'#e8eaf0'};
   const[toast,setToast]=useState("");
   const[delId,setDelId]=useState(null);
@@ -989,12 +981,12 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
         profitSoFar:Math.max(0,Math.round(saldo-acct.size)),
         challengeDaysLeft:wzpCalc?wzpCalc.challengeDaysLeft:0,
         dailyNeeded:wzpCalc?wzpCalc.dailyNeeded:0,
-        windowStart:settings.windowStart||'16:15',windowEnd:settings.windowEnd||'17:30',
+        windowStart:settings.windowStart||'16:15',
+        windowEnd:settings.windowEnd||'17:30',
         broker:acct.propFirm||acct.broker||'',
         accountNumber:acct.number||''
       };
-      const res=await fetch('/api/chat',{
-        method:'POST',headers:{'Content-Type':'application/json'},
+      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({messages:[{role:"user",content:prompt}],context:ctx})
       });
       const rawText=await res.text();
@@ -1980,9 +1972,9 @@ const sendAiMessage=async()=>{
                     </div>
                   </div>
                   {(monatExp||isDesktop)&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #1e1428"}}>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>{[
-                        {l:"HANDELSTAGE NOCH",v:dLeft2+" Tage",c:dLeft2>5?G:dLeft2>2?Y:R,s:"diesen Monat"},
-                        {l:"GEWINN/TAG NÖTIG",v:missing<=0?"✅ Erreicht":"$"+dailyNeed,c:missing<=0?G:dailyNeed<100?G:Y,s:"um Ziel zu erreichen"},
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
+                      {[
+                        {l:"HANDELSTAGE NOCH",v:dLeft2+" Tage",c:dLeft2>5?G:dLeft2>2?Y:R,s:"diesen Monat"},{l:"GEWINN/TAG NÖTIG",v:missing<=0?"✅ Erreicht":"$"+dailyNeed,c:missing<=0?G:dailyNeed<100?G:Y,s:"um Ziel zu erreichen"},
                         {l:"GEWINN/TRADE NÖTIG",v:missing<=0?"✓":"$"+tradeNeed,c:missing<=0?G:tradeNeed<50?G:Y,s:"bei 2 Trades/Tag"},
                         {l:"MAX. TRADES NOCH",v:dLeft2*DAILY_LIMIT,c:"#f0f4ff",s:dLeft2+" Tage × "+DAILY_LIMIT},
                         {l:"DIESEN MONAT P&L",v:(monthPnl>=0?"+":"")+"$"+monthPnl,c:pc(monthPnl),s:"seit Monatsstart"},
