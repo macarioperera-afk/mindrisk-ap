@@ -1318,7 +1318,7 @@ const sendAiMessage=async()=>{
       const k=`${y}-${String(mo+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
       const pv=calMap[k],isT=k===todayISO(),isFuture=k>todayISO();
       const isBlocked=blockedDays.has(k)&&isFuture;
-      let bg=DK.mini,border=isT?B:DK.miniBorder;
+      let bg={DK.mini},border=isT?B:DK.miniBorder;
       if(isBlocked){bg=R+"11";border=R+"44";}
       else if(pv!=null){bg=pv>0?G+"22":R+"22";border=pv>0?G+"55":R+"55";}
       cells.push(
@@ -2302,7 +2302,7 @@ const sendAiMessage=async()=>{
                 <XAxis dataKey="i" tick={{fill:DK.muted,fontSize:9}} axisLine={false} tickLine={false}/>
                 <YAxis tick={{fill:DK.muted,fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>"$"+v} width={55}/>
                 <Tooltip formatter={v=>[fd(v),"Kumuliert"]} contentStyle={{background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,fontSize:11}}/>
-                <ReferenceLine y={0} stroke=DK.miniBorder strokeDasharray="4 4"/>
+                <ReferenceLine y={0} stroke={DK.miniBorder} strokeDasharray="4 4"/>
                 <Line type="monotone" dataKey="v" stroke={B} strokeWidth={2} dot={false}/>
               </LineChart>
             </ResponsiveContainer>
