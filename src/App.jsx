@@ -159,15 +159,15 @@ const Pill=({bg,color,children})=>(
   <span style={{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:bg,color}}>{children}</span>
 );
 const Card=({children,style,onClick})=>(
-  <div onClick={onClick} style={{background:"linear-gradient(145deg,#141e35 0%,#0f1828 100%)",border:"1px solid rgba(99,102,241,0.18)",borderRadius:14,padding:16,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.05)",...style}}>{children}</div>
+  <div onClick={onClick} style={{background:"var(--mr-card)",border:"1px solid var(--mr-card-border)",borderRadius:14,padding:16,overflow:"hidden",boxShadow:"var(--mr-shadow)",...style}}>{children}</div>
 );
 const Bar2=({pct,color})=>(
-  <div style={{height:10,borderRadius:5,background:"rgba(255,255,255,0.05)",boxShadow:"inset 0 2px 4px rgba(0,0,0,0.4)"}}>
+  <div style={{height:10,borderRadius:5,background:"var(--mr-bar-track)"}}>
     <div style={{height:"100%",borderRadius:5,width:Math.min(100,Math.max(0,pct))+"%",background:"linear-gradient(90deg,"+color+"aa,"+color+")",transition:"width .6s ease",boxShadow:"0 0 10px "+color+"55"}}/>
   </div>
 );
 const Chk=({checked,onClick,label})=>(
-  <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:"1px solid #2d3548",cursor:"pointer"}}>
+  <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:"1px solid var(--mr-border)",cursor:"pointer"}}>
     <div style={{width:22,height:22,borderRadius:6,border:"2px solid "+(checked?G:"#1e2d48"),background:checked?G:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
       {checked&&<span style={{color:"#000",fontSize:14,fontWeight:900}}>✓</span>}
     </div>
@@ -176,8 +176,8 @@ const Chk=({checked,onClick,label})=>(
 );
 
 const Field=({label,children,dm:fdm})=>(
-  <div style={{background:fdm?"#0d1320":"#f5f7fc",borderRadius:10,padding:"10px 12px",border:"1px solid "+(fdm?"#2d3548":"#e0e4f0")}}>
-    <div style={{color:"#8b96b0",fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:6}}>{label}</div>
+  <div style={{background:"var(--mr-input)",borderRadius:10,padding:"10px 12px",border:"1px solid var(--mr-border)"}}>
+    <div style={{color:"var(--mr-muted, #8b96b0)",fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:6}}>{label}</div>
     {children}
   </div>
 );
@@ -223,38 +223,34 @@ export default function App(){
   const[dm,setDm]=useState(()=>localStorage.getItem('ttp_dm')!=='light');
   const saveDm=(v)=>{setDm(v);localStorage.setItem('ttp_dm',v?'dark':'light');};
   useEffect(()=>{
-    const id='mr-lm';
+    const id='mr-css';
     let el=document.getElementById(id);
     if(!el){el=document.createElement('style');el.id=id;document.head.appendChild(el);}
-    if(!dm){
-      const LT='[data-theme="light"]';
-      const rules=[
-        LT+' [style*="#141e35"],'+LT+' [style*="#0f1828"],'+LT+' [style*="#0f1117"]{background:#ffffff!important;box-shadow:0 1px 6px rgba(0,0,0,0.06)!important}',
-        LT+' [style*="linear-gradient(145deg,#141e35"]{background:#ffffff!important;box-shadow:0 1px 6px rgba(0,0,0,0.06)!important}',
-        LT+' [style*="linear-gradient(135deg,#141e35"]{background:#ffffff!important}',
-        LT+' [style*="#131d30"],'+LT+' [style*="#13162a"],'+LT+' [style*="#1a2235"],'+LT+' [style*="#0d1117"]{background:#f5f7fc!important}',
-        LT+' [style*="background:\"#0d1320\""],'+LT+' [style*="#0a0e1a"],'+LT+' [style*="#0b0d14"]{background:#f0f2f7!important}',
-        LT+' [style*="linear-gradient(160deg,#0a0e1a"]{background:#ffffff!important}',
-        LT+' [style*="linear-gradient(135deg,#0a0e1a"]{background:#f5f7fc!important}',
-        LT+' [style*="linear-gradient(180deg,#0f1830"]{background:#ffffff!important;border-bottom:0.5px solid #e0e4f0!important}',
-        LT+' [style*="linear-gradient(180deg,rgba(8,12,20"]{background:rgba(240,242,247,0.97)!important}',
-        LT+' [style*=dm?"rgba(0,0,0,0.2)":"rgba(0,0,0,0.04)"],'+LT+' [style*=dm?"rgba(0,0,0,0.25)":"rgba(0,0,0,0.04)"]{background:rgba(0,0,0,0.04)!important}',
-        LT+' [style*="rgba(13,18,32"]{background:#f5f7fc!important}',
-        LT+' [style*="background:\"#2d3548\""],'+LT+' [style*="borderColor:\"#2d3548\""],'+LT+' [style*="#1e2235"]{border-color:#e0e4f0!important}',
-        LT+' [style*="color: #f0f4ff"],'+LT+' [style*="color:#f0f4ff"],'+LT+' [style*="color: \"#f0f4ff"]{color:#1a1d2a!important}',
-        LT+' [style*="color: #e8eaf2"],'+LT+' [style*="color:#e8eaf2"]{color:#1a1d2a!important}',
-        LT+' [style*="color: #8b96b0"],'+LT+' [style*="color:#8b96b0"],'+LT+' [style*="color: #6b7a9a"],'+LT+' [style*="color:#6b7a9a"]{color:#6b7280!important}',
-        LT+' [style*="color: #4a5568"],'+LT+' [style*="color:#4a5568"],'+LT+' [style*="color: #374151"],'+LT+' [style*="color:#374151"]{color:#9ca3af!important}',
-        LT+' [style*="color: #4b5568"],'+LT+' [style*="color:#4b5568"]{color:#9ca3af!important}',
-        LT+' input,'+LT+' textarea{color:#1a1d2a!important}',
-        LT+' [style*="borderBottom:\"1px solid #2d3548\""],'+LT+' [style*="borderTop:\"1px solid #2d3548\""]{border-color:#e0e4f0!important}',
-        LT+' [style*="border:\"1px solid #2d3548\""],'+LT+' [style*="border:1px solid #2d3548"]{border-color:#e0e4f0!important}',
-        LT+' [style*="boxShadow:\"0 4px 24px"]{box-shadow:0 1px 8px rgba(0,0,0,0.08)!important}',
-      ].join('\n');
-      el.textContent=rules;
-    } else {
-      el.textContent='';
-    }
+    const dark=[
+      '--mr-card:linear-gradient(145deg,#141e35 0%,#0f1828 100%)',
+      '--mr-card-border:rgba(99,102,241,0.18)',
+      '--mr-shadow:0 4px 24px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.05)',
+      '--mr-mini:#13162a',
+      '--mr-mini-border:#1e2235',
+      '--mr-bar-track:rgba(255,255,255,0.06)',
+      '--mr-border:#2d3548',
+      '--mr-input:#0d1320',
+      '--mr-divider:#1e2235',
+      '--mr-overlay:rgba(0,0,0,0.2)','--mr-muted:#6b7a9a',
+    ].join(';');
+    const light=[
+      '--mr-card:#ffffff',
+      '--mr-card-border:#e0e4f0',
+      '--mr-shadow:0 1px 12px rgba(0,0,0,0.08)',
+      '--mr-mini:#f5f7fc',
+      '--mr-mini-border:#e0e4f0',
+      '--mr-bar-track:rgba(0,0,0,0.07)',
+      '--mr-border:#e0e4f0',
+      '--mr-input:#f5f7fc',
+      '--mr-divider:#e8eaf0',
+      '--mr-overlay:rgba(0,0,0,0.04)','--mr-muted:#6b7280',
+    ].join(';');
+    el.textContent=':root{'+dark+'}[data-theme="light"]{'+light+'}';
   },[dm]);
 
   const DK={bg:dm?'#0b0d14':'#f0f2f7',nav:dm?'#0e1020':'#ffffff',card:dm?'#141e35':'#ffffff',cardBorder:dm?'rgba(99,102,241,0.18)':'#e0e4f0',mini:dm?'#13162a':'#f5f7fc',miniBorder:dm?'#1e2235':'#e0e4f0',text:dm?'#f0f4ff':'#1a1d2a',muted:dm?'#6b7a9a':'#6b7280',divider:dm?'#1e2235':'#e8eaf0',subtext:dm?'#4b5568':'#9ca3af'};
@@ -1322,12 +1318,12 @@ const sendAiMessage=async()=>{
       const k=`${y}-${String(mo+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
       const pv=calMap[k],isT=k===todayISO(),isFuture=k>todayISO();
       const isBlocked=blockedDays.has(k)&&isFuture;
-      let bg="#131d30",border=isT?B:"#1e2d48";
+      let bg=DK.mini,border=isT?B:DK.miniBorder;
       if(isBlocked){bg=R+"11";border=R+"44";}
       else if(pv!=null){bg=pv>0?G+"22":R+"22";border=pv>0?G+"55":R+"55";}
       cells.push(
         <div key={k} style={{background:bg,border:"2px solid "+border,borderRadius:isDesktop?10:7,padding:isDesktop?"10px 4px":"5px 2px",textAlign:"center",minHeight:isDesktop?64:42}}>
-          <div style={{color:isT?B:"#8b96b0",fontSize:isDesktop?14:11,fontWeight:isT?700:400}}>{d}</div>
+          <div style={{color:isT?B:DK.muted,fontSize:isDesktop?14:11,fontWeight:isT?700:400}}>{d}</div>
           {isBlocked&&<div style={{fontSize:8,color:R,fontWeight:700}}>SPERRE</div>}
           {pv!=null&&!isBlocked&&<div style={{color:pc(pv),fontSize:isDesktop?12:10,fontWeight:700}}>{pv>=0?"+":"-"}${Math.abs(pv).toFixed(0)}</div>}
         </div>
@@ -1362,16 +1358,16 @@ const sendAiMessage=async()=>{
         <div style={{fontSize:42,fontWeight:900,letterSpacing:"-2px",marginBottom:4}}><span style={{color:B,fontSize:isDesktop?32:26,fontWeight:900,letterSpacing:"-1.5px"}}>Mind</span><span style={{color:DK.text,fontSize:isDesktop?32:26,fontWeight:900,letterSpacing:"-1.5px"}}>Risk</span></div>
         <div style={{fontSize:11,color:DK.muted,letterSpacing:"3px",marginBottom:40}}>TRADING JOURNAL</div>
         <div style={{width:"100%",maxWidth:360}}>
-          <div style={{display:"flex",marginBottom:24,background:"#141e35",borderRadius:10,padding:4}}>
-            <button onClick={()=>{setAuthScreen("login");setAuthError("");}} style={{flex:1,padding:"8px",borderRadius:8,fontWeight:700,fontSize:14,background:authScreen==="login"?"#6366f1":"transparent",color:authScreen==="login"?"#fff":"#6b7a9a",border:"none"}}>Einloggen</button>
-            <button onClick={()=>{setAuthScreen("register");setAuthError("");}} style={{flex:1,padding:"8px",borderRadius:8,fontWeight:700,fontSize:14,background:authScreen==="register"?"#6366f1":"transparent",color:authScreen==="register"?"#fff":"#6b7a9a",border:"none"}}>Registrieren</button>
+          <div style={{display:"flex",marginBottom:24,background:DK.mini,borderRadius:10,padding:4}}>
+            <button onClick={()=>{setAuthScreen("login");setAuthError("");}} style={{flex:1,padding:"8px",borderRadius:8,fontWeight:700,fontSize:14,background:authScreen==="login"?"#6366f1":"transparent",color:authScreen==="login"?"#fff":DK.muted,border:"none"}}>Einloggen</button>
+            <button onClick={()=>{setAuthScreen("register");setAuthError("");}} style={{flex:1,padding:"8px",borderRadius:8,fontWeight:700,fontSize:14,background:authScreen==="register"?"#6366f1":"transparent",color:authScreen==="register"?"#fff":DK.muted,border:"none"}}>Registrieren</button>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
+            <div style={{background:DK.mini,borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
               <div style={{color:DK.muted,fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>EMAIL</div>
               <input type="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} placeholder="deine@email.com" style={{background:"transparent",border:"none",fontSize:15,color:DK.text,width:"100%",outline:"none"}}/>
             </div>
-            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
+            <div style={{background:DK.mini,borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
               <div style={{color:DK.muted,fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>PASSWORT</div>
               <input type="password" value={authPassword} onChange={e=>setAuthPassword(e.target.value)} placeholder="••••••••" style={{background:"transparent",border:"none",fontSize:15,color:DK.text,width:"100%",outline:"none"}} onKeyDown={e=>e.key==="Enter"&&(authScreen==="login"?signIn():signUp())}/>
             </div>
@@ -1405,11 +1401,11 @@ const sendAiMessage=async()=>{
           <div style={{fontSize:24,fontWeight:800,color:DK.text,marginBottom:4,letterSpacing:"-0.5px"}}>Dein Profil</div>
           <div style={{fontSize:14,color:DK.muted,marginBottom:28}}>Damit der Coach dich wirklich kennt.</div>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
+            <div style={{background:DK.mini,borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
               <div style={{color:DK.muted,fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>DEIN NAME</div>
               <input value={onboardData.name} onChange={e=>setOnboardData(p=>({...p,name:e.target.value}))} placeholder="z.B. Max" style={{background:"transparent",border:"none",fontSize:16,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/>
             </div>
-            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
+            <div style={{background:DK.mini,borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
               <div style={{color:DK.muted,fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>HAUPT-INSTRUMENT</div>
               <select value={onboardData.instrument||'MNQ'} onChange={e=>setOnboardData(p=>({...p,instrument:e.target.value}))} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}>
                 <option value="MNQ">MNQ — Micro Nasdaq (Tick: $0.50)</option>
@@ -1423,7 +1419,7 @@ const sendAiMessage=async()=>{
                 <option value="M2K">M2K — Micro Russell (Tick: $0.50)</option>
               </select>
             </div>
-            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
+            <div style={{background:DK.mini,borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
               <div style={{color:DK.muted,fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>PROP FIRM</div>
               <select value={onboardData.firm} onChange={e=>setOnboardData(p=>({...p,firm:e.target.value}))} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}>
                 <option value="TTP">The Trading Pit (TTP)</option>
@@ -1434,23 +1430,23 @@ const sendAiMessage=async()=>{
                 <option value="Andere">Andere</option>
               </select>
             </div>
-            {onboardData.firm==="Andere"&&<div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
+            {onboardData.firm==="Andere"&&<div style={{background:DK.mini,borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
               <div style={{color:DK.muted,fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>FIRM NAME</div>
               <input value={onboardData.firmOther} onChange={e=>setOnboardData(p=>({...p,firmOther:e.target.value}))} placeholder="Firma eingeben" style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/>
             </div>}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
+              <div style={{background:DK.mini,borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
                 <div style={{color:DK.muted,fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>KONTO ($)</div>
                 <select value={onboardData.size} onChange={e=>setOnboardData(p=>({...p,size:parseInt(e.target.value),target:parseInt(e.target.value)+parseInt(e.target.value)*0.08,maxDD:parseInt(e.target.value)*0.04,dailyDD:parseInt(e.target.value)*0.02}))} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}>
                   {[25000,50000,75000,100000,125000,150000,200000].map(s=><option key={s} value={s}>${(s/1000).toFixed(0)}k</option>)}
                 </select>
               </div>
-              <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
+              <div style={{background:DK.mini,borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
                 <div style={{color:DK.muted,fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>MAX DD ($)</div>
                 <input type="number" value={onboardData.maxDD} onChange={e=>setOnboardData(p=>({...p,maxDD:parseInt(e.target.value)||2000}))} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/>
               </div>
             </div>
-            <div style={{background:"#141e35",borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
+            <div style={{background:DK.mini,borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
               <div style={{color:DK.muted,fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>KONTO-NUMMER (optional)</div>
               <input value={onboardData.number} onChange={e=>setOnboardData(p=>({...p,number:e.target.value}))} placeholder="z.B. P1-235109" style={{background:"transparent",border:"none",fontSize:14,color:DK.text,width:"100%",outline:"none"}}/>
             </div>
@@ -1478,7 +1474,7 @@ const sendAiMessage=async()=>{
                     style={{padding:"8px 14px",borderRadius:20,fontSize:12,fontWeight:600,
                       background:onboardData.psychAnswers[q.k]===o?"rgba(99,102,241,0.3)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",
                       border:"1px solid "+(onboardData.psychAnswers[q.k]===o?"#6366f1":"rgba(255,255,255,0.1)"),
-                      color:onboardData.psychAnswers[q.k]===o?"#a5b4fc":"#6b7a9a"}}>
+                      color:onboardData.psychAnswers[q.k]===o?"#a5b4fc":DK.muted}}>
                     {o}
                   </button>
                 ))}
@@ -1499,7 +1495,7 @@ const sendAiMessage=async()=>{
           <div style={{color:"#6366f1",fontSize:11,fontWeight:700,letterSpacing:"2px",marginBottom:8}}>SCHRITT 3 VON 3</div>
           <div style={{fontSize:28,fontWeight:800,color:DK.text,marginBottom:8}}>Alles bereit!</div>
           <div style={{fontSize:14,color:DK.muted,marginBottom:32,lineHeight:1.6}}>Dein Coach kennt jetzt dein Profil und deine Schwächen. Er wird dir von Anfang an gezielt helfen.</div>
-          <div style={{background:"#141e35",borderRadius:14,padding:20,marginBottom:24,textAlign:"left",border:"1px solid rgba(99,102,241,0.2)"}}>
+          <div style={{background:DK.mini,borderRadius:14,padding:20,marginBottom:24,textAlign:"left",border:"1px solid rgba(99,102,241,0.2)"}}>
             <div style={{color:"#6366f1",fontSize:11,fontWeight:700,marginBottom:12}}>DEIN PROFIL</div>
             {[
               ["Name",onboardData.name],
@@ -1602,17 +1598,17 @@ const sendAiMessage=async()=>{
                   <div style={{display:"flex",flexDirection:"column",gap:isDesktop?6:3,alignItems:"flex-end"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       <span style={{color:DK.muted,fontSize:isDesktop?11:8,fontWeight:isDesktop?600:400}}>{isDesktop?"London":"LON"}</span>
-                      <span style={{color:lonOpen?G:"#6b7a9a",fontWeight:700,fontSize:isDesktop?13:10}}>{lonTime}</span>
+                      <span style={{color:lonOpen?G:DK.muted,fontWeight:700,fontSize:isDesktop?13:10}}>{lonTime}</span>
                       <div style={{width:isDesktop?8:6,height:isDesktop?8:6,borderRadius:"50%",background:lonOpen?G:"#4a5568",boxShadow:lonOpen?"0 0 6px "+G:"none"}}/>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       <span style={{color:DK.muted,fontSize:isDesktop?11:8,fontWeight:isDesktop?600:400}}>{isDesktop?"Chicago":"CHI"}</span>
-                      <span style={{color:myWindow?G:chiOpen?Y:"#6b7a9a",fontWeight:700,fontSize:isDesktop?13:10}}>{chiTime}</span>
+                      <span style={{color:myWindow?G:chiOpen?Y:DK.muted,fontWeight:700,fontSize:isDesktop?13:10}}>{chiTime}</span>
                       <div style={{width:isDesktop?8:6,height:isDesktop?8:6,borderRadius:"50%",background:myWindow?G:chiOpen?Y:"#4a5568",boxShadow:myWindow?"0 0 6px "+G:chiOpen?"0 0 6px "+Y:"none"}}/>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       <span style={{color:DK.muted,fontSize:isDesktop?11:8,fontWeight:isDesktop?600:400}}>{isDesktop?"Tokyo":"TYO"}</span>
-                      <span style={{color:tokyoOpen?G:"#6b7a9a",fontWeight:700,fontSize:isDesktop?13:10}}>{tokyoTime}</span>
+                      <span style={{color:tokyoOpen?G:DK.muted,fontWeight:700,fontSize:isDesktop?13:10}}>{tokyoTime}</span>
                       <div style={{width:isDesktop?8:6,height:isDesktop?8:6,borderRadius:"50%",background:tokyoOpen?G:"#4a5568",boxShadow:tokyoOpen?"0 0 6px "+G:"none"}}/>
                     </div>
                   </div>
@@ -1678,7 +1674,7 @@ const sendAiMessage=async()=>{
               <div style={{background:DK.mini,borderRadius:8,padding:"8px 12px",textAlign:"right"}}>
                 <div style={{color:DK.muted,fontSize:9,marginBottom:1}}>HEUTE</div>
                 <div style={{color:pc(todPnl),fontWeight:800,fontSize:isDesktop?22:16}}>{fs(todPnl)}</div>
-                <div style={{color:tradeCount>=OVERTRADING_AT?R:tradeCount>=DAILY_LIMIT?O:"#8b96b0",fontSize:9,marginTop:1,fontWeight:tradeCount>=DAILY_LIMIT?700:400}}>{tradeCount}/{DAILY_LIMIT} Trades{tradeCount>=OVERTRADING_AT?" !":""}</div>
+                <div style={{color:tradeCount>=OVERTRADING_AT?R:tradeCount>=DAILY_LIMIT?O:DK.muted,fontSize:9,marginTop:1,fontWeight:tradeCount>=DAILY_LIMIT?700:400}}>{tradeCount}/{DAILY_LIMIT} Trades{tradeCount>=OVERTRADING_AT?" !":""}</div>
               </div>
             </div>
             {(()=>{
@@ -1714,7 +1710,7 @@ const sendAiMessage=async()=>{
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between"}}>
                     <span style={{color:ddColor,fontSize:9,fontWeight:700}}>Abstand: ${Math.round(ddAbstand).toLocaleString()}</span>
-                    <span style={{color:profit>0?G:"#6b7a9a",fontSize:9,fontWeight:700}}>{profit>0?"Profit: +$"+Math.round(profit).toLocaleString():"Noch $"+(profitStart-saldo).toLocaleString()+" bis Profit"}</span>
+                    <span style={{color:profit>0?G:DK.muted,fontSize:9,fontWeight:700}}>{profit>0?"Profit: +$"+Math.round(profit).toLocaleString():"Noch $"+(profitStart-saldo).toLocaleString()+" bis Profit"}</span>
                   </div>
                 </div>
               );
@@ -1880,7 +1876,7 @@ const sendAiMessage=async()=>{
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginBottom:8}}>
                     <div style={{background:'rgba(99,102,241,0.12)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(99,102,241,0.3)'}}>
                       <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>KONTRAKTE</div>
-                      <div style={{color:'#f0f4ff',fontWeight:900,fontSize:20}}>{cd?cd.recContracts:recC}x</div>
+                      <div style={{color:DK.text,fontWeight:900,fontSize:20}}>{cd?cd.recContracts:recC}x</div>
                       <div style={{color:B,fontSize:9,fontWeight:700,marginTop:1}}>{cd?cd.recSymbol:(acct.instrument||'MNQ')}</div>
                     </div>
                     <div style={{background:'rgba(239,68,68,0.08)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(239,68,68,0.2)'}}>
@@ -1897,7 +1893,7 @@ const sendAiMessage=async()=>{
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
                     <div style={{background:'rgba(0,0,0,0.2)',borderRadius:8,padding:'8px 10px',border:'1px solid #1e2030'}}>
                       <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>MAX TRADES / TAG</div>
-                      <div style={{color:'#f0f4ff',fontWeight:900,fontSize:16}}>{maxT} Trades</div>
+                      <div style={{color:DK.text,fontWeight:900,fontSize:16}}>{maxT} Trades</div>
                       <div style={{color:'#4b5568',fontSize:9,marginTop:1}}>Heute: {todT.length}/{maxT}</div>
                     </div>
                     <div style={{background:'rgba(0,0,0,0.2)',borderRadius:8,padding:'8px 10px',border:'1px solid #1e2030'}}>
@@ -1949,7 +1945,7 @@ const sendAiMessage=async()=>{
                     {cd.recs.map((r,i)=>(
                       <div key={i} style={{marginBottom:5,padding:'7px 10px',background:'rgba(99,102,241,0.08)',borderRadius:8,border:'1px solid rgba(99,102,241,0.15)'}}>
                         <span style={{fontSize:11}}>{r.icon} </span>
-                        <span style={{color:'#f0f4ff',fontSize:10,fontWeight:700}}>{r.title}: </span>
+                        <span style={{color:DK.text,fontSize:10,fontWeight:700}}>{r.title}: </span>
                         <span style={{color:'#8b96b0',fontSize:10}}>{r.text}</span>
                       </div>
                     ))}
@@ -1989,7 +1985,7 @@ const sendAiMessage=async()=>{
               const slD=20,tpD=40;
               return(
                 <div>                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
-                    {[{l:"AKTUELL",v:"$"+saldo.toLocaleString("de-DE",{maximumFractionDigits:0}),c:"#f0f4ff"},{l:"ZIEL",v:"$"+goals.targetBalance.toLocaleString("de-DE"),c:P},
+                    {[{l:"AKTUELL",v:"$"+saldo.toLocaleString("de-DE",{maximumFractionDigits:0}),c:DK.text},{l:"ZIEL",v:"$"+goals.targetBalance.toLocaleString("de-DE"),c:P},
                       {l:"NOCH FEHLT",v:missing<=0?"✓":"+$"+Math.round(missing).toLocaleString("de-DE"),c:missing<=0?G:R}
                     ].map(s=>(
                       <div key={s.l} style={{background:DK.mini,borderRadius:8,padding:"7px 6px",textAlign:"center",border:"1px solid "+DK.miniBorder}}>
@@ -2012,7 +2008,7 @@ const sendAiMessage=async()=>{
                         {l:"HANDELSTAGE NOCH",v:dLeft2+" Tage",c:dLeft2>5?G:dLeft2>2?Y:R,s:"diesen Monat"},
                         {l:"GEWINN/TAG NÖTIG",v:missing<=0?"✅ Erreicht":"$"+dailyNeed,c:missing<=0?G:dailyNeed<100?G:Y,s:"um Ziel zu erreichen"},
                         {l:"GEWINN/TRADE NÖTIG",v:missing<=0?"✓":"$"+tradeNeed,c:missing<=0?G:tradeNeed<50?G:Y,s:"bei 2 Trades/Tag"},
-                        {l:"MAX. TRADES NOCH",v:dLeft2*DAILY_LIMIT,c:"#f0f4ff",s:dLeft2+" Tage × "+DAILY_LIMIT},
+                        {l:"MAX. TRADES NOCH",v:dLeft2*DAILY_LIMIT,c:DK.text,s:dLeft2+" Tage × "+DAILY_LIMIT},
                         {l:"DIESEN MONAT P&L",v:(monthPnl>=0?"+":"")+"$"+monthPnl,c:pc(monthPnl),s:"seit Monatsstart"},
                         {l:"REGELQUOTE",v:disc+"%",c:sc(disc),s:"Ziel: "+goals.disc+"%"},
                       ].map(s=>(
@@ -2172,7 +2168,7 @@ const sendAiMessage=async()=>{
                         style={{padding:"5px 10px",borderRadius:20,fontSize:11,fontWeight:600,
                           background:problems[p.k]?"rgba(245,158,11,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",
                           border:"1px solid "+(problems[p.k]?"rgba(245,158,11,0.6)":"rgba(255,255,255,0.1)"),
-                          color:problems[p.k]?"#fcd34d":"#6b7a9a"}}>
+                          color:problems[p.k]?"#fcd34d":DK.muted}}>
                         {problems[p.k]?"✓ ":""}{p.l}
                       </button>
                     ))}
@@ -2249,7 +2245,7 @@ const sendAiMessage=async()=>{
                 </select>
               </Field>
               <Field dm={dm} label="NETTO P&L ($) *">
-                <input type="number" step="0.01" value={form.pnl} onChange={e=>setForm(f=>({...f,pnl:e.target.value}))} placeholder="z.B. 40 oder -20" style={{borderColor:form.pnl?(parseFloat(form.pnl)>=0?G+"88":R+"88"):"#1e2d48"}}/>
+                <input type="number" step="0.01" value={form.pnl} onChange={e=>setForm(f=>({...f,pnl:e.target.value}))} placeholder="z.B. 40 oder -20" style={{borderColor:form.pnl?(parseFloat(form.pnl)>=0?G+"88":R+"88"):DK.miniBorder}}/>
               </Field>
               {(()=>{
                 const inst=INSTRUMENTS[form.contract]||INSTRUMENTS['MNQ'];
@@ -2303,10 +2299,10 @@ const sendAiMessage=async()=>{
             <div style={{fontWeight:700,marginBottom:10,fontSize:14,color:DK.text}}>Equity Kurve</div>
             <ResponsiveContainer width="100%" height={140}>
               <LineChart data={equity}>
-                <XAxis dataKey="i" tick={{fill:"#6b7a9a",fontSize:9}} axisLine={false} tickLine={false}/>
-                <YAxis tick={{fill:"#6b7a9a",fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>"$"+v} width={55}/>
+                <XAxis dataKey="i" tick={{fill:DK.muted,fontSize:9}} axisLine={false} tickLine={false}/>
+                <YAxis tick={{fill:DK.muted,fontSize:9}} axisLine={false} tickLine={false} tickFormatter={v=>"$"+v} width={55}/>
                 <Tooltip formatter={v=>[fd(v),"Kumuliert"]} contentStyle={{background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,fontSize:11}}/>
-                <ReferenceLine y={0} stroke="#1e2d48" strokeDasharray="4 4"/>
+                <ReferenceLine y={0} stroke=DK.miniBorder strokeDasharray="4 4"/>
                 <Line type="monotone" dataKey="v" stroke={B} strokeWidth={2} dot={false}/>
               </LineChart>
             </ResponsiveContainer>
@@ -2327,7 +2323,7 @@ const sendAiMessage=async()=>{
                     const isWindow=parseInt(h)>=16&&parseInt(h)<=17;
                     return(
                       <div key={h} style={{display:"flex",alignItems:"center",gap:8}}>
-                        <div style={{color:isWindow?G:"#8b96b0",fontSize:11,fontWeight:isWindow?700:400,width:36,flexShrink:0}}>{h}:00{isWindow&&" ⚡"}</div>
+                        <div style={{color:isWindow?G:DK.muted,fontSize:11,fontWeight:isWindow?700:400,width:36,flexShrink:0}}>{h}:00{isWindow&&" ⚡"}</div>
                         <div style={{flex:1,height:20,background:DK.mini,borderRadius:4,overflow:"hidden",position:"relative"}}>
                           <div style={{height:"100%",width:wr+"%",background:c+"44",borderRadius:4}}/>
                           <div style={{position:"absolute",top:0,left:4,right:0,height:"100%",display:"flex",alignItems:"center"}}>
@@ -2416,7 +2412,7 @@ const sendAiMessage=async()=>{
               {weekdayStats.map(d=>{
                 const c=d.pct>=60?G:d.pct>=40?Y:R;
                 return(
-                  <div key={d.label} style={{background:DK.mini,borderRadius:8,padding:"8px 4px",textAlign:"center",border:"1px solid "+(d.days>0?c+"33":"#1e2d48")}}>
+                  <div key={d.label} style={{background:DK.mini,borderRadius:8,padding:"8px 4px",textAlign:"center",border:"1px solid "+(d.days>0?c+"33":DK.miniBorder)}}>
                     <div style={{fontWeight:700,fontSize:13,marginBottom:2,color:d.days>0?c:"#4a5568"}}>{d.label}</div>
                     {d.days>0?(<>
                       <div style={{color:c,fontWeight:800,fontSize:16}}>{d.pct}%</div>
@@ -2567,7 +2563,7 @@ const sendAiMessage=async()=>{
                   <div style={{fontWeight:700,fontSize:13,color:DK.text}}>{sec.label}</div>
                   <div style={{color:DK.muted,fontSize:10}}>{sec.sub}</div>
                 </div>
-                <div style={{color:settingsSection===sec.id?B:"#6b7a9a",fontSize:12,fontWeight:700,transform:settingsSection===sec.id?"rotate(180deg)":"none",transition:"transform .2s"}}>▼</div>
+                <div style={{color:settingsSection===sec.id?B:DK.muted,fontSize:12,fontWeight:700,transform:settingsSection===sec.id?"rotate(180deg)":"none",transition:"transform .2s"}}>▼</div>
               </div>
 
               {settingsSection==="wzp"&&sec.id==="wzp"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
@@ -2577,7 +2573,7 @@ const sendAiMessage=async()=>{
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:14}}>
                   {[{k:"TTP",l:"The Trading Pit"},{k:"FTMO",l:"FTMO"},{k:"TopStep",l:"TopStep"},{k:"Apex",l:"Apex Trader"},{k:"MyFundedFX",l:"MyFundedFX"},{k:"Eigenes",l:"Eigenes Kapital"}].map(f=>(
                     <button key={f.k} onClick={()=>saveAcct({...acct,propFirm:f.k})}
-                      style={{padding:"8px 6px",borderRadius:8,fontSize:11,fontWeight:700,background:acct.propFirm===f.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.propFirm===f.k?"#6366f1":"#1e2535"),color:acct.propFirm===f.k?"#a5b4fc":"#6b7a9a"}}>{f.l}</button>
+                      style={{padding:"8px 6px",borderRadius:8,fontSize:11,fontWeight:700,background:acct.propFirm===f.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.propFirm===f.k?"#6366f1":"#1e2535"),color:acct.propFirm===f.k?"#a5b4fc":DK.muted}}>{f.l}</button>
                   ))}
                 </div>
 
@@ -2585,7 +2581,7 @@ const sendAiMessage=async()=>{
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,marginBottom:14}}>
                   {[{k:"challenge",l:"🎯 Challenge"},{k:"pa",l:"💰 Performance"},{k:"own",l:"💼 Eigenkapital"}].map(t=>(
                     <button key={t.k} onClick={()=>saveAcct({...acct,type:t.k})}
-                      style={{padding:"8px 4px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.type===t.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.type===t.k?"#6366f1":"#1e2535"),color:acct.type===t.k?"#a5b4fc":"#6b7a9a"}}>{t.l}</button>
+                      style={{padding:"8px 4px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.type===t.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.type===t.k?"#6366f1":"#1e2535"),color:acct.type===t.k?"#a5b4fc":DK.muted}}>{t.l}</button>
                   ))}
                 </div>
 
@@ -2593,7 +2589,7 @@ const sendAiMessage=async()=>{
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:14}}>
                   {[{k:"eod",l:"📅 EOD (End of Day)",sub:"Sicherer — DD zählt nur am Tagesende"},{k:"trailing",l:"📈 Trailing",sub:"DD-Level steigt mit deinen Gewinnen"}].map(d=>(
                     <button key={d.k} onClick={()=>saveAcct({...acct,ddType:d.k})}
-                      style={{padding:"10px 8px",borderRadius:8,fontSize:10,fontWeight:700,textAlign:"left",background:acct.ddType===d.k?"rgba(99,102,241,0.2)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.ddType===d.k?"#6366f1":"#1e2535"),color:acct.ddType===d.k?"#a5b4fc":"#6b7a9a"}}>
+                      style={{padding:"10px 8px",borderRadius:8,fontSize:10,fontWeight:700,textAlign:"left",background:acct.ddType===d.k?"rgba(99,102,241,0.2)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.ddType===d.k?"#6366f1":"#1e2535"),color:acct.ddType===d.k?"#a5b4fc":DK.muted}}>
                       <div style={{fontWeight:800}}>{d.l}</div>
                       <div style={{fontSize:9,color:DK.muted,marginTop:3}}>{d.sub}</div>
                     </button>
@@ -2636,7 +2632,7 @@ const sendAiMessage=async()=>{
                 <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:14}}>
                   {[{s:'MNQ',tv:0.5},{s:'NQ',tv:5.0},{s:'MES',tv:1.25},{s:'ES',tv:12.5},{s:'MYM',tv:0.5},{s:'YM',tv:5.0},{s:'MGC',tv:1.0},{s:'GC',tv:10.0}].map(({s,tv})=>(
                     <button key={s} onClick={()=>saveAcct({...acct,instrument:s})}
-                      style={{padding:"8px 4px",borderRadius:7,fontSize:10,fontWeight:700,background:acct.instrument===s?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.instrument===s?"#6366f1":"#1e2535"),color:acct.instrument===s?"#a5b4fc":"#6b7a9a"}}>
+                      style={{padding:"8px 4px",borderRadius:7,fontSize:10,fontWeight:700,background:acct.instrument===s?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.instrument===s?"#6366f1":"#1e2535"),color:acct.instrument===s?"#a5b4fc":DK.muted}}>
                       <div>{s}</div>
                       <div style={{fontSize:8,color:DK.muted,marginTop:2}}>${tv}/T</div>
                     </button>
@@ -2700,7 +2696,7 @@ const sendAiMessage=async()=>{
                   <div style={{color:DK.muted,fontSize:10,fontWeight:600,marginBottom:6}}>ZIEL-ZEITRAUM</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
                     {[{k:"month",l:"Monat"},{k:"3m",l:"3 Monate"},{k:"6m",l:"6 Monate"}].map(p=>(
-                      <button key={p.k} onClick={()=>setGoalPeriod(p.k)} style={{background:goalPeriod===p.k?B+"33":"#131d30",border:"1px solid "+(goalPeriod===p.k?B:"#1e2d48"),color:goalPeriod===p.k?B:"#8b96b0",padding:"7px 4px",borderRadius:8,fontSize:11,fontWeight:600}}>{p.l}</button>
+                      <button key={p.k} onClick={()=>setGoalPeriod(p.k)} style={{background:goalPeriod===p.k?B+"33":"#131d30",border:"1px solid "+(goalPeriod===p.k?B:DK.miniBorder),color:goalPeriod===p.k?B:DK.muted,padding:"7px 4px",borderRadius:8,fontSize:11,fontWeight:600}}>{p.l}</button>
                     ))}
                   </div>
                 </div>
@@ -2720,7 +2716,7 @@ const sendAiMessage=async()=>{
               {settingsSection==="rules"&&sec.id==="rules"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini,display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{color:DK.muted,fontSize:10,marginBottom:6}}>Wähle max. 5 Regeln für MIND Tab:</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                  {ALL_RULES.map(r=>{const on=selectedRules.includes(r.k);const disabled=!on&&selectedRules.length>=5;return(<button key={r.k} onClick={()=>!disabled&&toggleRule(r.k)} style={{padding:"5px 8px",borderRadius:16,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3,background:on?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(on?"#6366f1":"rgba(255,255,255,0.1)"),color:on?"#a5b4fc":disabled?"#2d3548":"#6b7a9a",opacity:disabled?0.4:1}}>{r.icon} {r.l}</button>);})}
+                  {ALL_RULES.map(r=>{const on=selectedRules.includes(r.k);const disabled=!on&&selectedRules.length>=5;return(<button key={r.k} onClick={()=>!disabled&&toggleRule(r.k)} style={{padding:"5px 8px",borderRadius:16,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3,background:on?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(on?"#6366f1":"rgba(255,255,255,0.1)"),color:on?"#a5b4fc":disabled?"#2d3548":DK.muted,opacity:disabled?0.4:1}}>{r.icon} {r.l}</button>);})}
                 </div>
                 <div style={{color:DK.muted,fontSize:9,marginBottom:8}}>{selectedRules.length}/5 gewählt – erscheinen im MIND Tab</div>
                 <Field dm={dm} label="MAX TRADES / TAG"><input type="number" value={settings.maxTrades} onChange={e=>saveSettings({...settings,maxTrades:parseInt(e.target.value)||2})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
@@ -2777,7 +2773,7 @@ const sendAiMessage=async()=>{
                   <div style={{color:DK.muted,fontSize:10,fontWeight:600,marginBottom:6}}>ZIEL-ZEITRAUM</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
                     {[{k:"month",l:"Monat"},{k:"3m",l:"3 Monate"},{k:"6m",l:"6 Monate"}].map(p=>(
-                      <button key={p.k} onClick={()=>setGoalPeriod(p.k)} style={{background:goalPeriod===p.k?B+"33":"#131d30",border:"1px solid "+(goalPeriod===p.k?B:"#1e2d48"),color:goalPeriod===p.k?B:"#8b96b0",padding:"7px 4px",borderRadius:8,fontSize:11,fontWeight:600}}>{p.l}</button>
+                      <button key={p.k} onClick={()=>setGoalPeriod(p.k)} style={{background:goalPeriod===p.k?B+"33":"#131d30",border:"1px solid "+(goalPeriod===p.k?B:DK.miniBorder),color:goalPeriod===p.k?B:DK.muted,padding:"7px 4px",borderRadius:8,fontSize:11,fontWeight:600}}>{p.l}</button>
                     ))}
                   </div>
                 </div>
@@ -2797,7 +2793,7 @@ const sendAiMessage=async()=>{
               {settingsSection==="rules"&&sec.id==="rules"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini,display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{color:DK.muted,fontSize:10,marginBottom:6}}>Wähle max. 5 Regeln für MIND Tab:</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                  {ALL_RULES.map(r=>{const on=selectedRules.includes(r.k);const disabled=!on&&selectedRules.length>=5;return(<button key={r.k} onClick={()=>!disabled&&toggleRule(r.k)} style={{padding:"5px 8px",borderRadius:16,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3,background:on?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(on?"#6366f1":"rgba(255,255,255,0.1)"),color:on?"#a5b4fc":disabled?"#2d3548":"#6b7a9a",opacity:disabled?0.4:1}}>{r.icon} {r.l}</button>);})}
+                  {ALL_RULES.map(r=>{const on=selectedRules.includes(r.k);const disabled=!on&&selectedRules.length>=5;return(<button key={r.k} onClick={()=>!disabled&&toggleRule(r.k)} style={{padding:"5px 8px",borderRadius:16,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3,background:on?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(on?"#6366f1":"rgba(255,255,255,0.1)"),color:on?"#a5b4fc":disabled?"#2d3548":DK.muted,opacity:disabled?0.4:1}}>{r.icon} {r.l}</button>);})}
                 </div>
                 <div style={{color:DK.muted,fontSize:9,marginBottom:8}}>{selectedRules.length}/5 gewählt – erscheinen im MIND Tab</div>
                 <Field dm={dm} label="MAX TRADES / TAG"><input type="number" value={settings.maxTrades} onChange={e=>saveSettings({...settings,maxTrades:parseInt(e.target.value)||2})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
@@ -2832,7 +2828,7 @@ const sendAiMessage=async()=>{
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
                   {[{k:"challenge",l:"🎯 Challenge"},{k:"pa",l:"💰 PA Account"}].map(t=>(
                     <button key={t.k} onClick={()=>saveAcct({...acct,type:t.k})}
-                      style={{padding:"8px",borderRadius:8,fontSize:11,fontWeight:700,background:acct.type===t.k?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.type===t.k?"#6366f1":"#2d3548"),color:acct.type===t.k?"#a5b4fc":"#6b7a9a"}}>{t.l}</button>
+                      style={{padding:"8px",borderRadius:8,fontSize:11,fontWeight:700,background:acct.type===t.k?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.type===t.k?"#6366f1":"#2d3548"),color:acct.type===t.k?"#a5b4fc":DK.muted}}>{t.l}</button>
                   ))}
                 </div>
                 <Field dm={dm} label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
@@ -2841,7 +2837,7 @@ const sendAiMessage=async()=>{
                 <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:8}}>KONTO GRÖßE</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5,marginBottom:10}}>
                   {[50000,75000,100000,125000,150000,200000].map(s=>(
-                    <button key={s} onClick={()=>saveAcct({...acct,size:s})} style={{padding:"6px 4px",borderRadius:7,fontSize:10,fontWeight:700,background:acct.size===s?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.size===s?"#6366f1":"#2d3548"),color:acct.size===s?"#a5b4fc":"#6b7a9a"}}>${s/1000}k</button>
+                    <button key={s} onClick={()=>saveAcct({...acct,size:s})} style={{padding:"6px 4px",borderRadius:7,fontSize:10,fontWeight:700,background:acct.size===s?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.size===s?"#6366f1":"#2d3548"),color:acct.size===s?"#a5b4fc":DK.muted}}>${s/1000}k</button>
                   ))}
                 </div>
                 <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>RISIKO EINSTELLUNGEN</div>
@@ -2850,7 +2846,7 @@ const sendAiMessage=async()=>{
                 <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:6}}>LOT SIZE (für Kalkulationen)</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:8}}>
                   {[1,2,3,5].map(l=>(
-                    <button key={l} onClick={()=>saveAcct({...acct,lotSize:l})} style={{padding:"6px 4px",borderRadius:7,fontSize:11,fontWeight:700,background:acct.lotSize===l?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.lotSize===l?"#6366f1":"#2d3548"),color:acct.lotSize===l?"#a5b4fc":"#6b7a9a"}}>{l} MNQ</button>
+                    <button key={l} onClick={()=>saveAcct({...acct,lotSize:l})} style={{padding:"6px 4px",borderRadius:7,fontSize:11,fontWeight:700,background:acct.lotSize===l?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.lotSize===l?"#6366f1":"#2d3548"),color:acct.lotSize===l?"#a5b4fc":DK.muted}}>{l} MNQ</button>
                   ))}
                 </div>
                 {(()=>{
@@ -2936,7 +2932,7 @@ const sendAiMessage=async()=>{
               )}
               {aiMessages.map((m,i)=>(
                 <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
-                  <div style={{maxWidth:"85%",padding:"8px 12px",borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",background:m.role==="user"?"linear-gradient(135deg,"+B+","+P+")":"#0d1825",border:"1px solid "+(m.role==="user"?"transparent":"#1e2d48"),fontSize:12,color:DK.text,lineHeight:1.5,whiteSpace:"pre-wrap"}}>
+                  <div style={{maxWidth:"85%",padding:"8px 12px",borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",background:m.role==="user"?"linear-gradient(135deg,"+B+","+P+")":"#0d1825",border:"1px solid "+(m.role==="user"?"transparent":DK.miniBorder),fontSize:12,color:DK.text,lineHeight:1.5,whiteSpace:"pre-wrap"}}>
                     {m.content}
                   </div>
                 </div>
@@ -2978,7 +2974,7 @@ const sendAiMessage=async()=>{
                   Chart
                 </button>
                 <button onClick={startVoice}
-                  style={{background:isRecording?"rgba(239,68,68,0.3)":"#131d30",border:"1px solid "+(isRecording?"#ef4444":"#1e2d48"),color:isRecording?"#ef4444":"#a8b8d0",padding:"9px 0",borderRadius:10,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:11,fontWeight:600}}>
+                  style={{background:isRecording?"rgba(239,68,68,0.3)":"#131d30",border:"1px solid "+(isRecording?"#ef4444":DK.miniBorder),color:isRecording?"#ef4444":"#a8b8d0",padding:"9px 0",borderRadius:10,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:11,fontWeight:600}}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                   {isRecording?"Aufnahme":"Sprechen"}
                 </button>
