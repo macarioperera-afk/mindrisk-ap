@@ -1878,29 +1878,29 @@ const sendAiMessage=async()=>{
                   <div style={{color:'#6b7a9a',fontSize:9,fontWeight:700,letterSpacing:'0.8px',marginBottom:8}}>DEIN SETUP HEUTE</div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginBottom:8}}>
                     <div style={{background:'rgba(99,102,241,0.12)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(99,102,241,0.3)'}}>
-                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>KONTRAKTE</div>
+                      <div style={{color:DK.muted,fontSize:8,marginBottom:2}}>KONTRAKTE</div>
                       <div style={{color:DK.text,fontWeight:900,fontSize:20}}>{cd?cd.recContracts:recC}x</div>
                       <div style={{color:B,fontSize:9,fontWeight:700,marginTop:1}}>{cd?cd.recSymbol:(acct.instrument||'MNQ')}</div>
                     </div>
                     <div style={{background:'rgba(239,68,68,0.08)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(239,68,68,0.2)'}}>
-                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>STOP LOSS</div>
+                      <div style={{color:DK.muted,fontSize:8,marginBottom:2}}>STOP LOSS</div>
                       <div style={{color:R,fontWeight:900,fontSize:20}}>{cd?cd.adaptiveSL:slT}T</div>
                       <div style={{color:R,fontSize:9,fontWeight:700,marginTop:1}}>-${cd?Math.round(cd.adaptiveSL*(INSTRUMENTS[cd.recSymbol]||inst).tickValue*(cd.recContracts||1)):recSL}</div>
                     </div>
                     <div style={{background:'rgba(0,211,149,0.08)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(0,211,149,0.2)'}}>
-                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>TAKE PROFIT</div>
+                      <div style={{color:DK.muted,fontSize:8,marginBottom:2}}>TAKE PROFIT</div>
                       <div style={{color:G,fontWeight:900,fontSize:20}}>{cd?cd.adaptiveTP:tpT}T</div>
                       <div style={{color:G,fontSize:9,fontWeight:700,marginTop:1}}>+${cd?Math.round(cd.adaptiveTP*(INSTRUMENTS[cd.recSymbol]||inst).tickValue*(cd.recContracts||1)):recTP}</div>
                     </div>
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                    <div style={{background:'rgba(0,0,0,0.2)',borderRadius:8,padding:'8px 10px',border:'1px solid #1e2030'}}>
-                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>MAX TRADES / TAG</div>
+                    <div style={{background:DK.mini,borderRadius:8,padding:'8px 10px',border:'1px solid '+DK.miniBorder}}>
+                      <div style={{color:DK.muted,fontSize:8,marginBottom:2}}>MAX TRADES / TAG</div>
                       <div style={{color:DK.text,fontWeight:900,fontSize:16}}>{maxT} Trades</div>
                       <div style={{color:'#4b5568',fontSize:9,marginTop:1}}>Heute: {todT.length}/{maxT}</div>
                     </div>
-                    <div style={{background:'rgba(0,0,0,0.2)',borderRadius:8,padding:'8px 10px',border:'1px solid #1e2030'}}>
-                      <div style={{color:'#8b96b0',fontSize:8,marginBottom:2}}>ERWARTUNG HEUTE</div>
+                    <div style={{background:DK.mini,borderRadius:8,padding:'8px 10px',border:'1px solid '+DK.miniBorder}}>
+                      <div style={{color:DK.muted,fontSize:8,marginBottom:2}}>ERWARTUNG HEUTE</div>
                       <div style={{color:evDay>=0?G:R,fontWeight:900,fontSize:16}}>{evDay>=0?'+':''}{cd?cd.evPerDay:evDay}$</div>
                       <div style={{color:'#4b5568',fontSize:9,marginTop:1}}>CRV {cd?(cd.adaptiveTP/cd.adaptiveSL).toFixed(1):crv}:1</div>
                     </div>
@@ -1915,7 +1915,7 @@ const sendAiMessage=async()=>{
                       {l:'Ø WIN',v:'+$'+avgW,c:G},
                       {l:'Ø LOSS',v:'-$'+avgL,c:R},
                     ].map(s=>(
-                      <div key={s.l} style={{background:'rgba(0,0,0,0.2)',borderRadius:7,padding:'6px 4px',textAlign:'center',border:'1px solid #1e2030'}}>
+                      <div key={s.l} style={{background:DK.mini,borderRadius:7,padding:'6px 4px',textAlign:'center',border:'1px solid '+DK.miniBorder}}>
                         <div style={{color:'#6b7a9a',fontSize:8,marginBottom:2}}>{s.l}</div>
                         <div style={{color:s.c,fontWeight:800,fontSize:12}}>{s.v}</div>
                       </div>
@@ -1949,7 +1949,7 @@ const sendAiMessage=async()=>{
                       <div key={i} style={{marginBottom:5,padding:'7px 10px',background:'rgba(99,102,241,0.08)',borderRadius:8,border:'1px solid rgba(99,102,241,0.15)'}}>
                         <span style={{fontSize:11}}>{r.icon} </span>
                         <span style={{color:DK.text,fontSize:10,fontWeight:700}}>{r.title}: </span>
-                        <span style={{color:'#8b96b0',fontSize:10}}>{r.text}</span>
+                        <span style={{color:DK.muted,fontSize:10}}>{r.text}</span>
                       </div>
                     ))}
                   </div>}
@@ -1962,7 +1962,7 @@ const sendAiMessage=async()=>{
           </div>{/* /BLOCK3 */}
           <div style={isDesktop?{background:DK.card,padding:"18px 20px"}:{display:"contents"}}>
           {/* MEIN MONATSZIEL */}
-          <Card dk={{dm}} style={{borderColor:P+"33",background:"#0d0a14"}} onClick={()=>setMonatExp(p=>!p)}>
+          <Card dk={{dm}} style={{borderColor:P+"33",background:DK.card}} onClick={()=>setMonatExp(p=>!p)}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:4,height:4,borderRadius:"50%",background:"#a855f7",flexShrink:0,marginTop:5,marginLeft:5,animation:"watchDotsPurple 2.5s ease-in-out infinite 0.3s",boxShadow:"0 0 4px rgba(168,85,247,0.8)"}}/>
@@ -2145,7 +2145,7 @@ const sendAiMessage=async()=>{
             <button onClick={()=>{const u={...journal,[todayISO()]:{...todayJ}};setJournal(u);localStorage.setItem("ttp_journal",JSON.stringify(u));showToast("✅ Reflexion gespeichert!");}} style={{background:B,color:"#fff",padding:10,width:"100%",fontWeight:700,borderRadius:10,fontSize:13}}>Speichern</button>
           </Card>
 
-          <Card dk={{dm}} style={{borderColor:"rgba(245,158,11,0.2)",background:"linear-gradient(145deg,#1a1508 0%,#0f1010 100%)"}}>
+          <Card dk={{dm}} style={{borderColor:"rgba(245,158,11,0.2)",background:dm?"linear-gradient(145deg,#1a1508 0%,#0f1010 100%)":"#fffbeb"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,cursor:"pointer"}} onClick={()=>setProbExp(p=>!p)}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:14,height:14,borderRadius:"50%",background:"radial-gradient(circle,#fcd34d,#f59e0b 60%,#92400e)",animation:"livingOrb 2s ease-in-out infinite",boxShadow:"0 0 10px rgba(245,158,11,0.6)",flexShrink:0}}/>
