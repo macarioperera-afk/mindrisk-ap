@@ -1768,7 +1768,7 @@ const sendAiMessage=async()=>{
             const lastV=pts.length>0?pts[pts.length-1]:0;
             const lc=lastV>=0?G:R;
             return(
-              <div style={{background:dm?dm?"rgba(0,0,0,0.25)":"rgba(0,0,0,0.04)":"rgba(0,0,0,0.04)",borderRadius:10,padding:"10px 12px",border:"0.5px solid "+DK.divider}}>
+              <div style={{background:dm?dm?DK.mini:"rgba(0,0,0,0.04)":"rgba(0,0,0,0.04)",borderRadius:10,padding:"10px 12px",border:"0.5px solid "+DK.divider}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
                   <span style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:"0.8px"}}>EQUITY KURVE</span>
                   <span style={{fontSize:10,fontWeight:700,color:lc}}>{lastV>=0?"+":""}{Math.round(lastV)}$</span>
@@ -2145,7 +2145,7 @@ const sendAiMessage=async()=>{
             <button onClick={()=>{const u={...journal,[todayISO()]:{...todayJ}};setJournal(u);localStorage.setItem("ttp_journal",JSON.stringify(u));showToast("✅ Reflexion gespeichert!");}} style={{background:B,color:"#fff",padding:10,width:"100%",fontWeight:700,borderRadius:10,fontSize:13}}>Speichern</button>
           </Card>
 
-          <Card dk={{dm}} style={{borderColor:"rgba(245,158,11,0.2)",background:dm?"linear-gradient(145deg,#1a1508 0%,#0f1010 100%)":"#fffbeb"}}>
+          <Card dk={{dm}} style={{borderColor:"rgba(245,158,11,0.2)",background:dm?dm?"linear-gradient(145deg,#1a1508 0%,#0f1010 100%)":"#fffbeb":"#fffbeb"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,cursor:"pointer"}} onClick={()=>setProbExp(p=>!p)}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:14,height:14,borderRadius:"50%",background:"radial-gradient(circle,#fcd34d,#f59e0b 60%,#92400e)",animation:"livingOrb 2s ease-in-out infinite",boxShadow:"0 0 10px rgba(245,158,11,0.6)",flexShrink:0}}/>
@@ -2699,7 +2699,7 @@ const sendAiMessage=async()=>{
                   <div style={{color:DK.muted,fontSize:10,fontWeight:600,marginBottom:6}}>ZIEL-ZEITRAUM</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
                     {[{k:"month",l:"Monat"},{k:"3m",l:"3 Monate"},{k:"6m",l:"6 Monate"}].map(p=>(
-                      <button key={p.k} onClick={()=>setGoalPeriod(p.k)} style={{background:goalPeriod===p.k?B+"33":"#131d30",border:"1px solid "+(goalPeriod===p.k?B:DK.miniBorder),color:goalPeriod===p.k?B:DK.muted,padding:"7px 4px",borderRadius:8,fontSize:11,fontWeight:600}}>{p.l}</button>
+                      <button key={p.k} onClick={()=>setGoalPeriod(p.k)} style={{background:goalPeriod===p.k?B+"33":DK.mini,border:"1px solid "+(goalPeriod===p.k?B:DK.miniBorder),color:goalPeriod===p.k?B:DK.muted,padding:"7px 4px",borderRadius:8,fontSize:11,fontWeight:600}}>{p.l}</button>
                     ))}
                   </div>
                 </div>
@@ -2776,7 +2776,7 @@ const sendAiMessage=async()=>{
                   <div style={{color:DK.muted,fontSize:10,fontWeight:600,marginBottom:6}}>ZIEL-ZEITRAUM</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
                     {[{k:"month",l:"Monat"},{k:"3m",l:"3 Monate"},{k:"6m",l:"6 Monate"}].map(p=>(
-                      <button key={p.k} onClick={()=>setGoalPeriod(p.k)} style={{background:goalPeriod===p.k?B+"33":"#131d30",border:"1px solid "+(goalPeriod===p.k?B:DK.miniBorder),color:goalPeriod===p.k?B:DK.muted,padding:"7px 4px",borderRadius:8,fontSize:11,fontWeight:600}}>{p.l}</button>
+                      <button key={p.k} onClick={()=>setGoalPeriod(p.k)} style={{background:goalPeriod===p.k?B+"33":DK.mini,border:"1px solid "+(goalPeriod===p.k?B:DK.miniBorder),color:goalPeriod===p.k?B:DK.muted,padding:"7px 4px",borderRadius:8,fontSize:11,fontWeight:600}}>{p.l}</button>
                     ))}
                   </div>
                 </div>
@@ -2977,7 +2977,7 @@ const sendAiMessage=async()=>{
                   Chart
                 </button>
                 <button onClick={startVoice}
-                  style={{background:isRecording?"rgba(239,68,68,0.3)":"#131d30",border:"1px solid "+(isRecording?"#ef4444":DK.miniBorder),color:isRecording?"#ef4444":"#a8b8d0",padding:"9px 0",borderRadius:10,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:11,fontWeight:600}}>
+                  style={{background:isRecording?"rgba(239,68,68,0.3)":DK.mini,border:"1px solid "+(isRecording?"#ef4444":DK.miniBorder),color:isRecording?"#ef4444":"#a8b8d0",padding:"9px 0",borderRadius:10,flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontSize:11,fontWeight:600}}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                   {isRecording?"Aufnahme":"Sprechen"}
                 </button>
