@@ -951,7 +951,8 @@ KONTEXT:
 • Heutige P&L: ${todPnl>=0?"+":""}$${todPnl.toFixed(0)}
 
 Sei direkt und ehrlich. Erkenne Muster wenn du sie siehst. Max 4 Sätze.`;
-    }    else if(type==="overtrading"){
+    }
+    else if(type==="overtrading"){
       const tod3=t09.filter(t=>t.date===todayISO());
       const todTradesStr=tod3.map(t=>"• "+t.time+" "+t.contract+" "+(t.pnl>=0?"+":"")+"$"+t.pnl.toFixed(0)).join("\n");
       prompt="NOTFALL: "+(acct.name||"Trader")+" hat gerade seinen "+tod3.length+". Trade gemacht (Limit: "+DAILY_LIMIT+").\n\nHeutige Trades:\n"+todTradesStr+"\nHeutige P&L: "+(todPnl>=0?"+":"")+"$"+todPnl.toFixed(0)+"\n\nGib eine KLARE STOPP-Nachricht. Kurz, direkt, keine Ausreden akzeptieren. Max 3 Sätze.";
@@ -2740,6 +2741,8 @@ const sendAiMessage=async()=>{
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8,marginTop:12}}>⚙️ DATEN</div>
                 <button onClick={()=>{if(window.confirm("Alle Trades & Daten löschen?\nDas kann nicht rückgängig gemacht werden!")){localStorage.clear();window.location.reload();}}} style={{background:"rgba(239,68,68,0.06)",color:R,border:"1px solid rgba(239,68,68,0.2)",padding:"10px",width:"100%",fontWeight:600,fontSize:11,borderRadius:10}}>🗑 Alle Daten löschen</button>
               </div>}
+            </div>
+          ))}
           <div style={{paddingTop:12,color:DK.muted,fontSize:10,textAlign:"center"}}>MindRisk v2.0 · Claude AI ✅</div>
         </div>
       </div>}
@@ -2859,4 +2862,3 @@ const sendAiMessage=async()=>{
     </div>
   );
 }
-
