@@ -662,13 +662,13 @@ export default function App(){
     // --- Ziele je Kontotyp ---
     let profitTarget=0,profitSoFar=0,profitNeeded=0,challengeDaysLeft=0,dailyNeeded=0,weeklyTarget=0;
     if(accountType==='challenge'){
-      profitTarget=Math.round(acct.size*((acct.profitTargetPct||8)/100));
-      profitSoFar=Math.max(0,Math.round(saldo-acct.size));
+      profitTarget=acct.target?Math.round(acct.target-acct.size):Math.round(acct.size*((acct.profitTargetPct||8)/100));
+      profitSoFar=Math.max(0,Math.round((challengeStart&&challengeStart!=='2000-01-01'?t09.filter(t=>t.date>=challengeStart).reduce((s,t)=>s+t.pnl,0):saldo-acct.size)*100)/100);
       profitNeeded=Math.max(0,profitTarget-profitSoFar);
       if(challengeStart&&challengeStart!=='2000-01-01'){
         const cEnd=new Date(challengeStart);cEnd.setDate(cEnd.getDate()+(acct.challengeDays||30));
         for(let d=new Date(now);d<=cEnd;d.setDate(d.getDate()+1)){const dw=d.getDay();if(dw!==0&&dw!==6&&d>now)challengeDaysLeft++;}
-      } else {challengeDaysLeft=15;}
+      } else {const d=new Date();const cEnd=new Date(d);cEnd.setDate(d.getDate()+(acct.challengeDays||30));for(let dd=new Date(d);dd<=cEnd;dd.setDate(dd.getDate()+1)){const dw=dd.getDay();if(dw!==0&&dw!==6&&dd>d)challengeDaysLeft++;}}
       dailyNeeded=challengeDaysLeft>0?Math.ceil(profitNeeded/challengeDaysLeft):profitNeeded;
       weeklyTarget=dailyNeeded*Math.min(5,tradDaysLeftWeek+1);
     } else {
@@ -761,8 +761,8 @@ export default function App(){
         const cEnd=new Date(challengeStart);cEnd.setDate(cEnd.getDate()+(acct.challengeDays||30));
         for(let d=new Date(now);d<=cEnd;d.setDate(d.getDate()+1)){const dw=d.getDay();if(dw!==0&&dw!==6&&d>now)challengeDaysLeft++;}
       }
-      const profitTarget=acct.type==='challenge'?Math.round(acct.size*((acct.profitTargetPct||8)/100)):goals.monthlyGoal||1500;
-      const profitSoFar=acct.type==='challenge'?Math.max(0,Math.round(saldo-acct.size)):Math.max(0,Math.round(monthPnl));
+      const profitTarget=acct.type==='challenge'?(acct.target?Math.round(acct.target-acct.size):Math.round(acct.size*((acct.profitTargetPct||8)/100))):goals.monthlyGoal||1500;
+      const profitSoFar=acct.type==='challenge'?Math.max(0,Math.round((challengeStart&&challengeStart!=='2000-01-01'?t09.filter(t=>t.date>=challengeStart).reduce((s,t)=>s+t.pnl,0):saldo-acct.size)*100)/100):Math.max(0,Math.round(monthPnl));
       const profitNeeded=Math.max(0,profitTarget-profitSoFar);
       const ddUsed=Math.max(0,acct.size-saldo);
       const ddPct=Math.round(ddUsed/(acct.maxDD||2000)*100);
@@ -779,7 +779,7 @@ TRADER DATEN:
 - Instrument: ${acct.instrument||'MNQ'} (Tick-Wert: $${inst.tickValue})
 - Max Trades/Tag: ${maxT}
 - Handelsfenster: ${settings.windowStart||'16:15'}–${settings.windowEnd||'17:30'} Uhr
-${acct.type==='challenge'?'- Challenge Gewinnziel: '+(acct.profitTargetPct||8)+'% = $'+profitTarget+'\n- Bereits erreicht: $'+profitSoFar+'\n- Noch benötigt: $'+profitNeeded+'\n- Verbleibende Handelstage: '+challengeDaysLeft:''}
+${acct.type==='challenge'?'- Challenge Gewinnziel: $'+(acct.target?(acct.target-acct.size).toLocaleString():(Math.round(acct.size*(acct.profitTargetPct||8)/100)).toLocaleString())+'\n- Bereits erreicht: $'+profitSoFar+'\n- Noch benötigt: $'+profitNeeded+'\n- Verbleibende Handelstage: '+challengeDaysLeft:''}
 
 TRADE-STATISTIKEN (${t09.length} Trades gesamt):
 - Win Rate: ${wr}%
@@ -1007,7 +1007,7 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
         ddType:acct.ddType||'eod',
         propFirm:acct.propFirm||'',
         accountType:acct.type||'challenge',
-        profitTarget:acct.type==='challenge'?Math.round(acct.size*((acct.profitTargetPct||8)/100)):goals.monthlyGoal||1500,
+        profitTarget:acct.type==='challenge'?(acct.target?Math.round(acct.target-acct.size):Math.round(acct.size*((acct.profitTargetPct||8)/100))):goals.monthlyGoal||1500,
         profitSoFar:Math.max(0,Math.round(saldo-acct.size)),
         challengeDaysLeft:wzpCalc?wzpCalc.challengeDaysLeft:0,
         dailyNeeded:wzpCalc?wzpCalc.dailyNeeded:0,
