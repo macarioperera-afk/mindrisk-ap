@@ -727,7 +727,91 @@ export default function App(){
     } else {
       recs.push({icon:'✅',title:'Risiko im Griff',text:'Max-DD '+ddPct+'% verbraucht. '+(ddType==='eod'?'EOD DD — du kannst Positionen halten.':'Trailing DD — DD-Level steigt mit Gewinnen.')});
     }
-    return{ampel,ampelMsg,weekPnl,weekTradeCount:weekT.length,weekWR,weeklyTarget,weeklyPct,profitTarget,profitSoFar,profitNeeded,challengeDaysLeft,dailyNeeded,recSym,recQty,recSL,recTP,ddPct,dailyDDPct,ddUsed:Math.round(ddUsed),recs,accountType,ddType,tradDaysLeftWeek};
+    // ── SZENARIEN ─────────────────────────────────────────────
+    const allWins=t09.filter(t=>t.pnl>0),allLoss=t09.filter(t=>t.pnl<=0);
+    const realWR=t09.length>=3?allWins.length/t09.length:0.5;
+    const avgWinAmt=allWins.length?allWins.reduce((s,t)=>s+t.pnl,0)/allWins.length:recTP;
+    const avgLossAmt=allLoss.length?Math.abs(allLoss.reduce((s,t)=>s+t.pnl,0)/allLoss.length):recSL;
+    const calcEV=(wr,tp,sl)=>Math.round(wr*tp-(1-wr)*sl);
+    const pessWR=0.35,realScWR=Math.max(0.35,realWR),bestWR=Math.min(0.90,realWR*1.25||0.65);
+    const pessTP=recTP,pessSL=recSL;
+    const evPess=calcEV(pessWR,pessTP,pessSL)*maxT;
+    const evReal=calcEV(realScWR,avgWinAmt,avgLossAmt)*maxT;
+    const evBest=calcEV(bestWR,avgWinAmt*1.1,avgLossAmt*0.9)*maxT;
+    const daysToGoalPess=evPess>0?Math.ceil(profitNeeded/evPess):999;
+    const daysToGoalReal=evReal>0?Math.ceil(profitNeeded/evReal):999;
+    const daysToGoalBest=evBest>0?Math.ceil(profitNeeded/evBest):999;
+    // ── MACHBARKEIT ───────────────────────────────────────────
+    const maxPossible=recTP*maxT*challengeDaysLeft;
+    const pctPossible=maxPossible>0?Math.min(100,Math.round(profitNeeded/maxPossible*100)):100;
+    const machbar=evReal>0&&daysToGoalReal<=challengeDaysLeft;
+    const machbarPct=machbar?Math.min(99,Math.round((1-(daysToGoalReal/Math.max(1,challengeDaysLeft)))*100+50)):Math.max(5,Math.round((evReal/(dailyNeeded||1))*50));
+    // ── INSTRUMENT & LOTS EMPFEHLUNG (multi-faktor) ──────────
+    const microMap={NQ:'MNQ',ES:'MES',YM:'MYM',GC:'MGC',CL:'MCL'};
+    const fullMap={MNQ:'NQ',MES:'ES',MYM:'YM',MGC:'GC',MCL:'CL'};
+    // Basis: wieviel darf 1 Trade maximal kosten?
+    const dailyDD=acct.dailyDD||1000;
+    const maxRiskPerTrade=Math.floor(dailyDD/maxT*0.4); // 40% des tages-DD pro Trade
+    const slTicks=acct.slTicks||40;
+    // Berechne optimale Lots für jedes Instrument
+    const calcOptimal=(sym)=>{
+      const i=INSTRUMENTS[sym];if(!i)return 0;
+      const slCost=slTicks*i.tickValue;
+      return slCost>0?Math.max(0,Math.floor(maxRiskPerTrade/slCost)):0;
+    };
+    const curSym=acct.instrument||'MNQ';
+    const isMicro=!!fullMap[curSym];
+    const fullSym=isMicro?fullMap[curSym]:curSym;
+    const microSym=isMicro?curSym:microMap[curSym];
+    const optFull=fullSym?calcOptimal(fullSym):0;
+    const optMicro=microSym?calcOptimal(microSym):0;
+    // Entscheide welches Instrument basierend auf ALLEN Faktoren
+    let instrRec=curSym,instrQty=Math.max(1,calcOptimal(curSym)||1),instrReason='';
+    const accountSize=acct.size||50000;
+    const profitUrgency=dailyNeeded>0?(dailyNeeded/(maxRiskPerTrade*maxT)):1; // >1 = unter Druck
+    if(optFull>=1){
+      // Full contract möglich — empfehlen wenn Konto gross genug
+      const fullSlCost=(INSTRUMENTS[fullSym]||{tickValue:5}).tickValue*slTicks;
+      const fullRiskPct=fullSlCost*maxT/accountSize*100;
+      if(fullRiskPct<2&&realWR>=0.45){
+        // Risiko <2% des Kontos und WR ok → Full
+        instrRec=fullSym;instrQty=Math.max(1,optFull);
+        instrReason=instrQty+'x '+fullSym+' passt: Risiko '+fullRiskPct.toFixed(1)+'% des Kontos, WR '+Math.round(realWR*100)+'%';
+      } else if(fullRiskPct>=2){
+        // Risiko zu hoch → Micro
+        instrRec=microSym||curSym;instrQty=Math.max(1,optMicro);
+        instrReason='Risiko mit '+fullSym+' wäre '+fullRiskPct.toFixed(1)+'% des Kontos — zu hoch. Bleib bei '+instrRec;
+      } else {
+        // WR zu niedrig für Full → Micro
+        instrRec=microSym||curSym;instrQty=Math.max(1,optMicro);
+        instrReason='WR '+Math.round(realWR*100)+'% noch nicht für '+fullSym+' — erst >45% erreichen';
+      }
+    } else if(optMicro>0){
+      instrRec=microSym||curSym;instrQty=Math.max(1,optMicro);
+      instrReason=instrQty+'x '+instrRec+' optimal bei Daily DD $'+dailyDD+' und SL '+slTicks+' Ticks';
+    } else {
+      instrRec=curSym;instrQty=1;
+      instrReason='1x '+curSym+' — Mindestgröße. Daily DD oder SL anpassen für mehr.';
+    }
+    // Dringlichkeit: wenn Pace nötig ist, mehr Kontrakte vorschlagen
+    if(profitUrgency>1.5&&instrQty<3){
+      instrReason+=' ⚡ Pace zu niedrig — überleg '+Math.min(instrQty+1,calcOptimal(instrRec)||instrQty+1)+'x zu handeln';
+    }
+    // ── WOCHENZIEL ────────────────────────────────────────────
+    const weekNeededTotal=dailyNeeded*Math.min(5,tradDaysLeftWeek+1);
+    const weekPace=weekNeededTotal>0?Math.round(weekPnl/weekNeededTotal*100):weekPnl>=0?100:0;
+    const weekOnTrack=weekPnl>=weekNeededTotal*0.7;
+    return{ampel,ampelMsg,weekPnl,weekTradeCount:weekT.length,weekWR,weeklyTarget,weeklyPct,
+      profitTarget,profitSoFar,profitNeeded,challengeDaysLeft,dailyNeeded,
+      recSym,recQty,recSL,recTP,ddPct,dailyDDPct,ddUsed:Math.round(ddUsed),recs,
+      accountType,ddType,tradDaysLeftWeek,
+      // New
+      evPess,evReal,evBest,pessWR:Math.round(pessWR*100),realScWR:Math.round(realScWR*100),bestWR:Math.round(bestWR*100),
+      daysToGoalPess,daysToGoalReal,daysToGoalBest,
+      machbar,machbarPct,maxPossible,
+      instrRec,instrQty,instrReason,avgWinAmt:Math.round(avgWinAmt),avgLossAmt:Math.round(avgLossAmt),
+      weekNeededTotal,weekPace,weekOnTrack
+    };
   },[t09,acct,saldo,settings,disc,monthPnl,challengeStart,goals,todPnl]);
 
   const wzpAnalyze=async()=>{
@@ -1808,148 +1892,151 @@ const sendAiMessage=async()=>{
           {wzpCalc&&(()=>{
             const wz=wzpCalc;
             const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
-            const maxT=acct.maxTrades||settings.maxTrades||2;
-            const slT=acct.slTicks||40;
-            const tpT=acct.tpTicks||80;
-            const maxRisk=Math.floor((acct.dailyDD||1000)/maxT*0.4);
-            const slPer=slT*inst.tickValue;
-            const tpPer=tpT*inst.tickValue;
-            const recC=Math.max(1,Math.floor(maxRisk/Math.max(0.01,slPer)));
-            const recSL=Math.round(slPer*recC);
-            const recTP=Math.round(tpPer*recC);
-            const crv=(tpT/slT).toFixed(1);
-            const allWins=t09.filter(t=>t.pnl>0);
-            const allLoss=t09.filter(t=>t.pnl<0);
-            const wr=t09.length?Math.round(allWins.length/t09.length*100):0;
-            const avgW=allWins.length?Math.round(allWins.reduce((s,t)=>s+t.pnl,0)/allWins.length):0;
-            const avgL=allLoss.length?Math.round(Math.abs(allLoss.reduce((s,t)=>s+t.pnl,0)/allLoss.length)):0;
-            const useWR=wr>0?wr/100:0.5;
-            const evTrade=Math.round(useWR*recTP-(1-useWR)*recSL);
-            const evDay=evTrade*maxT;
             const ac=wz.ampel==='green'?G:wz.ampel==='yellow'?Y:R;
             const cd=wzpData;
             return(
-              <Card dk={{dm}} style={{borderColor:ac+'55',background:'var(--mr-card)',padding:0,overflow:'hidden'}}>
+              <Card style={{borderColor:ac+'55',padding:0,overflow:'hidden'}}>
 
                 {/* HEADER */}
-                <div style={{padding:'12px 16px 10px',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                <div style={{padding:'12px 16px 10px',borderBottom:'1px solid '+DK.miniBorder}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
-                      <div style={{width:10,height:10,borderRadius:'50%',background:ac,animation:'pulse 2s infinite',boxShadow:'0 0 8px '+ac,flexShrink:0}}/>
+                      <div style={{width:9,height:9,borderRadius:'50%',background:ac,flexShrink:0}}/>
                       <div>
                         <div style={{fontWeight:900,fontSize:16,color:DK.text}}>Weg zur Profitabilität</div>
-                        <div style={{fontSize:9,color:B,fontWeight:700,letterSpacing:'0.8px',marginTop:1}}>
-                          {acct.propFirm||'CHALLENGE'} · {acct.instrument||'MNQ'} · {(acct.ddType||'eod')==='eod'?'EOD':'TRAILING'} DD
-                        </div>
+                        <div style={{fontSize:9,color:B,fontWeight:700,letterSpacing:'0.8px',marginTop:1}}>{acct.propFirm||'CHALLENGE'} · {acct.instrument||'MNQ'} · {(acct.ddType||'eod').toUpperCase()} DD</div>
                       </div>
                     </div>
-                    <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                      <button onClick={e=>{e.stopPropagation();wzpAnalyze();}}
-                        style={{background:wzpLoading?'rgba(255,255,255,0.04)':'rgba(99,102,241,0.2)',border:'1px solid rgba(99,102,241,0.35)',borderRadius:8,padding:'5px 10px',color:wzpLoading?'#4b5568':'#a5b4fc',fontSize:10,fontWeight:700}}>
-                        {wzpLoading?'⟳ KI...':'🤖 KI'}
-                      </button>
-                      <span style={{fontSize:16}}>{wz.ampel==='green'?'🟢':wz.ampel==='yellow'?'🟡':'🔴'}</span>
+                    <div style={{display:'flex',gap:5,alignItems:'center'}}>
+                      <button onClick={e=>{e.stopPropagation();wzpAnalyze();}} style={{background:wzpLoading?'rgba(99,102,241,0.05)':'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,padding:'4px 10px',color:wzpLoading?DK.muted:'#a5b4fc',fontSize:10,fontWeight:700}}>{wzpLoading?'⟳':'🤖'} KI</button>
+                      <button onClick={e=>{e.stopPropagation();const msg='WZP Analyse: Ziel $'+wz.profitTarget+' | Erreicht $'+wz.profitSoFar+' | Noch $'+wz.profitNeeded+' | '+wz.challengeDaysLeft+'d | Tägl $'+wz.dailyNeeded+' | Setup '+wz.recQty+'x '+(wz.recSym||acct.instrument||'MNQ')+' SL$'+wz.recSL+' TP$'+wz.recTP+' | Machbarkeit '+wz.machbarPct+'% | EV real '+wz.evReal+'$/Tag | WR '+(t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0)+'%';setAiInput(msg);setAiOpen(true);}} style={{background:'rgba(168,85,247,0.12)',border:'1px solid rgba(168,85,247,0.25)',borderRadius:8,padding:'4px 8px',color:'#c084fc',fontSize:12}}>💬</button>
                     </div>
                   </div>
-                  <div style={{marginTop:6,color:ac,fontSize:11,fontWeight:700}}>{wz.ampelMsg}</div>
-                  <div style={{marginTop:2,fontSize:8,color:DK.muted}}>Powered by <span style={{color:B,fontWeight:700}}>MindRisk Coach</span> · {acct.propFirm||'Challenge'} · {acct.instrument||'MNQ'}</div>
+                  <div style={{marginTop:5,color:ac,fontSize:11,fontWeight:700}}>{wz.ampelMsg}</div>
+                  <div style={{fontSize:8,color:DK.muted,marginTop:1}}>Powered by <span style={{color:B,fontWeight:700}}>MindRisk Coach</span></div>
                 </div>
 
                 {/* CHALLENGE FORTSCHRITT */}
-                <div style={{padding:'10px 16px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
-                    <span style={{color:'#6b7a9a',fontSize:9,fontWeight:700}}>{wz.accountType==='challenge'?'CHALLENGE FORTSCHRITT':'MONATSZIEL'}</span>
-                    <span style={{fontWeight:900,fontSize:12,color:wz.profitNeeded<=0?G:'#f0f4ff'}}>
-                      {wz.profitNeeded<=0?'✅ GESCHAFFT!':'+$'+wz.profitSoFar+' / $'+wz.profitTarget}
-                    </span>
+                <div style={{padding:'10px 16px',borderBottom:'1px solid '+DK.miniBorder}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                    <span style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px'}}>CHALLENGE FORTSCHRITT</span>
+                    <span style={{fontWeight:900,fontSize:12,color:wz.profitNeeded<=0?G:DK.text}}>{wz.profitNeeded<=0?'✅ GESCHAFFT!':'+$'+wz.profitSoFar+' / $'+wz.profitTarget}</span>
                   </div>
-                  <div style={{height:5,borderRadius:3,background:'rgba(255,255,255,0.05)',overflow:'hidden',marginBottom:5}}>
-                    <div style={{height:'100%',width:Math.min(100,Math.round(wz.profitSoFar/Math.max(1,wz.profitTarget)*100))+'%',background:'linear-gradient(90deg,'+G+',#00c97a)',borderRadius:3,transition:'width .6s'}}/>
+                  <div style={{height:5,borderRadius:3,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.08)',overflow:'hidden',marginBottom:5}}>
+                    <div style={{height:'100%',width:Math.min(100,wz.profitTarget>0?Math.round(wz.profitSoFar/wz.profitTarget*100):0)+'%',background:'linear-gradient(90deg,'+G+',#00c97a)',borderRadius:3}}/>
                   </div>
-                  <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#6b7a9a'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:DK.muted}}>
                     <span>Noch: <b style={{color:wz.profitNeeded<=0?G:R}}>${wz.profitNeeded}</b></span>
-                    <span>Tägl. nötig: <b style={{color:wz.dailyNeeded<=Math.max(0,evDay)?G:wz.dailyNeeded<=Math.max(0,evDay)*1.5?Y:R}}>${wz.dailyNeeded}</b></span>
-                    <span>Tage: <b style={{color:wz.challengeDaysLeft>5?G:wz.challengeDaysLeft>2?Y:R}}>{wz.challengeDaysLeft}d</b></span>
+                    <span>Tägl: <b style={{color:wz.dailyNeeded<=wz.evReal?G:wz.dailyNeeded<=wz.evReal*1.5?Y:R}}>${wz.dailyNeeded}</b></span>
+                    <span>Tage: <b style={{color:wz.challengeDaysLeft>7?G:wz.challengeDaysLeft>3?Y:R}}>{wz.challengeDaysLeft}d</b></span>
                   </div>
                 </div>
 
-                {/* DEIN SETUP */}
-                <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                  <div style={{color:'#6b7a9a',fontSize:9,fontWeight:700,letterSpacing:'0.8px',marginBottom:8}}>DEIN SETUP HEUTE</div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginBottom:8}}>
-                    <div style={{background:'rgba(99,102,241,0.12)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(99,102,241,0.3)'}}>
-                      <div style={{color:DK.muted,fontSize:8,marginBottom:2}}>KONTRAKTE</div>
-                      <div style={{color:DK.text,fontWeight:900,fontSize:20}}>{cd?cd.recContracts:recC}x</div>
-                      <div style={{color:B,fontSize:9,fontWeight:700,marginTop:1}}>{cd?cd.recSymbol:(acct.instrument||'MNQ')}</div>
+                {/* SETUP */}
+                <div style={{padding:'10px 16px',borderBottom:'1px solid '+DK.miniBorder}}>
+                  <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:7}}>DEIN SETUP HEUTE</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:7}}>
+                    <div style={{background:dm?'rgba(99,102,241,0.1)':'rgba(99,102,241,0.06)',borderRadius:9,padding:'8px 5px',textAlign:'center',border:'1px solid rgba(99,102,241,0.25)'}}>
+                      <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>KONTRAKTE</div>
+                      <div style={{color:dm?'#c7d2fe':'#4c1d95',fontWeight:900,fontSize:18}}>{wz.instrQty||wz.recQty}x</div>
+                      <div style={{color:B,fontSize:9,fontWeight:700}}>{wz.instrRec||wz.recSym||acct.instrument||'MNQ'}</div>
                     </div>
-                    <div style={{background:'rgba(239,68,68,0.08)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(239,68,68,0.2)'}}>
-                      <div style={{color:DK.muted,fontSize:8,marginBottom:2}}>STOP LOSS</div>
-                      <div style={{color:R,fontWeight:900,fontSize:20}}>{cd?cd.adaptiveSL:slT}T</div>
-                      <div style={{color:R,fontSize:9,fontWeight:700,marginTop:1}}>-${cd?Math.round(cd.adaptiveSL*(INSTRUMENTS[cd.recSymbol]||inst).tickValue*(cd.recContracts||1)):recSL}</div>
+                    <div style={{background:dm?'rgba(239,68,68,0.07)':'rgba(239,68,68,0.05)',borderRadius:9,padding:'8px 5px',textAlign:'center',border:'1px solid rgba(239,68,68,0.2)'}}>
+                      <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>STOP LOSS</div>
+                      <div style={{color:R,fontWeight:900,fontSize:18}}>{cd?cd.adaptiveSL:acct.slTicks||40}T</div>
+                      <div style={{color:R,fontSize:9,fontWeight:700}}>-${wz.recSL}</div>
                     </div>
-                    <div style={{background:'rgba(0,211,149,0.08)',borderRadius:10,padding:'10px 6px',textAlign:'center',border:'1px solid rgba(0,211,149,0.2)'}}>
-                      <div style={{color:DK.muted,fontSize:8,marginBottom:2}}>TAKE PROFIT</div>
-                      <div style={{color:G,fontWeight:900,fontSize:20}}>{cd?cd.adaptiveTP:tpT}T</div>
-                      <div style={{color:G,fontSize:9,fontWeight:700,marginTop:1}}>+${cd?Math.round(cd.adaptiveTP*(INSTRUMENTS[cd.recSymbol]||inst).tickValue*(cd.recContracts||1)):recTP}</div>
+                    <div style={{background:dm?'rgba(0,211,149,0.07)':'rgba(0,211,149,0.05)',borderRadius:9,padding:'8px 5px',textAlign:'center',border:'1px solid rgba(0,211,149,0.2)'}}>
+                      <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>TAKE PROFIT</div>
+                      <div style={{color:G,fontWeight:900,fontSize:18}}>{cd?cd.adaptiveTP:acct.tpTicks||80}T</div>
+                      <div style={{color:G,fontSize:9,fontWeight:700}}>+${wz.recTP}</div>
                     </div>
                   </div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                    <div style={{background:DK.mini,borderRadius:8,padding:'8px 10px',border:'1px solid '+DK.miniBorder}}>
-                      <div style={{color:DK.muted,fontSize:8,marginBottom:2}}>MAX TRADES / TAG</div>
-                      <div style={{color:DK.text,fontWeight:900,fontSize:16}}>{maxT} Trades</div>
-                      <div style={{color:'#4b5568',fontSize:9,marginTop:1}}>Heute: {todT.length}/{maxT}</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:5}}>
+                    <div style={{background:DK.mini,borderRadius:8,padding:'7px 10px',border:'1px solid '+DK.miniBorder}}>
+                      <div style={{color:DK.muted,fontSize:7,marginBottom:1}}>MAX TRADES / TAG</div>
+                      <div style={{color:DK.text,fontWeight:900,fontSize:15}}>{acct.maxTrades||2} Trades</div>
+                      <div style={{color:DK.muted,fontSize:8}}>Heute: {todT.length}/{acct.maxTrades||2}</div>
                     </div>
-                    <div style={{background:DK.mini,borderRadius:8,padding:'8px 10px',border:'1px solid '+DK.miniBorder}}>
-                      <div style={{color:DK.muted,fontSize:8,marginBottom:2}}>ERWARTUNG HEUTE</div>
-                      <div style={{color:evDay>=0?G:R,fontWeight:900,fontSize:16}}>{evDay>=0?'+':''}{cd?cd.evPerDay:evDay}$</div>
-                      <div style={{color:'#4b5568',fontSize:9,marginTop:1}}>CRV {cd?(cd.adaptiveTP/cd.adaptiveSL).toFixed(1):crv}:1</div>
+                    <div style={{background:DK.mini,borderRadius:8,padding:'7px 10px',border:'1px solid '+DK.miniBorder}}>
+                      <div style={{color:DK.muted,fontSize:7,marginBottom:1}}>EV HEUTE (REALISTISCH)</div>
+                      <div style={{color:wz.evReal>=0?G:R,fontWeight:900,fontSize:15}}>{wz.evReal>=0?'+':''}{wz.evReal}$</div>
+                      <div style={{color:DK.muted,fontSize:8}}>CRV {(acct.tpTicks/Math.max(1,acct.slTicks||1)||2).toFixed(1)}:1</div>
                     </div>
                   </div>
                 </div>
 
-                {/* STATS + DD */}
+                {/* MACHBARKEIT + SZENARIEN */}
+                <div style={{padding:'10px 16px',borderBottom:'1px solid '+DK.miniBorder}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
+                    <span style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px'}}>ZIEL ERREICHBAR?</span>
+                    <span style={{fontSize:11,fontWeight:900,color:wz.machbar?G:wz.machbarPct>30?Y:R}}>{wz.machbar?'✅ JA':'⚠️ KRITISCH'} · {wz.machbarPct}%</span>
+                  </div>
+                  {wz.instrReason?<div style={{fontSize:9,color:Y,marginBottom:6,padding:'4px 8px',background:dm?'rgba(245,158,11,0.06)':'rgba(245,158,11,0.06)',borderRadius:6,border:'1px solid rgba(245,158,11,0.2)'}}>💡 {wz.instrReason}</div>:null}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5}}>
+                    {[
+                      {l:'PESSIMISTISCH',wr:wz.pessWR,ev:wz.evPess,d:wz.daysToGoalPess,c:R,bg:dm?'rgba(239,68,68,0.06)':'rgba(239,68,68,0.05)',b:'rgba(239,68,68,0.2)'},
+                      {l:'REALISTISCH',wr:wz.realScWR,ev:wz.evReal,d:wz.daysToGoalReal,c:Y,bg:dm?'rgba(245,158,11,0.06)':'rgba(245,158,11,0.05)',b:'rgba(245,158,11,0.25)'},
+                      {l:'OPTIMISTISCH',wr:wz.bestWR,ev:wz.evBest,d:wz.daysToGoalBest,c:G,bg:dm?'rgba(0,211,149,0.06)':'rgba(0,211,149,0.05)',b:'rgba(0,211,149,0.2)'},
+                    ].map(s=>(
+                      <div key={s.l} style={{background:s.bg,border:'1px solid '+s.b,borderRadius:8,padding:'7px 4px',textAlign:'center'}}>
+                        <div style={{fontSize:7,color:s.c,fontWeight:700,marginBottom:2}}>{s.l}</div>
+                        <div style={{fontSize:8,color:DK.muted}}>{s.wr}% WR</div>
+                        <div style={{fontSize:14,fontWeight:900,color:s.ev>=0?s.c:R,lineHeight:1.2}}>{s.ev>=0?'+':''}{s.ev}$</div>
+                        <div style={{fontSize:8,color:DK.muted,marginTop:2}}>{s.d<=wz.challengeDaysLeft?<span style={{color:s.c,fontWeight:700}}>{s.d}d ✓</span>:<span style={{color:R}}>&gt;{wz.challengeDaysLeft}d</span>}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* STATS + DD + WOCHE */}
                 <div style={{padding:'10px 16px'}}>
                   <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:5,marginBottom:8}}>
                     {[
-                      {l:'WIN RATE',v:wr+'%',c:wr>=50?G:wr>=40?Y:R},
-                      {l:'Ø WIN',v:'+$'+avgW,c:G},
-                      {l:'Ø LOSS',v:'-$'+avgL,c:R},
+                      {l:'WIN RATE',v:(t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0)+'%',c:wz.realScWR>=0.50?G:wz.realScWR>=0.35?Y:R},
+                      {l:'Ø WIN',v:'+$'+wz.avgWinAmt,c:G},
+                      {l:'Ø LOSS',v:'-$'+wz.avgLossAmt,c:R},
                     ].map(s=>(
                       <div key={s.l} style={{background:DK.mini,borderRadius:7,padding:'6px 4px',textAlign:'center',border:'1px solid '+DK.miniBorder}}>
-                        <div style={{color:'#6b7a9a',fontSize:8,marginBottom:2}}>{s.l}</div>
+                        <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>{s.l}</div>
                         <div style={{color:s.c,fontWeight:800,fontSize:12}}>{s.v}</div>
                       </div>
                     ))}
                   </div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                    <div>
-                      <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-                        <span style={{color:'#6b7a9a',fontSize:9}}>Max DD</span>
-                        <span style={{color:wz.ddPct>50?R:wz.ddPct>25?Y:G,fontSize:9,fontWeight:700}}>{wz.ddPct}%</span>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7,marginBottom:8}}>
+                    {[
+                      {l:'MAX DD',pct:wz.ddPct,used:wz.ddUsed,total:acct.maxDD||2000},
+                      {l:'TAGES DD',pct:wz.dailyDDPct,used:Math.round(Math.max(0,-todPnl)),total:acct.dailyDD||1000},
+                    ].map(s=>(
+                      <div key={s.l}>
+                        <div style={{display:'flex',justifyContent:'space-between',fontSize:8,marginBottom:2}}>
+                          <span style={{color:DK.muted}}>{s.l}</span>
+                          <span style={{color:s.pct>50?R:s.pct>25?Y:G,fontWeight:700}}>{s.pct}%</span>
+                        </div>
+                        <div style={{height:4,borderRadius:2,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.08)',overflow:'hidden',marginBottom:2}}>
+                          <div style={{height:'100%',width:s.pct+'%',background:s.pct>50?R:s.pct>25?Y:G,borderRadius:2}}/>
+                        </div>
+                        <div style={{fontSize:8,color:DK.muted}}>${s.used} / ${s.total}</div>
                       </div>
-                      <div style={{height:4,borderRadius:2,background:'rgba(255,255,255,0.04)',overflow:'hidden'}}>
-                        <div style={{height:'100%',width:wz.ddPct+'%',background:wz.ddPct>50?R:wz.ddPct>25?Y:G,borderRadius:2}}/>
-                      </div>
-                      <div style={{fontSize:9,color:'#4b5568',marginTop:2}}>${Math.round(wz.ddUsed)} verbraucht · {(acct.ddType||'eod')==='eod'?'EOD':'TRAILING'}</div>
-                    </div>
-                    <div>
-                      <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-                        <span style={{color:'#6b7a9a',fontSize:9}}>Tages DD</span>
-                        <span style={{color:wz.dailyDDPct>50?R:wz.dailyDDPct>25?Y:G,fontSize:9,fontWeight:700}}>{wz.dailyDDPct}%</span>
-                      </div>
-                      <div style={{height:4,borderRadius:2,background:'rgba(255,255,255,0.04)',overflow:'hidden'}}>
-                        <div style={{height:'100%',width:wz.dailyDDPct+'%',background:wz.dailyDDPct>50?R:wz.dailyDDPct>25?Y:G,borderRadius:2}}/>
-                      </div>
-                      <div style={{fontSize:9,color:'#4b5568',marginTop:2}}>${Math.max(0,(acct.dailyDD||1000)-Math.round(Math.max(0,-todPnl)))} frei heute</div>
-                    </div>
+                    ))}
                   </div>
-                  {cd&&cd.recs&&<div style={{marginTop:8}}>
-                    <div style={{color:'#6b7a9a',fontSize:9,fontWeight:700,letterSpacing:'0.8px',marginBottom:5}}>🤖 KI EMPFEHLUNGEN</div>
+                  <div style={{padding:'7px 10px',background:wz.weekOnTrack?dm?'rgba(0,211,149,0.05)':'rgba(0,211,149,0.04)':dm?'rgba(245,158,11,0.05)':'rgba(245,158,11,0.04)',borderRadius:8,border:'1px solid '+(wz.weekOnTrack?'rgba(0,211,149,0.2)':'rgba(245,158,11,0.2)'),marginBottom:cd&&cd.recs?8:0}}>
+                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                      <span style={{fontSize:8,color:DK.muted,fontWeight:700}}>DIESE WOCHE</span>
+                      <span style={{fontSize:8,fontWeight:700,color:wz.weekOnTrack?G:Y}}>{wz.weekPace}% {wz.weekOnTrack?'✅':'⚠️'}</span>
+                    </div>
+                    <div style={{height:3,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.08)',borderRadius:2,overflow:'hidden',marginBottom:3}}>
+                      <div style={{height:'100%',width:Math.min(100,wz.weekPace)+'%',background:wz.weekOnTrack?G:Y,borderRadius:2}}/>
+                    </div>
+                    <div style={{fontSize:8,color:DK.muted}}>{wz.weekPnl>=0?'+':''}{wz.weekPnl}$ · Ziel ${wz.weekNeededTotal} · {wz.tradDaysLeftWeek}d noch</div>
+                  </div>
+                  {cd&&cd.recs&&<div>
+                    <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:4}}>🤖 KI EMPFEHLUNGEN</div>
                     {cd.recs.map((r,i)=>(
-                      <div key={i} style={{marginBottom:5,padding:'7px 10px',background:'rgba(99,102,241,0.08)',borderRadius:8,border:'1px solid rgba(99,102,241,0.15)'}}>
-                        <span style={{fontSize:11}}>{r.icon} </span>
-                        <span style={{color:DK.text,fontSize:10,fontWeight:700}}>{r.title}: </span>
-                        <span style={{color:DK.muted,fontSize:10}}>{r.text}</span>
+                      <div key={i} style={{marginBottom:4,padding:'6px 9px',background:dm?'rgba(99,102,241,0.07)':'rgba(99,102,241,0.05)',borderRadius:7,border:'1px solid rgba(99,102,241,0.15)'}}>
+                        <span style={{fontSize:10}}>{r.icon} </span>
+                        <span style={{color:DK.text,fontSize:9,fontWeight:700}}>{r.title}: </span>
+                        <span style={{color:DK.muted,fontSize:9}}>{r.text}</span>
                       </div>
                     ))}
                   </div>}
