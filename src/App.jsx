@@ -688,7 +688,7 @@ export default function App(){
     const slPerFull=fullInst?Math.round((acct.slTicks||40)*fullInst.tickValue):9999;
     const canFull=fullInst&&slPerFull<=maxRisk;
     const recFull=canFull?Math.max(1,Math.floor(maxRisk/slPerFull)):0;
-    const recSym=canFull&&recMicro>=8?fullSym:(acct.instrument||'MNQ');
+    const recSym=canFull&&recMicro>=8?curFullSym:(acct.instrument||'MNQ');
     const recQty=recSym===fullSym?recFull:recMicro;
     const recTickVal=(INSTRUMENTS[recSym]||inst).tickValue;
     const recSL=Math.round((acct.slTicks||40)*recTickVal*recQty);
@@ -761,9 +761,9 @@ export default function App(){
     };
     const curSym=acct.instrument||'MNQ';
     const isMicro=!!fullMap[curSym];
-    const fullSym=isMicro?fullMap[curSym]:curSym;
+    const curFullSym=isMicro?fullMap[curSym]:curSym;
     const microSym=isMicro?curSym:microMap[curSym];
-    const optFull=fullSym?calcOptimal(fullSym):0;
+    const optFull=curFullSym?calcOptimal(curFullSym):0;
     const optMicro=microSym?calcOptimal(microSym):0;
     // Entscheide welches Instrument basierend auf ALLEN Faktoren
     let instrRec=curSym,instrQty=Math.max(1,calcOptimal(curSym)||1),instrReason='';
@@ -771,16 +771,16 @@ export default function App(){
     const profitUrgency=dailyNeeded>0?(dailyNeeded/(maxRiskPerTrade*maxT)):1; // >1 = unter Druck
     if(optFull>=1){
       // Full contract möglich — empfehlen wenn Konto gross genug
-      const fullSlCost=(INSTRUMENTS[fullSym]||{tickValue:5}).tickValue*slTicks;
+      const fullSlCost=(INSTRUMENTS[curFullSym]||{tickValue:5}).tickValue*slTicks;
       const fullRiskPct=fullSlCost*maxT/accountSize*100;
       if(fullRiskPct<2&&realWR>=0.45){
         // Risiko <2% des Kontos und WR ok → Full
-        instrRec=fullSym;instrQty=Math.max(1,optFull);
-        instrReason=instrQty+'x '+fullSym+' passt: Risiko '+fullRiskPct.toFixed(1)+'% des Kontos, WR '+Math.round(realWR*100)+'%';
+        instrRec=curFullSym;instrQty=Math.max(1,optFull);
+        instrReason=instrQty+'x '+curFullSym+' passt: Risiko '+fullRiskPct.toFixed(1)+'% des Kontos, WR '+Math.round(realWR*100)+'%';
       } else if(fullRiskPct>=2){
         // Risiko zu hoch → Micro
         instrRec=microSym||curSym;instrQty=Math.max(1,optMicro);
-        instrReason='Risiko mit '+fullSym+' wäre '+fullRiskPct.toFixed(1)+'% des Kontos — zu hoch. Bleib bei '+instrRec;
+        instrReason='Risiko mit '+curFullSym+' wäre '+fullRiskPct.toFixed(1)+'% des Kontos — zu hoch. Bleib bei '+instrRec;
       } else {
         // WR zu niedrig für Full → Micro
         instrRec=microSym||curSym;instrQty=Math.max(1,optMicro);
