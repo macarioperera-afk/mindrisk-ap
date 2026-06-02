@@ -2551,13 +2551,16 @@ const sendAiMessage=async()=>{
             </button>
           </div>
 
-          {/* ZIELE – ACCORDION */}
+          {/* SETTINGS – ACCORDION */}
           {[
-            {id:"wzp",label:"Konto & WZP",sub:"Firma, DD-Typ, Gewinnziel"},
-            {id:"goals",label:"Meine Ziele",sub:"Monatsziel, 3M, 6M"},
-            {id:"rules",label:"Trading Regeln",sub:"Limits, Zeiten, Pause"},
-            {id:"coach",label:"Coach Profil",sub:"Wer du bist & KI-Gedächtnis"},
-            {id:"data",label:"Daten",sub:"Reset & Verwaltung"},
+            {id:"profile",label:"👤 Profil",sub:"Name, Email, Konto-Nr"},
+            {id:"konto",label:"🏦 Firma & Konto",sub:"Prop Firm, DD, Gewinnziel"},
+            {id:"setup",label:"📊 Trading Setup",sub:"Markt, Lots, SL/TP"},
+            {id:"fenster",label:"⏰ Handelsfenster",sub:"Zeiten, Max Trades, Pause"},
+            {id:"coach",label:"🤖 MindRisk Coach",sub:"KI-Profil & Gedächtnis"},
+            {id:"goals",label:"🎯 Meine Ziele",sub:"Monatsziel, 3M, 6M"},
+            {id:"rules",label:"📋 Trading Regeln",sub:"Deine Regeln"},
+            {id:"data",label:"🗄️ Daten",sub:"Challenge, Reset"},
           ].map(sec=>(
             <div key={sec.id} style={{marginBottom:6,borderRadius:12,border:"1px solid "+DK.miniBorder,overflow:"hidden"}}>
               <div onClick={()=>setSettingsSection(p=>p===sec.id?null:sec.id)}
@@ -2569,318 +2572,175 @@ const sendAiMessage=async()=>{
                 <div style={{color:settingsSection===sec.id?B:DK.muted,fontSize:12,fontWeight:700,transform:settingsSection===sec.id?"rotate(180deg)":"none",transition:"transform .2s"}}>▼</div>
               </div>
 
-              {settingsSection==="wzp"&&sec.id==="wzp"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-
-                {/* FIRMA + TYP */}
-                <div style={{color:DK.muted,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>PROP FIRMA</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:14}}>
-                  {[{k:"TTP",l:"The Trading Pit"},{k:"FTMO",l:"FTMO"},{k:"TopStep",l:"TopStep"},{k:"Apex",l:"Apex Trader"},{k:"MyFundedFX",l:"MyFundedFX"},{k:"Eigenes",l:"Eigenes Kapital"}].map(f=>(
-                    <button key={f.k} onClick={()=>saveAcct({...acct,propFirm:f.k})}
-                      style={{padding:"8px 6px",borderRadius:8,fontSize:11,fontWeight:700,background:acct.propFirm===f.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.propFirm===f.k?"#6366f1":"#1e2535"),color:acct.propFirm===f.k?"#a5b4fc":DK.muted}}>{f.l}</button>
+              {settingsSection==="profile"&&sec.id==="profile"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,padding:"10px 12px",background:"rgba(99,102,241,0.06)",borderRadius:10,border:"1px solid rgba(99,102,241,0.15)"}}>
+                  <div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
+                    {(acct.name||"?")[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:14,color:DK.text}}>{acct.name||"Dein Name"}</div>
+                    <div style={{fontSize:10,color:DK.muted}}>{acct.email||"Keine Email"}</div>
+                  </div>
+                </div>
+                <Field dm={dm} label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} placeholder="z.B. Jeronimo" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="EMAIL ADRESSE"><input type="email" defaultValue={acct.email||""} onBlur={e=>saveAcct({...acct,email:e.target.value})} placeholder="du@beispiel.com" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="KONTO NUMMER"><input defaultValue={acct.number||""} onBlur={e=>saveAcct({...acct,number:e.target.value})} placeholder="z.B. P-14" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="BROKER / PROP FIRM (Freitext)"><input defaultValue={acct.broker||""} onBlur={e=>saveAcct({...acct,broker:e.target.value})} placeholder="z.B. The Trading Pit" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
+              </div>}
+              {settingsSection==="konto"&&sec.id==="konto"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>🏦 PROP FIRMA</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:12}}>
+                  {["TTP","FTMO","TopStep","Apex","MyFundedFX","Eigenes"].map(f=>(
+                    <button key={f} onClick={()=>saveAcct({...acct,propFirm:f})} style={{padding:"8px 4px",borderRadius:8,fontSize:11,fontWeight:700,background:acct.propFirm===f?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.propFirm===f?"#6366f1":DK.miniBorder),color:acct.propFirm===f?"#a5b4fc":DK.text}}>{f}</button>
                   ))}
                 </div>
-
-                <div style={{color:DK.muted,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>KONTO TYP</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,marginBottom:14}}>
-                  {[{k:"challenge",l:"🎯 Challenge"},{k:"pa",l:"💰 Performance"},{k:"own",l:"💼 Eigenkapital"}].map(t=>(
-                    <button key={t.k} onClick={()=>saveAcct({...acct,type:t.k})}
-                      style={{padding:"8px 4px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.type===t.k?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.type===t.k?"#6366f1":"#1e2535"),color:acct.type===t.k?"#a5b4fc":DK.muted}}>{t.l}</button>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>📋 KONTO TYP</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,marginBottom:12}}>
+                  {[["challenge","🎯 Challenge"],["pa","💼 Performance"],["private","🏠 Eigenkapital"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>saveAcct({...acct,type:v})} style={{padding:"8px 4px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.type===v?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.type===v?"#6366f1":DK.miniBorder),color:acct.type===v?"#a5b4fc":DK.text}}>{l}</button>
                   ))}
                 </div>
-
-                <div style={{color:DK.muted,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>DD TYP</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:14}}>
-                  {[{k:"eod",l:"📅 EOD (End of Day)",sub:"Sicherer — DD zählt nur am Tagesende"},{k:"trailing",l:"📈 Trailing",sub:"DD-Level steigt mit deinen Gewinnen"}].map(d=>(
-                    <button key={d.k} onClick={()=>saveAcct({...acct,ddType:d.k})}
-                      style={{padding:"10px 8px",borderRadius:8,fontSize:10,fontWeight:700,textAlign:"left",background:acct.ddType===d.k?"rgba(99,102,241,0.2)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.ddType===d.k?"#6366f1":"#1e2535"),color:acct.ddType===d.k?"#a5b4fc":DK.muted}}>
-                      <div style={{fontWeight:800}}>{d.l}</div>
-                      <div style={{fontSize:9,color:DK.muted,marginTop:3}}>{d.sub}</div>
-                    </button>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>⚡ DD TYP</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:12}}>
+                  {[["eod","📅 EOD"],["trailing","📈 Trailing"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>saveAcct({...acct,ddType:v})} style={{padding:"8px 4px",borderRadius:8,fontSize:11,fontWeight:700,background:(acct.ddType||"eod")===v?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+((acct.ddType||"eod")===v?"#6366f1":DK.miniBorder),color:(acct.ddType||"eod")===v?"#a5b4fc":DK.text}}>{l}</button>
                   ))}
                 </div>
-
-                {/* CHALLENGE ZAHLEN */}
-                <div style={{color:DK.muted,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>CHALLENGE ZAHLEN ($ eingeben)</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                  {[
-                    {lb:"KONTOSTAND ($)",val:saldo,key:"size",setter:v=>{setSaldo(v);localStorage.setItem("ttp_saldo",v);saveAcct({...acct,size:v});},color:DK.text},
-                    {lb:"GEWINNZIEL ($)",val:Math.round(acct.size*((acct.profitTargetPct||8)/100)),key:"profitTarget",
-                      setter:v=>saveAcct({...acct,profitTargetPct:Math.round(v/Math.max(1,acct.size)*1000)/10}),color:"#00d395"},
-                    {lb:"MAX DRAWDOWN ($)",val:acct.maxDD||2000,key:"maxDD",setter:v=>saveAcct({...acct,maxDD:v}),color:"#f59e0b"},
-                    {lb:"DAILY DD LIMIT ($)",val:acct.dailyDD||1000,key:"dailyDD",setter:v=>saveAcct({...acct,dailyDD:v}),color:"#ef4444"},
-                  ].map(f=>(
-                    <div key={f.key} style={{background:"rgba(255,255,255,0.03)",borderRadius:8,padding:"10px 12px",border:"1px solid #1e2535"}}>
-                      <div style={{color:DK.muted,fontSize:9,marginBottom:4}}>{f.lb}</div>
-                      <input type="number" defaultValue={f.val} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v>0)f.setter(v);}}
-                        style={{background:"transparent",border:"none",fontSize:18,fontWeight:900,color:f.color,width:"100%",outline:"none"}}/>
-                    </div>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>💰 KONTO GRÖßE</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5,marginBottom:12}}>
+                  {[25000,50000,75000,100000,150000,200000].map(s=>(
+                    <button key={s} onClick={()=>saveAcct({...acct,size:s})} style={{padding:"7px 4px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.size===s?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.size===s?"#6366f1":DK.miniBorder),color:acct.size===s?"#a5b4fc":DK.text}}>${s>=1000?s/1000+"k":s}</button>
                   ))}
                 </div>
-
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-                  <div style={{background:"rgba(255,255,255,0.03)",borderRadius:8,padding:"10px 12px",border:"1px solid #1e2535"}}>
-                    <div style={{color:DK.muted,fontSize:9,marginBottom:4}}>LAUFZEIT (TAGE)</div>
-                    <input type="number" defaultValue={acct.challengeDays||30} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,challengeDays:v});}}
-                      style={{background:"transparent",border:"none",fontSize:18,fontWeight:900,color:DK.text,width:"100%",outline:"none"}}/>
-                  </div>
-                  <div style={{background:"rgba(255,255,255,0.03)",borderRadius:8,padding:"10px 12px",border:"1px solid #1e2535"}}>
-                    <div style={{color:DK.muted,fontSize:9,marginBottom:4}}>MAX TRADES / TAG</div>
-                    <input type="number" defaultValue={acct.maxTrades||settings.maxTrades||2} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v)){saveAcct({...acct,maxTrades:v});saveSettings({...settings,maxTrades:v});}}}
-                      style={{background:"transparent",border:"none",fontSize:18,fontWeight:900,color:DK.text,width:"100%",outline:"none"}}/>
-                  </div>
-                </div>
-
-                {/* INSTRUMENT + SL/TP */}
-                <div style={{color:DK.muted,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>INSTRUMENT</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:14}}>
-                  {[{s:'MNQ',tv:0.5},{s:'NQ',tv:5.0},{s:'MES',tv:1.25},{s:'ES',tv:12.5},{s:'MYM',tv:0.5},{s:'YM',tv:5.0},{s:'MGC',tv:1.0},{s:'GC',tv:10.0}].map(({s,tv})=>(
-                    <button key={s} onClick={()=>saveAcct({...acct,instrument:s})}
-                      style={{padding:"8px 4px",borderRadius:7,fontSize:10,fontWeight:700,background:acct.instrument===s?"rgba(99,102,241,0.25)":"rgba(255,255,255,0.03)",border:"1px solid "+(acct.instrument===s?"#6366f1":"#1e2535"),color:acct.instrument===s?"#a5b4fc":DK.muted}}>
-                      <div>{s}</div>
-                      <div style={{fontSize:8,color:DK.muted,marginTop:2}}>${tv}/T</div>
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{color:DK.muted,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>SL / TP IN TICKS</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                  <div style={{background:"rgba(239,68,68,0.06)",borderRadius:8,padding:"10px 12px",border:"1px solid rgba(239,68,68,0.2)"}}>
-                    <div style={{color:DK.muted,fontSize:9,marginBottom:4}}>STOP LOSS (TICKS)</div>
-                    <input type="number" defaultValue={acct.slTicks||40} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,slTicks:v});}}
-                      style={{background:"transparent",border:"none",fontSize:20,fontWeight:900,color:"#ef4444",width:"100%",outline:"none"}}/>
-                    <div style={{color:DK.muted,fontSize:9,marginTop:3}}>= ${Math.round((acct.slTicks||40)*(INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ']).tickValue)} pro Kontrakt</div>
-                  </div>
-                  <div style={{background:"rgba(0,211,149,0.06)",borderRadius:8,padding:"10px 12px",border:"1px solid rgba(0,211,149,0.2)"}}>
-                    <div style={{color:DK.muted,fontSize:9,marginBottom:4}}>TAKE PROFIT (TICKS)</div>
-                    <input type="number" defaultValue={acct.tpTicks||80} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,tpTicks:v});}}
-                      style={{background:"transparent",border:"none",fontSize:20,fontWeight:900,color:"#00d395",width:"100%",outline:"none"}}/>
-                    <div style={{color:DK.muted,fontSize:9,marginTop:3}}>= ${Math.round((acct.tpTicks||80)*(INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ']).tickValue)} pro Kontrakt</div>
-                  </div>
-                </div>
-
-                {/* LIVE KALKULATION */}
-                {(()=>{
-                  const inst2=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
-                  const mxT=acct.maxTrades||settings.maxTrades||2;
-                  const ddL=acct.dailyDD||1000;
-                  const maxR=Math.floor(ddL/mxT*0.4);
-                  const slC=Math.round((acct.slTicks||40)*inst2.tickValue);
-                  const tpC=Math.round((acct.tpTicks||80)*inst2.tickValue);
-                  const rec=Math.max(1,Math.floor(maxR/Math.max(0.01,slC)));
-                  const recSLtot=slC*rec;
-                  const recTPtot=tpC*rec;
-                  const crv2=((acct.tpTicks||80)/(acct.slTicks||40)).toFixed(1);
-                  return(
-                    <div style={{background:"linear-gradient(135deg,rgba(99,102,241,0.12),rgba(168,85,247,0.06))",borderRadius:10,padding:"12px 14px",border:"1px solid rgba(99,102,241,0.25)"}}>
-                      <div style={{color:"#a5b4fc",fontSize:10,fontWeight:800,marginBottom:8}}>📐 TAGESPLAN VORSCHAU</div>
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginBottom:8}}>
-                        <div style={{textAlign:"center"}}>
-                          <div style={{color:DK.muted,fontSize:8}}>KONTRAKTE</div>
-                          <div style={{color:DK.text,fontWeight:900,fontSize:18}}>{rec}x {acct.instrument||"MNQ"}</div>
-                        </div>
-                        <div style={{textAlign:"center"}}>
-                          <div style={{color:DK.muted,fontSize:8}}>RISIKO / TRADE</div>
-                          <div style={{color:R,fontWeight:900,fontSize:18}}>-${recSLtot}</div>
-                        </div>
-                        <div style={{textAlign:"center"}}>
-                          <div style={{color:DK.muted,fontSize:8}}>ZIEL / TRADE</div>
-                          <div style={{color:G,fontWeight:900,fontSize:18}}>+${recTPtot}</div>
-                        </div>
-                      </div>
-                      <div style={{color:DK.muted,fontSize:10,lineHeight:1.6}}>
-                        {"CRV "+crv2+":1 · Max "+mxT+" Trades · Max Risiko/Tag: $"+maxR*mxT}
-                      </div>
-                    </div>
-                  );
-                })()}
+                <Field dm={dm} label={"GEWINNZIEL ($) — Ziel-Saldo eingeben"}><input type="number" defaultValue={acct.target||54000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,target:v});}} placeholder="z.B. 54000" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/></Field>
+                <div style={{fontSize:9,color:DK.muted,marginBottom:8}}>Profit = Ziel-Saldo − Start-Saldo = <b style={{color:G}}>${((acct.target||54000)-(acct.size||50000)).toLocaleString()}</b></div>
+                <Field dm={dm} label={"MAX DRAWDOWN ($) — Floor: $"+((acct.size||50000)-(acct.maxDD||2000)).toLocaleString()}><input type="number" defaultValue={acct.maxDD||2000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,maxDD:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:R,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="DAILY DD LIMIT ($)"><input type="number" defaultValue={acct.dailyDD||1000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,dailyDD:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:Y,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="LAUFZEIT (TAGE)"><input type="number" defaultValue={acct.challengeDays||30} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,challengeDays:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
               </div>}
-              {settingsSection==="goals"&&sec.id==="goals"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-                <div style={{marginBottom:12}}>
-                  <div style={{color:DK.muted,fontSize:10,fontWeight:600,marginBottom:6}}>ZIEL-ZEITRAUM</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-                    {[{k:"month",l:"Monat"},{k:"3m",l:"3 Monate"},{k:"6m",l:"6 Monate"}].map(p=>(
-                      <button key={p.k} onClick={()=>setGoalPeriod(p.k)} style={{background:goalPeriod===p.k?B+"33":DK.mini,border:"1px solid "+(goalPeriod===p.k?B:DK.miniBorder),color:goalPeriod===p.k?B:DK.muted,padding:"7px 4px",borderRadius:8,fontSize:11,fontWeight:600}}>{p.l}</button>
-                    ))}
-                  </div>
-                </div>
-                <Field dm={dm} label="ZIEL-SALDO ($)">
-                  <input type="number" defaultValue={goals.targetBalance} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)){const newG={...goals,targetBalance:v};setGoals(newG);localStorage.setItem('ttp_goals',JSON.stringify(newG));} }} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/>
-                </Field>
-                <div style={{marginTop:8,background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",border:"1px solid rgba(99,102,241,0.15)"}}>
-                  <div style={{color:DK.muted,fontSize:10}}>Aktuell: <span style={{color:DK.text,fontWeight:700}}>${saldo.toFixed(0)}</span> · Noch fehlen: <span style={{color:R,fontWeight:700}}>${Math.max(0,goals.targetBalance-saldo).toFixed(0)}</span></div>
-                </div>
-                <div style={{marginTop:8}}>
-                  <Field dm={dm} label="REGELQUOTE-ZIEL (%)">
-                    <input type="number" defaultValue={goals.disc} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v)){const newG={...goals,disc:v};setGoals(newG);localStorage.setItem('ttp_goals',JSON.stringify(newG));}}} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/>
-                  </Field>
-                </div>
-              </div>}
-
-              {settingsSection==="rules"&&sec.id==="rules"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini,display:"flex",flexDirection:"column",gap:10}}>
-                <div style={{color:DK.muted,fontSize:10,marginBottom:6}}>Wähle max. 5 Regeln für MIND Tab:</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                  {ALL_RULES.map(r=>{const on=selectedRules.includes(r.k);const disabled=!on&&selectedRules.length>=5;return(<button key={r.k} onClick={()=>!disabled&&toggleRule(r.k)} style={{padding:"5px 8px",borderRadius:16,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3,background:on?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(on?"#6366f1":"rgba(255,255,255,0.1)"),color:on?"#a5b4fc":disabled?"#2d3548":DK.muted,opacity:disabled?0.4:1}}>{r.icon} {r.l}</button>);})}
-                </div>
-                <div style={{color:DK.muted,fontSize:9,marginBottom:8}}>{selectedRules.length}/5 gewählt – erscheinen im MIND Tab</div>
-                <Field dm={dm} label="MAX TRADES / TAG"><input type="number" value={settings.maxTrades} onChange={e=>saveSettings({...settings,maxTrades:parseInt(e.target.value)||2})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="PFLICHTPAUSE (MIN)"><input type="number" value={settings.pauseMins} onChange={e=>saveSettings({...settings,pauseMins:parseInt(e.target.value)||15})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <Field dm={dm} label="FENSTER VON"><input type="time" value={settings.windowStart} onChange={e=>saveSettings({...settings,windowStart:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                  <Field dm={dm} label="FENSTER BIS"><input type="time" value={settings.windowEnd} onChange={e=>saveSettings({...settings,windowEnd:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                </div>
-              </div>}
-
-              {settingsSection==="coach"&&sec.id==="coach"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-                <div style={{color:DK.muted,fontSize:10,marginBottom:6}}>KI liest das bei JEDER Antwort:</div>
-                <textarea rows={5} value={coachProfile} onChange={e=>{setCoachProfile(e.target.value);localStorage.setItem('ttp_coach_profile',e.target.value);}}
-                  placeholder="Ich trade bei einer Prop Firm. Beschreibe hier dein Profil, Probleme und Ziele..."
-                  style={{resize:"vertical",fontSize:11,lineHeight:1.5,width:"100%",marginBottom:8}}/>
-                <div style={{color:G,fontSize:9,marginBottom:10}}>Schreib auch Psychologie, Schwächen, Ziele</div>
-                {coachMemory.length>0&&<div>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                    <div style={{color:DK.muted,fontSize:10,fontWeight:600}}>GEDÄCHTNIS ({coachMemory.length} Einträge)</div>
-                    <button onClick={()=>{if(confirm("Löschen?")){setCoachMemory([]);localStorage.removeItem('ttp_coach_memory');}}} style={{background:"none",color:R,fontSize:10,padding:0}}>löschen</button>
-                  </div>
-                  {coachMemory.slice(0,4).map((m,i)=>(
-                    <div key={i} style={{fontSize:10,color:DK.muted,padding:"3px 0",borderBottom:"1px solid "+DK.miniBorder}}>
-                      <span style={{color:DK.muted,fontSize:9}}>{m.date}: </span>{m.note.slice(0,70)}
-                    </div>
-                  ))}
-                </div>}
-              </div>}
-
-              {settingsSection==="data"&&sec.id==="data"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-
-                <div style={{color:DK.muted,fontSize:9,fontWeight:700,letterSpacing:"0.8px",marginBottom:10}}>PERSÖNLICHE INFOS</div>
-                <Field dm={dm} label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="BROKER / PROP FIRMA (Text)"><input defaultValue={acct.broker||""} onBlur={e=>saveAcct({...acct,broker:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="KONTO NUMMER"><input defaultValue={acct.number||""} onBlur={e=>saveAcct({...acct,number:e.target.value})} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-
-                <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"10px 12px",margin:"12px 0",border:"1px solid rgba(99,102,241,0.2)"}}>
-                  <div style={{color:DK.muted,fontSize:10}}>Challenge läuft seit: <span style={{color:"#a5b4fc",fontWeight:700}}>{challengeStart==="2000-01-01"?"Nicht gestartet":challengeStart}</span></div>
-                  <div style={{color:DK.muted,fontSize:9,marginTop:3}}>Alle Challenge-Zahlen → Einstellungen "Konto & WZP"</div>
-                </div>
-
-                <button onClick={()=>{if(window.confirm("Challenge starten:\nKonto: $"+acct.size.toLocaleString()+"\nGewinnziel: $"+Math.round(acct.size*(acct.profitTargetPct||8)/100)+"\nMax DD: $"+acct.maxDD+"\n\nAlle Trade-Daten bleiben erhalten.\nNur der Challenge-Timer startet neu.")){startChallenge();}}}
-                  style={{marginBottom:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",padding:"12px",width:"100%",fontWeight:800,fontSize:13,borderRadius:10}}>
-                  🚀 Challenge starten / neu starten
-                </button>
-
-                <button onClick={()=>{if(window.confirm("Alle Daten löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.")){localStorage.clear();window.location.reload();}}}
-                  style={{background:"rgba(239,68,68,0.06)",color:R,border:"1px solid rgba(239,68,68,0.2)",padding:"10px",width:"100%",fontWeight:600,fontSize:11,borderRadius:10}}>
-                  🗑 Alle Daten löschen
-                </button>
-              </div>}
-              {settingsSection==="goals"&&sec.id==="goals"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-                <div style={{marginBottom:12}}>
-                  <div style={{color:DK.muted,fontSize:10,fontWeight:600,marginBottom:6}}>ZIEL-ZEITRAUM</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-                    {[{k:"month",l:"Monat"},{k:"3m",l:"3 Monate"},{k:"6m",l:"6 Monate"}].map(p=>(
-                      <button key={p.k} onClick={()=>setGoalPeriod(p.k)} style={{background:goalPeriod===p.k?B+"33":DK.mini,border:"1px solid "+(goalPeriod===p.k?B:DK.miniBorder),color:goalPeriod===p.k?B:DK.muted,padding:"7px 4px",borderRadius:8,fontSize:11,fontWeight:600}}>{p.l}</button>
-                    ))}
-                  </div>
-                </div>
-                <Field dm={dm} label="ZIEL-SALDO ($)">
-                  <input type="number" defaultValue={goals.targetBalance} onBlur={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)){const newG={...goals,targetBalance:v};setGoals(newG);localStorage.setItem('ttp_goals',JSON.stringify(newG));} }} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/>
-                </Field>
-                <div style={{marginTop:8,background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",border:"1px solid rgba(99,102,241,0.15)"}}>
-                  <div style={{color:DK.muted,fontSize:10}}>Aktuell: <span style={{color:DK.text,fontWeight:700}}>${saldo.toFixed(0)}</span> · Noch fehlen: <span style={{color:R,fontWeight:700}}>${Math.max(0,goals.targetBalance-saldo).toFixed(0)}</span></div>
-                </div>
-                <div style={{marginTop:8}}>
-                  <Field dm={dm} label="REGELQUOTE-ZIEL (%)">
-                    <input type="number" defaultValue={goals.disc} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v)){const newG={...goals,disc:v};setGoals(newG);localStorage.setItem('ttp_goals',JSON.stringify(newG));}}} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/>
-                  </Field>
-                </div>
-              </div>}
-
-              {settingsSection==="rules"&&sec.id==="rules"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini,display:"flex",flexDirection:"column",gap:10}}>
-                <div style={{color:DK.muted,fontSize:10,marginBottom:6}}>Wähle max. 5 Regeln für MIND Tab:</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                  {ALL_RULES.map(r=>{const on=selectedRules.includes(r.k);const disabled=!on&&selectedRules.length>=5;return(<button key={r.k} onClick={()=>!disabled&&toggleRule(r.k)} style={{padding:"5px 8px",borderRadius:16,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:3,background:on?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(on?"#6366f1":"rgba(255,255,255,0.1)"),color:on?"#a5b4fc":disabled?"#2d3548":DK.muted,opacity:disabled?0.4:1}}>{r.icon} {r.l}</button>);})}
-                </div>
-                <div style={{color:DK.muted,fontSize:9,marginBottom:8}}>{selectedRules.length}/5 gewählt – erscheinen im MIND Tab</div>
-                <Field dm={dm} label="MAX TRADES / TAG"><input type="number" value={settings.maxTrades} onChange={e=>saveSettings({...settings,maxTrades:parseInt(e.target.value)||2})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="PFLICHTPAUSE (MIN)"><input type="number" value={settings.pauseMins} onChange={e=>saveSettings({...settings,pauseMins:parseInt(e.target.value)||15})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <Field dm={dm} label="FENSTER VON"><input type="time" value={settings.windowStart} onChange={e=>saveSettings({...settings,windowStart:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                  <Field dm={dm} label="FENSTER BIS"><input type="time" value={settings.windowEnd} onChange={e=>saveSettings({...settings,windowEnd:e.target.value})} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                </div>
-              </div>}
-
-              {settingsSection==="coach"&&sec.id==="coach"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-                <div style={{color:DK.muted,fontSize:10,marginBottom:6}}>KI liest das bei JEDER Antwort:</div>
-                <textarea rows={5} value={coachProfile} onChange={e=>{setCoachProfile(e.target.value);localStorage.setItem('ttp_coach_profile',e.target.value);}}
-                  placeholder="Ich trade bei einer Prop Firm. Beschreibe hier dein Profil, Probleme und Ziele..."
-                  style={{resize:"vertical",fontSize:11,lineHeight:1.5,width:"100%",marginBottom:8}}/>
-                <div style={{color:G,fontSize:9,marginBottom:10}}>Schreib auch Psychologie, Schwächen, Ziele</div>
-                {coachMemory.length>0&&<div>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                    <div style={{color:DK.muted,fontSize:10,fontWeight:600}}>GEDÄCHTNIS ({coachMemory.length} Einträge)</div>
-                    <button onClick={()=>{if(confirm("Löschen?")){setCoachMemory([]);localStorage.removeItem('ttp_coach_memory');}}} style={{background:"none",color:R,fontSize:10,padding:0}}>löschen</button>
-                  </div>
-                  {coachMemory.slice(0,4).map((m,i)=>(
-                    <div key={i} style={{fontSize:10,color:DK.muted,padding:"3px 0",borderBottom:"1px solid "+DK.miniBorder}}>
-                      <span style={{color:DK.muted,fontSize:9}}>{m.date}: </span>{m.note.slice(0,70)}
-                    </div>
-                  ))}
-                </div>}
-              </div>}
-
-              {settingsSection==="data"&&sec.id==="data"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>KONTO TYP</div>
+              {settingsSection==="setup"&&sec.id==="setup"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>📊 INSTRUMENT</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
-                  {[{k:"challenge",l:"🎯 Challenge"},{k:"pa",l:"💰 PA Account"}].map(t=>(
-                    <button key={t.k} onClick={()=>saveAcct({...acct,type:t.k})}
-                      style={{padding:"8px",borderRadius:8,fontSize:11,fontWeight:700,background:acct.type===t.k?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.type===t.k?"#6366f1":"#2d3548"),color:acct.type===t.k?"#a5b4fc":DK.muted}}>{t.l}</button>
-                  ))}
-                </div>
-                <Field dm={dm} label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="BROKER"><input defaultValue={acct.broker} onBlur={e=>saveAcct({...acct,broker:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="KONTO NUMMER"><input defaultValue={acct.number} onBlur={e=>saveAcct({...acct,number:e.target.value})} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:8}}>KONTO GRÖßE</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5,marginBottom:10}}>
-                  {[50000,75000,100000,125000,150000,200000].map(s=>(
-                    <button key={s} onClick={()=>saveAcct({...acct,size:s})} style={{padding:"6px 4px",borderRadius:7,fontSize:10,fontWeight:700,background:acct.size===s?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.size===s?"#6366f1":"#2d3548"),color:acct.size===s?"#a5b4fc":DK.muted}}>${s/1000}k</button>
-                  ))}
-                </div>
-                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginBottom:8}}>RISIKO EINSTELLUNGEN</div>
-                <Field dm={dm} label={"MAX DD ($) – Level: $"+(acct.size-acct.maxDD).toLocaleString()}><input type="number" defaultValue={acct.maxDD} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,maxDD:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="DAILY DD LIMIT ($)"><input type="number" defaultValue={acct.dailyDD} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,dailyDD:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:6}}>LOT SIZE (für Kalkulationen)</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:5,marginBottom:8}}>
-                  {[1,2,3,5].map(l=>(
-                    <button key={l} onClick={()=>saveAcct({...acct,lotSize:l})} style={{padding:"6px 4px",borderRadius:7,fontSize:11,fontWeight:700,background:acct.lotSize===l?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.lotSize===l?"#6366f1":"#2d3548"),color:acct.lotSize===l?"#a5b4fc":DK.muted}}>{l} MNQ</button>
+                  {Object.entries(INSTRUMENTS).map(([sym,inst])=>(
+                    <button key={sym} onClick={()=>{
+                      const defaults={MNQ:{sl:40,tp:80},NQ:{sl:20,tp:40},MES:{sl:40,tp:80},ES:{sl:20,tp:40},MYM:{sl:40,tp:80},YM:{sl:20,tp:40},MGC:{sl:20,tp:40},GC:{sl:10,tp:20},CL:{sl:20,tp:40},MCL:{sl:40,tp:80}};
+                      const d=defaults[sym]||{sl:40,tp:80};
+                      saveAcct({...acct,instrument:sym,slTicks:acct.slTicks||d.sl,tpTicks:acct.tpTicks||d.tp});
+                    }} style={{padding:"8px 6px",borderRadius:8,fontSize:10,fontWeight:700,textAlign:"left",background:(acct.instrument||"MNQ")===sym?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+((acct.instrument||"MNQ")===sym?"#6366f1":DK.miniBorder),color:(acct.instrument||"MNQ")===sym?"#a5b4fc":DK.text}}>
+                      <div style={{fontWeight:800}}>{sym}</div>
+                      <div style={{fontSize:9,color:(acct.instrument||"MNQ")===sym?"#818cf8":DK.muted}}>${INSTRUMENTS[sym].tickValue}/Tick</div>
+                    </button>
                   ))}
                 </div>
                 {(()=>{
-                  const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
-                  const ls=acct.lotSize||1;
-                  const sl=Math.round((acct.slTicks||40)*inst.tickValue*ls);
-                  const tp=Math.round((acct.tpTicks||80)*inst.tickValue*ls);
-                  const w=t09.length?t09.filter(t=>t.pnl>0).length/t09.length:0.5;
-                  const ev=Math.round(w*tp-(1-w)*sl);
-                  return(
-                    <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",marginBottom:8}}>
-                      <div style={{color:DK.muted,fontSize:10}}>
-                        {ls}x {acct.instrument||'MNQ'} → SL: <span style={{color:R,fontWeight:700}}>-${sl}</span> | TP: <span style={{color:G,fontWeight:700}}>+${tp}</span> | EV/Trade: <span style={{color:ev>=0?G:R,fontWeight:700}}>{ev>=0?'+':''}{ev}$</span>
+                  const inst=INSTRUMENTS[acct.instrument||"MNQ"]||INSTRUMENTS["MNQ"];
+                  const sl=acct.slTicks||40;
+                  const tp=acct.tpTicks||80;
+                  const lots=acct.lotSize||1;
+                  const slD=Math.round(sl*inst.tickValue*lots);
+                  const tpD=Math.round(tp*inst.tickValue*lots);
+                  const crv=(tp/sl).toFixed(1);
+                  const beWR=Math.round(sl/(sl+tp)*100);
+                  return(<>
+                    <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8,marginTop:4}}>🎯 ANZAHL KONTRAKTE</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                      <button onClick={()=>saveAcct({...acct,lotSize:Math.max(1,(acct.lotSize||1)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
+                      <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:"#a5b4fc"}}>{lots}x</div>
+                      <button onClick={()=>saveAcct({...acct,lotSize:Math.min(20,(acct.lotSize||1)+1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
+                      <div style={{fontSize:11,color:DK.muted}}>{acct.instrument||"MNQ"}</div>
+                    </div>
+                    <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>🛑 STOP LOSS (TICKS)</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                      <button onClick={()=>saveAcct({...acct,slTicks:Math.max(1,(acct.slTicks||40)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
+                      <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:R}}>{sl}T</div>
+                      <button onClick={()=>saveAcct({...acct,slTicks:(acct.slTicks||40)+1})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
+                      <div style={{fontSize:11,color:R,fontWeight:700}}>−${slD}</div>
+                    </div>
+                    <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>✅ TAKE PROFIT (TICKS)</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                      <button onClick={()=>saveAcct({...acct,tpTicks:Math.max(1,(acct.tpTicks||80)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
+                      <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:G}}>{tp}T</div>
+                      <button onClick={()=>saveAcct({...acct,tpTicks:(acct.tpTicks||80)+1})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
+                      <div style={{fontSize:11,color:G,fontWeight:700}}>+${tpD}</div>
+                    </div>
+                    <div style={{background:"rgba(99,102,241,0.08)",borderRadius:10,padding:"10px 12px",border:"1px solid rgba(99,102,241,0.2)"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:DK.text,marginBottom:4}}>{lots}x {acct.instrument||"MNQ"} — Live Vorschau</div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:10}}>
+                        <div>SL: <b style={{color:R}}>-${slD}</b></div>
+                        <div>TP: <b style={{color:G}}>+${tpD}</b></div>
+                        <div>CRV: <b style={{color:DK.text}}>{crv}:1</b></div>
+                        <div>Min WR: <b style={{color:Y}}>{beWR}%</b></div>
                       </div>
                     </div>
-                  );
+                  </>);
                 })()}
-                {acct.type==='challenge'&&<div>
-                  <div style={{color:"#a5b4fc",fontSize:11,fontWeight:700,marginTop:10,marginBottom:8}}>CHALLENGE ZIEL</div>
-                  <Field dm={dm} label="ZIEL SALDO ($)"><input type="number" defaultValue={acct.target} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,target:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                  <div style={{color:DK.muted,fontSize:9,marginBottom:6}}>z.B. $50k + 8% Ziel = 54000 eingeben</div>
-                  <Field dm={dm} label="ZEITRAUM (TAGE)"><input type="number" defaultValue={acct.targetDays} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,targetDays:v});}} style={{background:"transparent",border:"none",fontSize:13,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                </div>}
-                <div style={{background:"rgba(99,102,241,0.08)",borderRadius:8,padding:"8px 10px",margin:"10px 0"}}>
-                  <div style={{color:DK.muted,fontSize:10}}>Challenge läuft seit: <span style={{color:"#a5b4fc",fontWeight:700}}>{challengeStart==='2000-01-01'?'Nicht gestartet':challengeStart}</span></div>
-                </div>
-                <button onClick={()=>{if(window.confirm("Challenge starten:\nKonto: $"+acct.size.toLocaleString()+"\nMax DD: $"+acct.maxDD+"\nZiel: $"+acct.target+"\n\nAlles startet bei 0!")){startChallenge();}}} style={{marginBottom:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",padding:"12px",width:"100%",fontWeight:800,fontSize:13,borderRadius:10}}>🚀 Challenge starten / neu starten</button>
-                <button onClick={()=>{if(window.confirm("Alle Daten löschen?")){{localStorage.clear();window.location.reload();}}}} style={{background:"rgba(239,68,68,0.06)",color:R,border:"1px solid rgba(239,68,68,0.2)",padding:"10px",width:"100%",fontWeight:600,fontSize:11,borderRadius:10}}>Alle Daten löschen</button>
               </div>}
-            </div>
-          ))}
+              {settingsSection==="fenster"&&sec.id==="fenster"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>⏰ HANDELSFENSTER</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+                  <Field dm={dm} label="VON (CET)"><input type="time" defaultValue={settings.windowStart||"16:15"} onBlur={e=>setSettings(s=>({...s,windowStart:e.target.value}))} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
+                  <Field dm={dm} label="BIS (CET)"><input type="time" defaultValue={settings.windowEnd||"17:30"} onBlur={e=>setSettings(s=>({...s,windowEnd:e.target.value}))} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
+                </div>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>📊 MAX TRADES PRO TAG</div>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                  <button onClick={()=>saveAcct({...acct,maxTrades:Math.max(1,(acct.maxTrades||2)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+                  <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:DK.text}}>{acct.maxTrades||2}</div>
+                  <button onClick={()=>saveAcct({...acct,maxTrades:Math.min(10,(acct.maxTrades||2)+1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+                  <div style={{fontSize:11,color:DK.muted}}>Trades/Tag</div>
+                </div>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>⏸ PAUSE ZWISCHEN TRADES (MIN)</div>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                  <button onClick={()=>setSettings(s=>({...s,pauseMins:Math.max(0,(s.pauseMins||15)-5)}))} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+                  <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:DK.text}}>{settings.pauseMins||15}</div>
+                  <button onClick={()=>setSettings(s=>({...s,pauseMins:Math.min(60,(s.pauseMins||15)+5)}))} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+                  <div style={{fontSize:11,color:DK.muted}}>Min Pause</div>
+                </div>
+              </div>}
+              {settingsSection==="coach"&&sec.id==="coach"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>🤖 COACHING STIL</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:12}}>
+                  {[["direkt","💥 Direkt"],["motivierend","🔥 Motivierend"],["analytisch","📊 Analytisch"],["streng","⚡ Streng"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>saveAcct({...acct,coachStyle:v})} style={{padding:"8px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.coachStyle===v?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.coachStyle===v?"#6366f1":DK.miniBorder),color:acct.coachStyle===v?"#a5b4fc":DK.text}}>{l}</button>
+                  ))}
+                </div>
+                <Field dm={dm} label="DEIN TRADING PROFIL (für den Coach)">
+                  <textarea defaultValue={coachProfile||""} onBlur={e=>saveCoachProfile(e.target.value)} rows={4} placeholder="Beschreib dich: Erfahrung, Stärken, größte Schwäche..." style={{background:"transparent",border:"none",fontSize:12,color:DK.text,width:"100%",outline:"none",resize:"vertical"}}/>
+                </Field>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:6,marginTop:8}}>🧠 KI GEDÄCHTNIS ({coachMemory.length} Erkenntnisse)</div>
+                {coachMemory.slice(0,3).map((m,i)=>(
+                  <div key={i} style={{fontSize:10,color:DK.muted,padding:"4px 8px",background:dm?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.04)",borderRadius:6,marginBottom:4}}>
+                    {m.note}
+                  </div>
+                ))}
+                {coachMemory.length>0&&<button onClick={()=>{if(window.confirm("KI Gedächtnis löschen?"))saveCoachMemory([]);}} style={{marginTop:4,fontSize:10,color:R,background:"none",border:"none",padding:0,cursor:"pointer",textDecoration:"underline"}}>Gedächtnis löschen</button>}
+              </div>}
+              {settingsSection==="goals"&&sec.id==="goals"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>🎯 ZIELE</div>
+                <Field dm={dm} label="MONATSZIEL ($)"><input type="number" defaultValue={goals.monthlyGoal||1500} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveGoals({...goals,monthlyGoal:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="3-MONATS ZIEL ($)"><input type="number" defaultValue={goals.threeMonthGoal||5000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveGoals({...goals,threeMonthGoal:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="6-MONATS ZIEL ($)"><input type="number" defaultValue={goals.sixMonthGoal||15000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveGoals({...goals,sixMonthGoal:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="JAHRES ZIEL ($)"><input type="number" defaultValue={goals.yearGoal||50000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveGoals({...goals,yearGoal:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="ZIEL KONTOSTAND ($)"><input type="number" defaultValue={goals.targetBalance||60000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveGoals({...goals,targetBalance:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:"#a5b4fc",width:"100%",outline:"none"}}/></Field>
+              </div>}
+              {settingsSection==="rules"&&sec.id==="rules"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini},display:"flex",flexDirection:"column",gap:10}}>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px"}}>📋 DEINE TRADING REGELN</div>
+                {(settings.rules||["Max 2 Trades pro Tag","Nur 16:15–17:30 Uhr traden","SL immer vor Entry setzen","TP immer vor Entry setzen","Kein Trade nach 2 Verlusten"]).map((rule,i)=>(
+                  <div key={i} style={{display:"flex",gap:8,alignItems:"center"}}>
+                    <div style={{width:20,height:20,borderRadius:"50%",background:"rgba(99,102,241,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#a5b4fc",fontWeight:700,flexShrink:0}}>{i+1}</div>
+                    <input defaultValue={rule} onBlur={e=>{const r=[...(settings.rules||[])];r[i]=e.target.value;setSettings(s=>({...s,rules:r}));}} style={{flex:1,background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:7,padding:"6px 8px",fontSize:11,color:DK.text,outline:"none"}}/>
+                  </div>
+                ))}
+              </div>}
+              {settingsSection==="data"&&sec.id==="data"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:10}}>🚀 CHALLENGE</div>
+                <div style={{background:"rgba(99,102,241,0.06)",borderRadius:8,padding:"8px 10px",marginBottom:10,border:"1px solid rgba(99,102,241,0.15)"}}>
+                  <div style={{fontSize:10,color:DK.muted}}>Status: <span style={{color:"#a5b4fc",fontWeight:700}}>{challengeStart==="2000-01-01"?"Nicht gestartet":"Läuft seit "+challengeStart}</span></div>
+                  <div style={{fontSize:10,color:DK.muted,marginTop:2}}>Konto: <b style={{color:DK.text}}>${(acct.size||50000).toLocaleString()}</b> → Ziel: <b style={{color:G}}>${(acct.target||54000).toLocaleString()}</b></div>
+                </div>
+                <button onClick={()=>{if(window.confirm("Challenge starten?\nKonto: $"+acct.size.toLocaleString()+"\nZiel: $"+(acct.target||54000).toLocaleString()+"\nMax DD: $"+acct.maxDD+"\n\nChallenge-Timer startet neu."))startChallenge();}} style={{marginBottom:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",padding:"12px",width:"100%",fontWeight:800,fontSize:13,borderRadius:10}}>🚀 Challenge starten</button>
+                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8,marginTop:12}}>⚙️ DATEN</div>
+                <button onClick={()=>{if(window.confirm("Alle Trades & Daten löschen?\nDas kann nicht rückgängig gemacht werden!")){{localStorage.clear();window.location.reload();}}}} style={{background:"rgba(239,68,68,0.06)",color:R,border:"1px solid rgba(239,68,68,0.2)",padding:"10px",width:"100%",fontWeight:600,fontSize:11,borderRadius:10}}>🗑 Alle Daten löschen</button>
+              </div>}
           <div style={{paddingTop:12,color:DK.muted,fontSize:10,textAlign:"center"}}>MindRisk v2.0 · Claude AI ✅</div>
         </div>
       </div>}
