@@ -2722,7 +2722,7 @@ const sendAiMessage=async()=>{
                 <Field dm={dm} label="JAHRES ZIEL ($)"><input type="number" defaultValue={goals.yearGoal||50000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveGoals({...goals,yearGoal:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/></Field>
                 <Field dm={dm} label="ZIEL KONTOSTAND ($)"><input type="number" defaultValue={goals.targetBalance||60000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveGoals({...goals,targetBalance:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:"#a5b4fc",width:"100%",outline:"none"}}/></Field>
               </div>}
-              {settingsSection==="rules"&&sec.id==="rules"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini},display:"flex",flexDirection:"column",gap:10}}>
+              {settingsSection==="rules"&&sec.id==="rules"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini,display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px"}}>📋 DEINE TRADING REGELN</div>
                 {(settings.rules||["Max 2 Trades pro Tag","Nur 16:15–17:30 Uhr traden","SL immer vor Entry setzen","TP immer vor Entry setzen","Kein Trade nach 2 Verlusten"]).map((rule,i)=>(
                   <div key={i} style={{display:"flex",gap:8,alignItems:"center"}}>
