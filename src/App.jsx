@@ -1318,7 +1318,7 @@ const sendAiMessage=async()=>{
       const k=`${y}-${String(mo+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
       const pv=calMap[k],isT=k===todayISO(),isFuture=k>todayISO();
       const isBlocked=blockedDays.has(k)&&isFuture;
-      let bg={DK.mini},border=isT?B:DK.miniBorder;
+      let bg=DK.mini,border=isT?B:DK.miniBorder;
       if(isBlocked){bg=R+"11";border=R+"44";}
       else if(pv!=null){bg=pv>0?G+"22":R+"22";border=pv>0?G+"55":R+"55";}
       cells.push(
