@@ -2042,7 +2042,7 @@ const sendAiMessage=async()=>{
 
 
         {tab==="mind"&&<div style={{display:"flex",flexDirection:"column",gap:12,width:"100%"}}>
-          <Card dk={{dm}} style={{borderColor:"rgba(99,102,241,0.4)",background:"linear-gradient(145deg,#0f1428,#0d1020)"}}>
+          <Card dk={{dm}} style={{borderColor:"rgba(99,102,241,0.4)",background:dm?"linear-gradient(145deg,#0f1428,#0d1020)":DK.card}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
               <div style={{width:12,height:12,borderRadius:"50%",background:mindLight==='green'?G:mindLight==='yellow'?Y:mindLight==='red'?R:"#6366f1",animation:"livingOrb 2s infinite",boxShadow:"0 0 8px "+(mindLight==='green'?G:mindLight==='yellow'?Y:mindLight==='red'?R:"#6366f1")}}/>
               <div>
@@ -2886,7 +2886,7 @@ const sendAiMessage=async()=>{
       </div>}
 
       {/* AI COACH – FUTURISTISCH */}
-      <div style={{position:"fixed",bottom:88,right:16,zIndex:200}}>
+      <div style={{position:"fixed",bottom:isDesktop?24:88,right:isDesktop?24:16,zIndex:200}}>
         {!aiOpen&&(
           <button onClick={()=>{setAiOpen(true);if(aiMessages.length===0){setAiMessages([{role:"assistant",content:smartCoach("","daily_motivation")}]);}}}
             style={{width:54,height:54,borderRadius:"50%",border:"none",padding:0,position:"relative",overflow:"visible",cursor:"pointer",background:"transparent",WebkitTapHighlightColor:"transparent"}}>
@@ -2903,7 +2903,7 @@ const sendAiMessage=async()=>{
           </button>
         )}
         {aiOpen&&(
-          <div style={{width:320,maxWidth:"calc(100vw - 32px)",background:DK.mini,border:"1px solid #6366f1",borderRadius:16,boxShadow:"0 8px 32px rgba(99,102,241,0.3)",display:"flex",flexDirection:"column",maxHeight:isDesktop?"88vh":"80vh",minHeight:360}}>
+          <div style={{width:isDesktop?560:320,maxWidth:"calc(100vw - 32px)",background:DK.mini,border:"1px solid #6366f1",borderRadius:16,boxShadow:"0 8px 32px rgba(99,102,241,0.3)",display:"flex",flexDirection:"column",maxHeight:isDesktop?"88vh":"80vh",minHeight:360}}>
             <div style={{padding:"12px 16px",borderBottom:"1px solid "+DK.miniBorder,display:"flex",justifyContent:"space-between",alignItems:"center",background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.1))",borderRadius:"16px 16px 0 0"}}>
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
                 <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",animation:"orb 3s ease infinite",flexShrink:0}}>
@@ -2920,7 +2920,7 @@ const sendAiMessage=async()=>{
               </div>
               <button onClick={()=>setAiOpen(false)} style={{background:"rgba(255,255,255,0.08)",color:DK.muted,fontSize:16,padding:"4px 8px",borderRadius:6}}>×</button>
             </div>
-            <div ref={chatContainerRef} onScroll={e=>{const el=e.target;const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;userScrolledUp.current=!atBottom;}} style={{flex:1,overflowY:"scroll",WebkitOverflowScrolling:"touch",padding:12,display:"flex",flexDirection:"column",gap:8,minHeight:0}}>
+            <div ref={chatContainerRef} onScroll={e=>{const el=e.target;const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;userScrolledUp.current=!atBottom;}} style={{flex:1,overflowY:"scroll",WebkitOverflowScrolling:"touch",padding:12,display:"flex",flexDirection:"column",gap:8,minHeight:0,background:DK.bg}}>
               {checkedIn&&mindLight&&mindLight!=='green'&&(
                 <div style={{background:mindLight==='red'?"rgba(239,68,68,0.12)":"rgba(245,158,11,0.12)",border:"1px solid "+(mindLight==='red'?"rgba(239,68,68,0.4)":"rgba(245,158,11,0.4)"),borderRadius:10,padding:"8px 12px",marginBottom:4,display:"flex",gap:8,alignItems:"flex-start",flexShrink:0}}>
                   <span style={{fontSize:16,flexShrink:0}}>{mindLight==='red'?"🚫":"⚠️"}</span>
@@ -2935,7 +2935,7 @@ const sendAiMessage=async()=>{
               )}
               {aiMessages.map((m,i)=>(
                 <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
-                  <div style={{maxWidth:"85%",padding:"8px 12px",borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",background:m.role==="user"?"linear-gradient(135deg,"+B+","+P+")":"#0d1825",border:"1px solid "+(m.role==="user"?"transparent":DK.miniBorder),fontSize:12,color:DK.text,lineHeight:1.5,whiteSpace:"pre-wrap"}}>
+                  <div style={{maxWidth:"85%",padding:"8px 12px",borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",background:m.role==="user"?"linear-gradient(135deg,"+B+","+P+")":DK.mini,border:"1px solid "+(m.role==="user"?"transparent":DK.miniBorder),fontSize:12,color:DK.text,lineHeight:1.5,whiteSpace:"pre-wrap"}}>
                     {m.content}
                   </div>
                 </div>
