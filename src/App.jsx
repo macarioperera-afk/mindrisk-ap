@@ -236,7 +236,7 @@ export default function App(){
       '--mr-border:#2d3548',
       '--mr-input:#0d1320',
       '--mr-divider:#1e2235',
-      '--mr-overlay:rgba(0,0,0,0.2)','--mr-muted:#6b7a9a',
+      '--mr-overlay:rgba(0,0,0,0.2)','--mr-muted:#6b7a9a','--mr-text:#f0f4ff',
     ].join(';');
     const light=[
       '--mr-card:#ffffff',
@@ -248,7 +248,7 @@ export default function App(){
       '--mr-border:#e0e4f0',
       '--mr-input:#f5f7fc',
       '--mr-divider:#e8eaf0',
-      '--mr-overlay:rgba(0,0,0,0.04)','--mr-muted:#6b7280',
+      '--mr-overlay:rgba(0,0,0,0.04)','--mr-muted:#6b7280','--mr-text:#1a1d2a',
     ].join(';');
     el.textContent=':root{'+dark+'}[data-theme="light"]{'+light+'}';
   },[dm]);
@@ -1531,8 +1531,11 @@ const sendAiMessage=async()=>{
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0}
         html,body{overflow-x:hidden;max-width:100%}
-        input,select,textarea{max-width:100%;box-sizing:border-box;background:#0f1117;color:#e2e8f0;border:1px solid #2d3548;border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;outline:none;width:100%}
+        input,select,textarea{max-width:100%;box-sizing:border-box;background:var(--mr-input);color:var(--mr-text,#e2e8f0);border:1px solid var(--mr-border);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;outline:none;width:100%}
         input:focus,select:focus,textarea:focus{border-color:#6366f1}
+        [data-theme=light] input,[data-theme=light] select,[data-theme=light] textarea{background:#ffffff;color:#1a1d2a;border-color:#e0e4f0}
+        [data-theme=light] input::placeholder,[data-theme=light] textarea::placeholder{color:#9ca3af}
+        input[style*=transparent],[data-theme=light] input[style*=transparent]{background:transparent!important}
         select option{background:#1a1f2e}
         button{cursor:pointer;font-family:inherit;border:none;border-radius:8px}
         .mr-content{padding:16px 16px 20px;max-width:520px;margin:0 auto}
@@ -1826,7 +1829,7 @@ const sendAiMessage=async()=>{
             const ac=wz.ampel==='green'?G:wz.ampel==='yellow'?Y:R;
             const cd=wzpData;
             return(
-              <Card dk={{dm}} style={{borderColor:ac+'55',background:'linear-gradient(160deg,#0a0e1a,#0d1117)',padding:0,overflow:'hidden'}}>
+              <Card dk={{dm}} style={{borderColor:ac+'55',background:'var(--mr-card)',padding:0,overflow:'hidden'}}>
 
                 {/* HEADER */}
                 <div style={{padding:'12px 16px 10px',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
@@ -2537,7 +2540,7 @@ const sendAiMessage=async()=>{
 
       {/* SETTINGS DRAWER */}
       {settingsOpen&&<div onClick={()=>setSettingsOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:300,backdropFilter:"blur(4px)"}}>
-        <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:0,right:0,bottom:0,width:"min(300px,82vw)",background:"linear-gradient(180deg,#1a1f2e,#0f1117)",borderLeft:"1px solid #2d3548",overflowY:"auto",padding:"20px 18px",paddingBottom:"calc(20px + env(safe-area-inset-bottom,0px))"}}>
+        <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:0,right:0,bottom:0,width:"min(300px,82vw)",background:DK.nav,borderLeft:"1px solid #2d3548",overflowY:"auto",padding:"20px 18px",paddingBottom:"calc(20px + env(safe-area-inset-bottom,0px))"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
             <div>
               <div style={{fontWeight:800,fontSize:20,color:DK.text}}>Einstellungen</div>
