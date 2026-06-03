@@ -2131,7 +2131,7 @@ const sendAiMessage=async()=>{
                     </div>
                     <div style={{display:'flex',gap:5,alignItems:'center'}}>
                       <button onClick={e=>{e.stopPropagation();wzpAnalyze();}} style={{background:wzpLoading?'rgba(99,102,241,0.05)':'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,padding:'4px 10px',color:wzpLoading?DK.muted:'#a5b4fc',fontSize:10,fontWeight:700}}>{wzpLoading?'⟳':'🤖'} KI</button>
-                      <button onClick={e=>{e.stopPropagation();const msg='WZP Analyse: Ziel $'+wz.profitTarget+' | Erreicht $'+wz.profitSoFar+' | Noch $'+wz.profitNeeded+' | '+wz.challengeDaysLeft+'d | Tägl $'+wz.dailyNeeded+' | Setup '+wz.recQty+'x '+(wz.recSym||acct.instrument||'MNQ')+' SL$'+wz.recSL+' TP$'+wz.recTP+' | Machbarkeit '+wz.machbarPct+'% | EV real '+wz.evReal+'$/Tag | WR '+(t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0)+'%';setAiInput(msg);setAiOpen(true);}} style={{background:'rgba(168,85,247,0.12)',border:'1px solid rgba(168,85,247,0.25)',borderRadius:8,padding:'4px 8px',color:'#c084fc',fontSize:12}}>💬</button>
+                      <button onClick={e=>{e.stopPropagation();const msg='WZP Analyse: Ziel $'+wz.profitTarget+' | Erreicht $'+wz.profitSoFar+' | Noch $'+wz.profitNeeded+' | '+wz.challengeDaysLeft+'d | Tägl $'+wz.dailyNeeded+' | Setup '+wz.recQty+'x '+(wz.recSym||acct.instrument||'MNQ')+' SL$'+wz.recSL+' TP$'+wz.recTP+' | Machbarkeit '+wz.machbarPct+'% | EV real '+wz.evReal+'$/Tag | WR '+(t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0)+'%';setAiInput(msg);setAiOpen(true);}} style={{background:'linear-gradient(135deg,rgba(168,85,247,0.2),rgba(99,102,241,0.2))',border:'1px solid rgba(168,85,247,0.4)',borderRadius:8,padding:'5px 12px',color:'#c084fc',fontSize:10,fontWeight:700}}>Coach →</button>
                     </div>
                   </div>
                   <div style={{marginTop:5,color:ac,fontSize:11,fontWeight:700}}>{wz.ampelMsg}</div>
@@ -2270,6 +2270,7 @@ const sendAiMessage=async()=>{
                       {wz.underPressure?<span style={{color:Y}}>⚡ Pace-Druck → max 1.5% empfohlen</span>:<span style={{color:G}}>✅ Kein Druck → 1% Regel sicher</span>}
                     </div>
                   </div>
+                  </>{/* /hasTrades Kelly+Risiko */}
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5}}>
                     {[
                       {l:'PESSIMISTISCH',wr:wz.pessWR,ev:wz.evPess,d:wz.daysToGoalPess,c:R,bg:dm?'rgba(239,68,68,0.06)':'rgba(239,68,68,0.05)',b:'rgba(239,68,68,0.2)'},
