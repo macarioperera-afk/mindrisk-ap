@@ -2943,7 +2943,6 @@ const sendAiMessage=async()=>{
             {id:"profile",label:"👤 Profil",sub:"Name, Email, Konto-Nr"},
             {id:"konto",label:"🏦 Firma & Konto",sub:"Prop Firm, DD, Gewinnziel"},
             {id:"setup",label:"📊 Trading Setup",sub:"Markt, Lots, SL/TP"},
-            {id:"fenster",label:"⏰ Handelsfenster",sub:"Zeiten, Max Trades, Pause"},
             {id:"coach",label:"🤖 MindRisk Coach",sub:"KI-Profil & Gedächtnis"},
             {id:"goals",label:"🎯 Meine Ziele",sub:"Monatsziel, 3M, 6M"},
             {id:"rules",label:"📋 Trading Regeln",sub:"Deine Regeln"},
@@ -3082,7 +3081,25 @@ const sendAiMessage=async()=>{
                     </div>);
                   })()}
                 </div>
-                <div style={{background:"rgba(99,102,241,0.08)",borderRadius:10,padding:"10px 12px",border:"1px solid rgba(99,102,241,0.2)"}}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:10,marginBottom:2}}>
+                  <div>
+                    <div style={{fontSize:10,color:DK.muted,fontWeight:600,marginBottom:5}}>MAX TRADES / TAG</div>
+                    <div style={{display:'flex',alignItems:'center',gap:5}}>
+                      <button onClick={()=>saveAcct({...acct,maxTrades:Math.max(1,(acct.maxTrades||2)-1)})} style={{width:28,height:28,borderRadius:6,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:15}}>−</button>
+                      <div style={{flex:1,textAlign:'center',fontWeight:700,fontSize:15,color:DK.text}}>{acct.maxTrades||2}</div>
+                      <button onClick={()=>saveAcct({...acct,maxTrades:Math.min(10,(acct.maxTrades||2)+1)})} style={{width:28,height:28,borderRadius:6,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:15}}>+</button>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,color:DK.muted,fontWeight:600,marginBottom:5}}>PAUSE (MIN)</div>
+                    <div style={{display:'flex',alignItems:'center',gap:5}}>
+                      <button onClick={()=>setSettings(s=>({...s,pauseMins:Math.max(0,(s.pauseMins||15)-5)}))} style={{width:28,height:28,borderRadius:6,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:15}}>−</button>
+                      <div style={{flex:1,textAlign:'center',fontWeight:700,fontSize:15,color:DK.text}}>{settings.pauseMins||15}</div>
+                      <button onClick={()=>setSettings(s=>({...s,pauseMins:Math.min(60,(s.pauseMins||15)+5)}))} style={{width:28,height:28,borderRadius:6,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:15}}>+</button>
+                    </div>
+                  </div>
+                </div>
+                <div style={{background:"rgba(99,102,241,0.08)",borderRadius:10,padding:"10px 12px",border:"1px solid rgba(99,102,241,0.2)",marginTop:10}}>
                       <div style={{fontSize:11,fontWeight:700,color:DK.text,marginBottom:4}}>{lots}x {acct.instrument||"MNQ"} — Live Vorschau</div>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:10}}>
                         <div>SL: <b style={{color:R}}>-${slD}</b></div>
