@@ -483,9 +483,23 @@ export default function App(){
 
   // Auth listener
   useEffect(()=>{
-    supabase.auth.getSession().then(({data:{session}})=>{
+    supabase.auth.getSession().then(async ({data:{session}})=>{
       setAuthUser(session?.user||null);
       setAuthLoading(false);
+      if(session?.user){
+        const data=await loadFromSupabase(session.user.id);
+        if(data){
+          if(data.trades?.length){setTrades(data.trades);localStorage.setItem('ttp_trades',JSON.stringify(data.trades));}
+          if(data.settings?.acct){setAcct(data.settings.acct);localStorage.setItem('ttp_acct',JSON.stringify(data.settings.acct));}
+          if(data.settings?.goals){setGoals(data.settings.goals);localStorage.setItem('ttp_goals',JSON.stringify(data.settings.goals));}
+          if(data.settings?.settings){setSettings(data.settings.settings);localStorage.setItem('ttp_settings',JSON.stringify(data.settings.settings));}
+          if(data.settings?.challenge_start){setChallengeStart(data.settings.challenge_start);localStorage.setItem('ttp_challenge_start',data.settings.challenge_start);}
+          if(data.settings?.saldo){setSaldo(parseFloat(data.settings.saldo));localStorage.setItem('ttp_saldo',data.settings.saldo);}
+          if(data.settings?.coach_profile)setCoachProfile(data.settings.coach_profile);
+          if(data.settings?.coach_memory)setCoachMemory(data.settings.coach_memory);
+          if(typeof data.settings?.dark_mode==='boolean')saveDm(data.settings.dark_mode);
+        }
+      }
     });
     const{data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
       setAuthUser(session?.user||null);
@@ -1430,7 +1444,7 @@ const sendAiMessage=async()=>{
     const v=parseFloat(form.pnl);
     if(isNaN(v)){showToast("P&L muss eine Zahl sein");return;}
     const newT={id:uid(),acct:"09",contract:form.contract,date:form.date,time:form.time,pnl:v,dur:0,dir:form.dir,setup:form.setup,notes:form.notes,rules:{...form.rules}};
-    setTrades(p=>{const u=[...p,newT];localStorage.setItem('ttp_trades',JSON.stringify(u));return u;});
+    setTrades(p=>{const u=[...p,newT];localStorage.setItem('ttp_trades',JSON.stringify(u));if(authUser?.id)syncTradesToSupabase(authUser.id,[newT]);return u;});
     const newSaldo=Math.round((saldo+v)*100)/100;
     setSaldo(newSaldo);localStorage.setItem("ttp_saldo",newSaldo);
     setLastTradeAt(new Date());
