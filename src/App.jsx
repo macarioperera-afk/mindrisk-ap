@@ -682,77 +682,7 @@ export default function App(){
     const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
     const maxT=acct.maxTrades||settings.maxTrades||2;
 
-    // ── MARKT CHARAKTERISTIKA ─────────────────────────────────
-    const MARKET_PROFILE={
-      NQ:{name:'Nasdaq 100',tickVal:5,atr:100,speed:'sehr schnell',minSL:20,recSL:30,risk:'hoch',micro:'MNQ'},
-      MNQ:{name:'Micro Nasdaq',tickVal:0.5,atr:100,speed:'sehr schnell',minSL:20,recSL:30,risk:'niedrig',full:'NQ'},
-      ES:{name:'S&P 500',tickVal:12.5,atr:40,speed:'mittel',minSL:8,recSL:12,risk:'hoch',micro:'MES'},
-      MES:{name:'Micro S&P',tickVal:1.25,atr:40,speed:'mittel',minSL:8,recSL:12,risk:'niedrig',full:'ES'},
-      YM:{name:'Dow Jones',tickVal:5,atr:150,speed:'mittel',minSL:15,recSL:25,risk:'hoch',micro:'MYM'},
-      MYM:{name:'Micro Dow',tickVal:0.5,atr:150,speed:'mittel',minSL:15,recSL:25,risk:'niedrig',full:'YM'},
-      GC:{name:'Gold',tickVal:10,atr:20,speed:'mittel',minSL:10,recSL:15,risk:'hoch',micro:'MGC'},
-      MGC:{name:'Micro Gold',tickVal:1,atr:20,speed:'mittel',minSL:10,recSL:15,risk:'niedrig',full:'GC'},
-    };
 
-    // ── INSTRUMENT ANALYSE AUS ECHTEN TRADES ──────────────────
-    const tradesByInstrument={};
-    t09.forEach(t=>{
-      const sym=(t.contract||acct.instrument||'MNQ').toUpperCase();
-      if(!tradesByInstrument[sym])tradesByInstrument[sym]={trades:[],wins:0,losses:0,pnl:0,totalRisk:0};
-      tradesByInstrument[sym].trades.push(t);
-      if(t.pnl>0)tradesByInstrument[sym].wins++;
-      else tradesByInstrument[sym].losses++;
-      tradesByInstrument[sym].pnl+=t.pnl;
-    });
-    // Per-instrument stats
-    const instrStats=Object.entries(tradesByInstrument).map(([sym,d])=>({
-      sym,
-      trades:d.trades.length,
-      wins:d.wins,
-      losses:d.losses,
-      wr:d.trades.length>0?Math.round(d.wins/d.trades.length*100):0,
-      pnl:Math.round(d.pnl),
-      profile:MARKET_PROFILE[sym]||null,
-    }));
-    // Worst instrument
-    const worstInstr=instrStats.sort((a,b)=>a.wr-b.wr)[0];
-    const bestInstr=[...instrStats].sort((a,b)=>b.wr-a.wr)[0];
-
-    // ── DOWNGRADE EMPFEHLUNG ──────────────────────────────────
-    const maxDD=acct.maxDD||2000;
-    const dailyDDVal=acct.dailyDD||1000;
-    const currentSym=acct.instrument||'MNQ';
-    const currentProfile=MARKET_PROFILE[currentSym];
-    const isMicroAlready=currentProfile&&!currentProfile.micro;
-    const slPerTrade=Math.round((acct.slTicks||40)*(currentProfile?.tickVal||0.5));
-    const ddUsedPct=ddPct;
-    const tradesTillDDGone=slPerTrade>0?Math.floor((maxDD-Math.round(ddUsed))/slPerTrade):999;
-    
-    // Should trader downgrade to micro or reduce size?
-    let downgradeRec=null;
-    let downgradeReason='';
-    const hasMicro=!isMicroAlready&&!!currentProfile?.micro;
-    const wrTooLow=worstInstr&&worstInstr.sym===currentSym&&worstInstr.wr<40;
-    const ddCritical=ddUsedPct>50;
-    const ddDanger=tradesTillDDGone<=5&&tradesTillDDGone>0;
-
-    if(hasMicro&&(ddCritical||wrTooLow)){
-      const microProfile=MARKET_PROFILE[currentProfile.micro];
-      const microSLcost=Math.round((acct.slTicks||40)*(microProfile?.tickVal||0.5));
-      const microTradesTillDD=microSLcost>0?Math.floor((maxDD-Math.round(ddUsed))/microSLcost):999;
-      downgradeRec=currentProfile.micro;
-      if(ddCritical)downgradeReason='DD '+ddUsedPct+'% verbraucht — noch '+tradesTillDDGone+' Verluste bis Konto weg. Im '+currentProfile.micro+': noch '+microTradesTillDD+' möglich.';
-      else downgradeReason='WR im '+currentSym+' nur '+worstInstr.wr+'% — wechsle zu '+currentProfile.micro+' um das Konto zu schützen.';
-    } else if(!hasMicro&&(ddCritical||wrTooLow)){
-      // No micro available — recommend size reduction or market switch
-      downgradeRec='REDUZIEREN';
-      if(ddCritical)downgradeReason='DD '+ddUsedPct+'% verbraucht — kein Micro für '+currentSym+' verfügbar. Reduziere auf 1 Kontrakt oder pause bis DD sich erholt.';
-      else downgradeReason='WR '+worstInstr?.wr+'% im '+currentSym+' zu niedrig. Kein Micro verfügbar — Pause oder Wechsel zu MES/MNQ (andere Märkte mit Micro).';
-    } else if(isMicroAlready&&ddCritical){
-      // Already in micro but DD critical
-      downgradeRec='PAUSE';
-      downgradeReason='Du tradest bereits '+currentSym+' (Micro). DD '+ddUsedPct+'% kritisch — '+tradesTillDDGone+' Trades bis Limit. Heute STOP.';
-    }
     const ddType=acct.ddType||'eod';
     const accountType=acct.type||'challenge';
     // --- Woche ---
@@ -839,6 +769,77 @@ export default function App(){
     const realWR=t09.length>=3?allWins.length/t09.length:0.5;
     const avgWinAmt=allWins.length?allWins.reduce((s,t)=>s+t.pnl,0)/allWins.length:recTP;
     const avgLossAmt=allLoss.length?Math.abs(allLoss.reduce((s,t)=>s+t.pnl,0)/allLoss.length):recSL;
+    // ── MARKT CHARAKTERISTIKA ─────────────────────────────────
+    const MARKET_PROFILE={
+      NQ:{name:'Nasdaq 100',tickVal:5,atr:100,speed:'sehr schnell',minSL:20,recSL:30,risk:'hoch',micro:'MNQ'},
+      MNQ:{name:'Micro Nasdaq',tickVal:0.5,atr:100,speed:'sehr schnell',minSL:20,recSL:30,risk:'niedrig',full:'NQ'},
+      ES:{name:'S&P 500',tickVal:12.5,atr:40,speed:'mittel',minSL:8,recSL:12,risk:'hoch',micro:'MES'},
+      MES:{name:'Micro S&P',tickVal:1.25,atr:40,speed:'mittel',minSL:8,recSL:12,risk:'niedrig',full:'ES'},
+      YM:{name:'Dow Jones',tickVal:5,atr:150,speed:'mittel',minSL:15,recSL:25,risk:'hoch',micro:'MYM'},
+      MYM:{name:'Micro Dow',tickVal:0.5,atr:150,speed:'mittel',minSL:15,recSL:25,risk:'niedrig',full:'YM'},
+      GC:{name:'Gold',tickVal:10,atr:20,speed:'mittel',minSL:10,recSL:15,risk:'hoch',micro:'MGC'},
+      MGC:{name:'Micro Gold',tickVal:1,atr:20,speed:'mittel',minSL:10,recSL:15,risk:'niedrig',full:'GC'},
+    };
+
+    // ── INSTRUMENT ANALYSE AUS ECHTEN TRADES ──────────────────
+    const tradesByInstrument={};
+    t09.forEach(t=>{
+      const sym=(t.contract||acct.instrument||'MNQ').toUpperCase();
+      if(!tradesByInstrument[sym])tradesByInstrument[sym]={trades:[],wins:0,losses:0,pnl:0,totalRisk:0};
+      tradesByInstrument[sym].trades.push(t);
+      if(t.pnl>0)tradesByInstrument[sym].wins++;
+      else tradesByInstrument[sym].losses++;
+      tradesByInstrument[sym].pnl+=t.pnl;
+    });
+    // Per-instrument stats
+    const instrStats=Object.entries(tradesByInstrument).map(([sym,d])=>({
+      sym,
+      trades:d.trades.length,
+      wins:d.wins,
+      losses:d.losses,
+      wr:d.trades.length>0?Math.round(d.wins/d.trades.length*100):0,
+      pnl:Math.round(d.pnl),
+      profile:MARKET_PROFILE[sym]||null,
+    }));
+    // Worst instrument
+    const worstInstr=instrStats.sort((a,b)=>a.wr-b.wr)[0];
+    const bestInstr=[...instrStats].sort((a,b)=>b.wr-a.wr)[0];
+
+    // ── DOWNGRADE EMPFEHLUNG ──────────────────────────────────
+    const maxDD=acct.maxDD||2000;
+    const dailyDDVal=acct.dailyDD||1000;
+    const currentSym=acct.instrument||'MNQ';
+    const currentProfile=MARKET_PROFILE[currentSym];
+    const isMicroAlready=currentProfile&&!currentProfile.micro;
+    const slPerTrade=Math.round((acct.slTicks||40)*(currentProfile?.tickVal||0.5));
+    const ddUsedPct=ddPct;
+    const tradesTillDDGone=slPerTrade>0?Math.floor((maxDD-Math.round(ddUsed))/slPerTrade):999;
+    
+    // Should trader downgrade to micro or reduce size?
+    let downgradeRec=null;
+    let downgradeReason='';
+    const hasMicro=!isMicroAlready&&!!currentProfile?.micro;
+    const wrTooLow=worstInstr&&worstInstr.sym===currentSym&&worstInstr.wr<40;
+    const ddCritical=ddUsedPct>50;
+    const ddDanger=tradesTillDDGone<=5&&tradesTillDDGone>0;
+
+    if(hasMicro&&(ddCritical||wrTooLow)){
+      const microProfile=MARKET_PROFILE[currentProfile.micro];
+      const microSLcost=Math.round((acct.slTicks||40)*(microProfile?.tickVal||0.5));
+      const microTradesTillDD=microSLcost>0?Math.floor((maxDD-Math.round(ddUsed))/microSLcost):999;
+      downgradeRec=currentProfile.micro;
+      if(ddCritical)downgradeReason='DD '+ddUsedPct+'% verbraucht — noch '+tradesTillDDGone+' Verluste bis Konto weg. Im '+currentProfile.micro+': noch '+microTradesTillDD+' möglich.';
+      else downgradeReason='WR im '+currentSym+' nur '+worstInstr.wr+'% — wechsle zu '+currentProfile.micro+' um das Konto zu schützen.';
+    } else if(!hasMicro&&(ddCritical||wrTooLow)){
+      // No micro available — recommend size reduction or market switch
+      downgradeRec='REDUZIEREN';
+      if(ddCritical)downgradeReason='DD '+ddUsedPct+'% verbraucht — kein Micro für '+currentSym+' verfügbar. Reduziere auf 1 Kontrakt oder pause bis DD sich erholt.';
+      else downgradeReason='WR '+worstInstr?.wr+'% im '+currentSym+' zu niedrig. Kein Micro verfügbar — Pause oder Wechsel zu MES/MNQ (andere Märkte mit Micro).';
+    } else if(isMicroAlready&&ddCritical){
+      // Already in micro but DD critical
+      downgradeRec='PAUSE';
+      downgradeReason='Du tradest bereits '+currentSym+' (Micro). DD '+ddUsedPct+'% kritisch — '+tradesTillDDGone+' Trades bis Limit. Heute STOP.';
+    }
     // ── KELLY CRITERION ───────────────────────────────────────
     // Kelly nur mit echten Daten (min 10 Trades)
     const hasEnoughTrades=t09.length>=10;
