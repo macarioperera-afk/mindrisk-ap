@@ -2113,9 +2113,11 @@ const sendAiMessage=async()=>{
           {/* TAGESPLAN – KERN DER APP */}
           {wzpCalc&&(()=>{
             const wz=wzpCalc;
-            const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
             const ac=wz.ampel==='green'?G:wz.ampel==='yellow'?Y:R;
             const cd=wzpData;
+            const hasTarget=wz.profitTarget>0;
+            const hasTrades=t09.length>0;
+            const hasData=hasTarget&&hasTrades;
             return(
               <Card style={{borderColor:ac+'55',padding:0,overflow:'hidden'}}>
 
@@ -2131,35 +2133,41 @@ const sendAiMessage=async()=>{
                     </div>
                     <div style={{display:'flex',gap:5,alignItems:'center'}}>
                       <button onClick={e=>{e.stopPropagation();wzpAnalyze();}} style={{background:wzpLoading?'rgba(99,102,241,0.05)':'rgba(99,102,241,0.15)',border:'1px solid rgba(99,102,241,0.3)',borderRadius:8,padding:'4px 10px',color:wzpLoading?DK.muted:'#a5b4fc',fontSize:10,fontWeight:700}}>{wzpLoading?'⟳':'🤖'} KI</button>
-                      <button onClick={e=>{e.stopPropagation();const msg='WZP Analyse: Ziel $'+wz.profitTarget+' | Erreicht $'+wz.profitSoFar+' | Noch $'+wz.profitNeeded+' | '+wz.challengeDaysLeft+'d | Tägl $'+wz.dailyNeeded+' | Setup '+wz.recQty+'x '+(wz.recSym||acct.instrument||'MNQ')+' SL$'+wz.recSL+' TP$'+wz.recTP+' | Machbarkeit '+wz.machbarPct+'% | EV real '+wz.evReal+'$/Tag | WR '+(t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0)+'%';setAiInput(msg);setAiOpen(true);}} style={{background:'linear-gradient(135deg,rgba(168,85,247,0.2),rgba(99,102,241,0.2))',border:'1px solid rgba(168,85,247,0.4)',borderRadius:8,padding:'5px 12px',color:'#c084fc',fontSize:10,fontWeight:700}}>Coach →</button>
+                      <button onClick={e=>{e.stopPropagation();setAiInput('WZP Analyse: Ziel $'+wz.profitTarget+' | Noch $'+wz.profitNeeded+' | '+wz.challengeDaysLeft+'d | EV '+wz.evReal+'$/Tag | WR '+(t09.length?Math.round(t09.filter(t=>t.pnl>0).length/t09.length*100):0)+'%');setAiOpen(true);}} style={{background:'linear-gradient(135deg,rgba(168,85,247,0.2),rgba(99,102,241,0.2))',border:'1px solid rgba(168,85,247,0.4)',borderRadius:8,padding:'5px 12px',color:'#c084fc',fontSize:10,fontWeight:700}}>Coach →</button>
                     </div>
                   </div>
                   <div style={{marginTop:5,color:ac,fontSize:11,fontWeight:700}}>{wz.ampelMsg}</div>
                   <div style={{fontSize:8,color:DK.muted,marginTop:1}}>Powered by <span style={{color:B,fontWeight:700}}>MindRisk Coach</span></div>
                 </div>
 
+                {/* ZIEL SETZEN wenn kein Target */}
+                {!hasTarget&&<div style={{padding:'14px 16px',textAlign:'center',borderBottom:'1px solid '+DK.miniBorder}}>
+                  <div style={{fontSize:11,color:DK.muted,marginBottom:10}}>Kein Ziel gesetzt — WZP kann nicht rechnen</div>
+                  <button onClick={()=>{setSettingsOpen(true);setSettingsSection('konto');}} style={{background:'linear-gradient(135deg,#6366f1,#a855f7)',color:'#fff',padding:'10px 24px',borderRadius:10,fontSize:13,fontWeight:700}}>🎯 Ziel setzen</button>
+                </div>}
+
                 {/* CHALLENGE FORTSCHRITT */}
-                <div style={{padding:'10px 16px',borderBottom:'1px solid '+DK.miniBorder}}>
+                {hasTarget&&<div style={{padding:'10px 16px',borderBottom:'1px solid '+DK.miniBorder}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
                     <span style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px'}}>CHALLENGE FORTSCHRITT</span>
-                    <span style={{fontWeight:900,fontSize:12,color:wz.profitNeeded<=0?G:DK.text}}>{wz.profitTarget>0&&wz.profitNeeded<=0?'✅ GESCHAFFT!':wz.profitTarget>0?'+$'+wz.profitSoFar+' / $'+wz.profitTarget:'Ziel in Einstellungen setzen'}</span>
+                    <span style={{fontWeight:900,fontSize:12,color:wz.profitNeeded<=0?G:DK.text}}>{wz.profitNeeded<=0?'✅ GESCHAFFT!':'+$'+wz.profitSoFar+' / $'+wz.profitTarget}</span>
                   </div>
                   <div style={{height:5,borderRadius:3,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.08)',overflow:'hidden',marginBottom:5}}>
                     <div style={{height:'100%',width:Math.min(100,wz.profitTarget>0?Math.round(wz.profitSoFar/wz.profitTarget*100):0)+'%',background:'linear-gradient(90deg,'+G+',#00c97a)',borderRadius:3}}/>
                   </div>
                   <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:DK.muted}}>
                     <span>Noch: <b style={{color:wz.profitNeeded<=0?G:R}}>${wz.profitNeeded}</b></span>
-                    <span>Tägl: <b style={{color:wz.dailyNeeded<=wz.evReal?G:wz.dailyNeeded<=wz.evReal*1.5?Y:R}}>${wz.dailyNeeded}</b></span>
+                    <span>Tägl: <b style={{color:wz.dailyNeeded<=wz.evReal?G:Y}}>${wz.dailyNeeded}</b></span>
                     <span>Tage: <b style={{color:wz.challengeDaysLeft>7?G:wz.challengeDaysLeft>3?Y:R}}>{wz.challengeDaysLeft}d</b></span>
                   </div>
-                </div>
+                </div>}
 
                 {/* SETUP */}
                 <div style={{padding:'10px 16px',borderBottom:'1px solid '+DK.miniBorder}}>
                   <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:7}}>DEIN SETUP HEUTE</div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:7}}>
                     <div style={{background:dm?'rgba(99,102,241,0.1)':'rgba(99,102,241,0.06)',borderRadius:9,padding:'8px 5px',textAlign:'center',border:'1px solid rgba(99,102,241,0.25)'}}>
-                      <div style={{color:DK.muted,fontSize:7,marginBottom:1}}>KONTRAKTE</div>
+                      <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>KONTRAKTE</div>
                       <div style={{color:dm?'#c7d2fe':'#4c1d95',fontWeight:900,fontSize:18}}>{wz.recRiskLots||wz.instrQty||wz.recQty}x</div>
                       <div style={{color:B,fontSize:9,fontWeight:700}}>{wz.instrRec||wz.recSym||acct.instrument||'MNQ'}</div>
                       <div style={{color:wz.recRiskPct>1?Y:G,fontSize:7,fontWeight:700,marginTop:1}}>{wz.recRiskTier} Risiko</div>
@@ -2182,96 +2190,27 @@ const sendAiMessage=async()=>{
                       <div style={{color:DK.muted,fontSize:8}}>Heute: {todT.length}/{acct.maxTrades||2}</div>
                     </div>
                     <div style={{background:DK.mini,borderRadius:8,padding:'7px 10px',border:'1px solid '+DK.miniBorder}}>
-                      <div style={{color:DK.muted,fontSize:7,marginBottom:1}}>EV HEUTE (REALISTISCH)</div>
+                      <div style={{color:DK.muted,fontSize:7,marginBottom:1}}>EV HEUTE</div>
                       <div style={{color:wz.evReal>=0?G:R,fontWeight:900,fontSize:15}}>{wz.evReal>=0?'+':''}{wz.evReal}$</div>
                       <div style={{color:DK.muted,fontSize:8}}>CRV {(acct.tpTicks/Math.max(1,acct.slTicks||1)||2).toFixed(1)}:1</div>
                     </div>
                   </div>
                 </div>
 
-                {/* MACHBARKEIT + SZENARIEN */}
-                <div style={{padding:'10px 16px',borderBottom:'1px solid '+DK.miniBorder}}>
+                {/* DOWNGRADE WARNING */}
+                {wz.downgradeRec&&<div style={{margin:'0 16px 8px',padding:'8px 10px',background:wz.downgradeRec==='PAUSE'?'rgba(245,158,11,0.9)':'rgba(239,68,68,0.85)',borderRadius:8,marginTop:8}}>
+                  <div style={{fontSize:10,fontWeight:700,color:'#fff'}}>{wz.downgradeRec==='PAUSE'?'🛑 STOP':(wz.downgradeRec==='REDUZIEREN'?'🚨 POSITION REDUZIEREN':'🚨 WECHSEL ZU '+wz.downgradeRec+'!')}</div>
+                  <div style={{fontSize:9,color:'rgba(255,255,255,0.9)',marginTop:2}}>{wz.downgradeReason}</div>
+                </div>}
+
+                {/* MACHBARKEIT + SZENARIEN — nur mit echten Daten */}
+                {hasData&&<div style={{padding:'10px 16px',borderBottom:'1px solid '+DK.miniBorder}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
                     <span style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px'}}>ZIEL ERREICHBAR?</span>
                     <span style={{fontSize:11,fontWeight:900,color:wz.machbar?G:wz.machbarPct>30?Y:R}}>{wz.machbar?'✅ JA':'⚠️ KRITISCH'} · {wz.machbarPct}%</span>
                   </div>
-                  {wz.instrReason?<div style={{fontSize:9,color:Y,marginBottom:6,padding:'4px 8px',background:dm?'rgba(245,158,11,0.06)':'rgba(245,158,11,0.06)',borderRadius:6,border:'1px solid rgba(245,158,11,0.2)'}}>💡 {wz.instrReason}</div>:null}
-                  {wz.downgradeRec&&<div style={{fontSize:10,fontWeight:700,color:'#fff',marginBottom:6,padding:'8px 10px',background:wz.downgradeRec==='PAUSE'?'rgba(245,158,11,0.9)':'rgba(239,68,68,0.85)',borderRadius:8,border:'1px solid '+(wz.downgradeRec==='PAUSE'?'rgba(245,158,11,0.9)':'rgba(239,68,68,0.9)')}}>
-                    {wz.downgradeRec==='PAUSE'?'🛑 STOP':'🚨 '+(wz.downgradeRec==='REDUZIEREN'?'POSITION REDUZIEREN!':'WECHSEL ZU '+wz.downgradeRec+'!')} {wz.downgradeReason}
-                  </div>}
-                  {wz.tradesTillDDGone<=5&&wz.tradesTillDDGone>0&&!wz.downgradeRec&&<div style={{fontSize:10,fontWeight:700,color:R,marginBottom:6,padding:'6px 10px',background:'rgba(239,68,68,0.08)',borderRadius:8,border:'1px solid rgba(239,68,68,0.3)'}}>
-                    ⚠️ Noch {wz.tradesTillDDGone} Verluste bis Max DD! Vorsicht.
-                  </div>}
-                  {wz.instrStats&&wz.instrStats.length>1&&<div style={{marginBottom:6}}>
-                    <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:4}}>PERFORMANCE PRO INSTRUMENT</div>
-                    {wz.instrStats.map(s=>(
-                      <div key={s.sym} style={{display:'flex',justifyContent:'space-between',padding:'4px 8px',background:DK.mini,borderRadius:6,marginBottom:3,border:'1px solid '+DK.miniBorder}}>
-                        <span style={{fontWeight:700,color:DK.text,fontSize:10}}>{s.sym}</span>
-                        <span style={{fontSize:10,color:s.wr>=50?G:s.wr>=35?Y:R}}>{s.wr}% WR</span>
-                        <span style={{fontSize:10,color:s.pnl>=0?G:R}}>{s.pnl>=0?'+':''}{s.pnl}$</span>
-                        <span style={{fontSize:9,color:DK.muted}}>{s.trades} Trades</span>
-                      </div>
-                    ))}
-                  </div>}
-                  {/* KELLY CRITERION */}
-                  <div style={{marginBottom:8,padding:'8px 10px',background:dm?'rgba(99,102,241,0.07)':'rgba(99,102,241,0.05)',borderRadius:8,border:'1px solid rgba(99,102,241,0.2)'}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                      <span style={{fontSize:8,color:B,fontWeight:700,letterSpacing:'0.8px'}}>📐 KELLY CRITERION</span>
-                      <span style={{fontSize:9,fontWeight:700,color:wz.kellyStatus==='optimal'?G:wz.kellyStatus==='too_big'?R:wz.kellyStatus==='too_small'?Y:DK.muted}}>
-                        {wz.kellyStatus==='no_data'?'Zu wenig Daten':wz.kellyStatus==='optimal'?'✅ Optimal':wz.kellyStatus==='too_big'?'⚠️ Zu groß':'📈 Spielraum'}
-                      </span>
-                    </div>
-                    {wz.kellyPct>0&&wz.kellyLots>0?(<>
-                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4}}>
-                        <div style={{textAlign:'center'}}>
-                          <div style={{fontSize:7,color:DK.muted}}>FULL KELLY</div>
-                          <div style={{fontSize:13,fontWeight:900,color:R}}>{wz.kellyPct}%</div>
-                          <div style={{fontSize:7,color:DK.muted}}>zu riskant</div>
-                        </div>
-                        <div style={{textAlign:'center'}}>
-                          <div style={{fontSize:7,color:DK.muted}}>HALF-KELLY</div>
-                          <div style={{fontSize:13,fontWeight:900,color:G}}>{wz.halfKellyPct}%</div>
-                          <div style={{fontSize:7,color:DK.muted}}>${wz.kellyRiskDollar}</div>
-                        </div>
-                        <div style={{textAlign:'center'}}>
-                          <div style={{fontSize:7,color:DK.muted}}>EMPFOHLEN</div>
-                          <div style={{fontSize:13,fontWeight:900,color:B}}>{wz.kellyLots}x</div>
-                          <div style={{fontSize:7,color:DK.muted}}>{wz.instrRec||acct.instrument||'?'}</div>
-                        </div>
-                      </div>
-                    </>):<div style={{fontSize:9,color:DK.muted}}>Mind. 10 Trades nötig für Kelly-Berechnung</div>}
-                  </div>
-                  {/* RISIKO TIERS */}
-                  <div style={{marginBottom:8,padding:'8px 10px',background:dm?'rgba(0,0,0,0.15)':'rgba(0,0,0,0.04)',borderRadius:8,border:'1px solid '+DK.miniBorder}}>
-                    <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:6}}>💰 RISIKO MANAGEMENT — % VOM KONTO</div>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4,marginBottom:5}}>
-                      {[
-                        {pct:'1%',label:'KONSERVATIV',risk:wz.risk1pct,lots:wz.lots1pct,c:G,rec:wz.recRiskPct===1},
-                        {pct:'1.5%',label:'MODERAT',risk:wz.risk15pct,lots:wz.lots15pct,c:Y,rec:wz.recRiskPct===1.5},
-                        {pct:'2%',label:'AGGRESSIV',risk:wz.risk2pct,lots:wz.lots2pct,c:R,rec:wz.recRiskPct===2},
-                      ].map(t=>(
-                        <div key={t.pct} style={{textAlign:'center',padding:'6px 4px',borderRadius:7,background:t.rec?(dm?'rgba(99,102,241,0.15)':'rgba(99,102,241,0.08)'):'transparent',border:'1px solid '+(t.rec?B:DK.miniBorder)}}>
-                          <div style={{fontSize:7,color:t.c,fontWeight:700}}>{t.pct}</div>
-                          <div style={{fontSize:8,color:DK.muted}}>{t.label}</div>
-                          <div style={{fontSize:12,fontWeight:900,color:t.rec?B:DK.text}}>{t.lots}x</div>
-                          <div style={{fontSize:7,color:DK.muted}}>${t.risk}</div>
-                          {t.rec&&<div style={{fontSize:7,color:B,fontWeight:700}}>← JETZT</div>}
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{fontSize:9,color:DK.muted,marginTop:4,padding:'5px 8px',background:dm?'rgba(0,0,0,0.15)':'rgba(0,0,0,0.04)',borderRadius:6}}>
-                      <div style={{marginBottom:2}}>
-                        {wz.isChallenge
-                          ?<span>📊 Challenge/PA: Risiko basiert auf <b style={{color:DK.text}}>Daily DD ${ wz.isChallenge?(acct.dailyDD||1000):wz.effectiveCap}</b></span>
-                          :<span>💼 Eigenkapital: 1% von <b style={{color:DK.text}}>${wz.effectiveCap.toLocaleString()}</b></span>
-                        }
-                      </div>
-                      {wz.bufferGrowing&&<div style={{color:G,fontSize:8}}>📈 Buffer über Startniveau — mehr Spielraum verfügbar!</div>}
-                      {wz.underPressure?<span style={{color:Y}}>⚡ Pace-Druck → max 1.5% empfohlen</span>:<span style={{color:G}}>✅ Kein Druck → 1% Regel sicher</span>}
-                    </div>
-                  </div>
-                  </div>}{/* /hasTrades Kelly+Risiko */}
-                  {hasData&&<div style={{padding:'0 16px 8px',borderBottom:'1px solid '+DK.miniBorder}}><div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5}}>
+                  {wz.instrReason&&<div style={{fontSize:9,color:Y,marginBottom:6,padding:'4px 8px',background:'rgba(245,158,11,0.06)',borderRadius:6,border:'1px solid rgba(245,158,11,0.2)'}}>💡 {wz.instrReason}</div>}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:8}}>
                     {[
                       {l:'PESSIMISTISCH',wr:wz.pessWR,ev:wz.evPess,d:wz.daysToGoalPess,c:R,bg:dm?'rgba(239,68,68,0.06)':'rgba(239,68,68,0.05)',b:'rgba(239,68,68,0.2)'},
                       {l:'REALISTISCH',wr:wz.realScWR,ev:wz.evReal,d:wz.daysToGoalReal,c:Y,bg:dm?'rgba(245,158,11,0.06)':'rgba(245,158,11,0.05)',b:'rgba(245,158,11,0.25)'},
@@ -2284,7 +2223,61 @@ const sendAiMessage=async()=>{
                         <div style={{fontSize:8,color:DK.muted,marginTop:2}}>{s.d<=wz.challengeDaysLeft?<span style={{color:s.c,fontWeight:700}}>{s.d}d ✓</span>:<span style={{color:R}}>&gt;{wz.challengeDaysLeft}d</span>}</div>
                       </div>
                     ))}
-                  </div></div>}{/* /hasData szenarien */}
+                  </div>
+                  {wz.instrStats&&wz.instrStats.length>1&&<div>
+                    <div style={{fontSize:8,color:DK.muted,fontWeight:700,marginBottom:4}}>PERFORMANCE PRO INSTRUMENT</div>
+                    {wz.instrStats.map(s=>(
+                      <div key={s.sym} style={{display:'flex',justifyContent:'space-between',padding:'4px 8px',background:DK.mini,borderRadius:6,marginBottom:3,border:'1px solid '+DK.miniBorder}}>
+                        <span style={{fontWeight:700,color:DK.text,fontSize:10}}>{s.sym}</span>
+                        <span style={{fontSize:10,color:s.wr>=50?G:s.wr>=35?Y:R}}>{s.wr}% WR</span>
+                        <span style={{fontSize:10,color:s.pnl>=0?G:R}}>{s.pnl>=0?'+':''}{s.pnl}$</span>
+                        <span style={{fontSize:9,color:DK.muted}}>{s.trades}T</span>
+                      </div>
+                    ))}
+                  </div>}
+                </div>}
+
+                {/* KELLY + RISIKO — nur mit Trades */}
+                {hasTrades&&<div style={{padding:'10px 16px',borderBottom:'1px solid '+DK.miniBorder}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
+                    <span style={{fontSize:8,color:B,fontWeight:700,letterSpacing:'0.8px'}}>📐 KELLY CRITERION</span>
+                    <span style={{fontSize:9,fontWeight:700,color:wz.kellyStatus==='optimal'?G:wz.kellyStatus==='too_big'?R:wz.kellyStatus==='too_small'?Y:DK.muted}}>{wz.kellyStatus==='no_data'?'10 Trades nötig':wz.kellyStatus==='optimal'?'✅ Optimal':wz.kellyStatus==='too_big'?'⚠️ Zu groß':'📈 Spielraum'}</span>
+                  </div>
+                  {wz.kellyPct>0&&wz.kellyLots>0&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4,marginBottom:8}}>
+                    <div style={{textAlign:'center'}}>
+                      <div style={{fontSize:7,color:DK.muted}}>FULL KELLY</div>
+                      <div style={{fontSize:13,fontWeight:900,color:R}}>{wz.kellyPct}%</div>
+                      <div style={{fontSize:7,color:DK.muted}}>zu riskant</div>
+                    </div>
+                    <div style={{textAlign:'center'}}>
+                      <div style={{fontSize:7,color:DK.muted}}>HALF-KELLY</div>
+                      <div style={{fontSize:13,fontWeight:900,color:G}}>{wz.halfKellyPct}%</div>
+                      <div style={{fontSize:7,color:DK.muted}}>${wz.kellyRiskDollar}</div>
+                    </div>
+                    <div style={{textAlign:'center'}}>
+                      <div style={{fontSize:7,color:DK.muted}}>EMPFOHLEN</div>
+                      <div style={{fontSize:13,fontWeight:900,color:B}}>{wz.kellyLots}x</div>
+                      <div style={{fontSize:7,color:DK.muted}}>{wz.instrRec||acct.instrument||'?'}</div>
+                    </div>
+                  </div>}
+                  <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:6}}>💰 RISIKO % VOM KONTO</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4,marginBottom:6}}>
+                    {[
+                      {pct:'1%',label:'KONSERVATIV',risk:wz.risk1pct,lots:wz.lots1pct,c:G,rec:wz.recRiskPct===1},
+                      {pct:'1.5%',label:'MODERAT',risk:wz.risk15pct,lots:wz.lots15pct,c:Y,rec:wz.recRiskPct===1.5},
+                      {pct:'2%',label:'AGGRESSIV',risk:wz.risk2pct,lots:wz.lots2pct,c:R,rec:wz.recRiskPct===2},
+                    ].map(t=>(
+                      <div key={t.pct} style={{textAlign:'center',padding:'6px 4px',borderRadius:7,background:t.rec?(dm?'rgba(99,102,241,0.15)':'rgba(99,102,241,0.08)'):'transparent',border:'1px solid '+(t.rec?B:DK.miniBorder)}}>
+                        <div style={{fontSize:7,color:t.c,fontWeight:700}}>{t.pct}</div>
+                        <div style={{fontSize:8,color:DK.muted}}>{t.label}</div>
+                        <div style={{fontSize:12,fontWeight:900,color:t.rec?B:DK.text}}>{t.lots}x</div>
+                        <div style={{fontSize:7,color:DK.muted}}>${t.risk}</div>
+                        {t.rec&&<div style={{fontSize:7,color:B,fontWeight:700}}>← JETZT</div>}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{fontSize:9,color:DK.muted,textAlign:'center'}}>{wz.isChallenge?'Challenge: Daily DD $'+(acct.dailyDD||1000)+' als Basis':'EK: '+wz.effectiveCap+'$ als Basis'}</div>
+                </div>}
 
                 {/* STATS + DD + WOCHE */}
                 <div style={{padding:'10px 16px'}}>
@@ -2319,19 +2312,15 @@ const sendAiMessage=async()=>{
                   </div>
                   {wz.isPAmode&&<div style={{marginBottom:8,padding:'8px 10px',background:dm?'rgba(99,102,241,0.07)':'rgba(99,102,241,0.05)',borderRadius:8,border:'1px solid rgba(99,102,241,0.2)'}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                      <span style={{fontSize:8,color:B,fontWeight:700,letterSpacing:'0.8px'}}>🎯 PA KONSISTENZ</span>
+                      <span style={{fontSize:8,color:B,fontWeight:700}}>🎯 PA KONSISTENZ</span>
                       <span style={{fontSize:14,fontWeight:900,color:wz.consistencyScore>=80?G:wz.consistencyScore>=60?Y:R}}>{wz.consistencyGrade}</span>
                     </div>
                     <div style={{height:4,borderRadius:2,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.08)',overflow:'hidden',marginBottom:4}}>
                       <div style={{height:'100%',width:wz.consistencyScore+'%',background:wz.consistencyScore>=80?G:wz.consistencyScore>=60?Y:R,borderRadius:2}}/>
                     </div>
-                    <div style={{display:'flex',justifyContent:'space-between',fontSize:8,color:DK.muted,marginBottom:3}}>
-                      <span>Regelquote: <b style={{color:DK.text}}>{wz.consistencyScore}%</b></span>
-                      <span>100-Trade Ziel: <b style={{color:B}}>{wz.hundredTradeProgress}%</b></span>
-                    </div>
-                    <div style={{fontSize:8,color:wz.canIncreaseLots?G:Y}}>{wz.paFocus}</div>
+                    <div style={{fontSize:8,color:DK.muted}}>{wz.paFocus}</div>
                   </div>}
-                  <div style={{padding:'7px 10px',background:wz.weekOnTrack?dm?'rgba(0,211,149,0.05)':'rgba(0,211,149,0.04)':dm?'rgba(245,158,11,0.05)':'rgba(245,158,11,0.04)',borderRadius:8,border:'1px solid '+(wz.weekOnTrack?'rgba(0,211,149,0.2)':'rgba(245,158,11,0.2)'),marginBottom:cd&&cd.recs?8:0}}>
+                  <div style={{padding:'7px 10px',background:wz.weekOnTrack?dm?'rgba(0,211,149,0.05)':'rgba(0,211,149,0.04)':dm?'rgba(245,158,11,0.05)':'rgba(245,158,11,0.04)',borderRadius:8,border:'1px solid '+(wz.weekOnTrack?'rgba(0,211,149,0.2)':'rgba(245,158,11,0.2)')}}>
                     <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
                       <span style={{fontSize:8,color:DK.muted,fontWeight:700}}>DIESE WOCHE</span>
                       <span style={{fontSize:8,fontWeight:700,color:wz.weekOnTrack?G:Y}}>{wz.weekPace}% {wz.weekOnTrack?'✅':'⚠️'}</span>
@@ -2341,8 +2330,8 @@ const sendAiMessage=async()=>{
                     </div>
                     <div style={{fontSize:8,color:DK.muted}}>{wz.weekPnl>=0?'+':''}{wz.weekPnl}$ · Ziel ${wz.weekNeededTotal} · {wz.tradDaysLeftWeek}d noch</div>
                   </div>
-                  {cd&&cd.recs&&<div>
-                    <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:4}}>🤖 KI EMPFEHLUNGEN</div>
+                  {cd&&cd.recs&&<div style={{marginTop:8}}>
+                    <div style={{fontSize:8,color:DK.muted,fontWeight:700,marginBottom:4}}>🤖 KI EMPFEHLUNGEN</div>
                     {cd.recs.map((r,i)=>(
                       <div key={i} style={{marginBottom:4,padding:'6px 9px',background:dm?'rgba(99,102,241,0.07)':'rgba(99,102,241,0.05)',borderRadius:7,border:'1px solid rgba(99,102,241,0.15)'}}>
                         <span style={{fontSize:10}}>{r.icon} </span>
