@@ -2913,7 +2913,7 @@ const sendAiMessage=async()=>{
       {/* BOTTOM NAV */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:100,background:"rgba(15,10,30,0.97)",borderTop:"1px solid rgba(99,102,241,0.4)",boxShadow:"0 -4px 24px rgba(99,102,241,0.15)",display:"flex",paddingBottom:"env(safe-area-inset-bottom,8px)",WebkitTransform:"translate3d(0,0,0)",transform:"translate3d(0,0,0)"}}>        {NAVS.map(nav=>(
           <button key={nav.k} onClick={()=>setTab(nav.k)} style={{background:tab===nav.k?"rgba(99,102,241,0.08)":"none",color:tab===nav.k?B:(dm?P+"aa":"#6b7280"),padding:isDesktop?"14px 8px 14px":"10px 2px 11px",fontSize:isDesktop?10:9,flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:isDesktop?6:4,borderBottom:tab===nav.k?"2px solid "+B:"2px solid transparent",borderRadius:0,position:"relative",fontWeight:700,letterSpacing:"0.5px",transition:"all 0.2s"}}>
-            <div style={{width:isDesktop?28:22,height:isDesktop?28:22,display:"flex",alignItems:"center",justifyContent:"center",opacity:tab===nav.k?1:0.5,transform:tab===nav.k?"scale(1.15)":"scale(1)",transition:"all 0.2s",filter:tab===nav.k?"drop-shadow(0 0 6px "+B+") drop-shadow(0 0 12px "+B+"66)":"none"}}>
+            <div style={{width:isDesktop?28:22,height:isDesktop?28:22,display:"flex",alignItems:"center",justifyContent:"center",opacity:tab===nav.k?1:0.5,transform:tab===nav.k?"scale(1.15)":"scale(1)",transition:"all 0.2s",filter:tab===nav.k?"drop-shadow(0 0 6px "+B+") drop-shadow(0 0 14px "+B+") brightness(1.3)":"brightness(0.65)"}}>
               {nav.k==="log"&&!allChecked&&!todayBlocked&&!atLimit&&!inPause
                 ?<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#ef4444" strokeWidth="1.8"/><line x1="12" y1="8" x2="12" y2="16" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"/><line x1="8" y1="12" x2="16" y2="12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"/></svg>
                 :nav.svg}
@@ -3006,8 +3006,11 @@ const sendAiMessage=async()=>{
                 <Field dm={dm} label="LAUFZEIT (TAGE)"><input type="number" defaultValue={acct.challengeDays||30} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,challengeDays:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
               </div>}
               {settingsSection==="setup"&&sec.id==="setup"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-                <button onClick={()=>setSettings(s=>({...s,instrOpen:!s.instrOpen}))} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',background:'transparent',border:'none',padding:'0 0 8px 0',cursor:'pointer'}}>
-                  <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px"}}>📊 INSTRUMENT — {acct.instrument||'MNQ'} ${(INSTRUMENTS[acct.instrument||'MNQ']||{tickValue:0.5}).tickValue}/Tick</div>
+                <button onClick={()=>setSettings(s=>({...s,instrOpen:!s.instrOpen}))} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',background:dm?'rgba(99,102,241,0.08)':'rgba(99,102,241,0.06)',border:'1px solid rgba(99,102,241,0.2)',borderRadius:8,padding:'8px 10px',marginBottom:8,cursor:'pointer'}}>
+                  <div>
+                    <div style={{fontSize:10,color:"#6366f1",fontWeight:700}}>INSTRUMENT</div>
+                    <div style={{fontSize:13,fontWeight:800,color:DK.text,marginTop:2}}>{acct.instrument||'MNQ'} <span style={{fontSize:11,color:DK.muted,fontWeight:400}}>${(INSTRUMENTS[acct.instrument||'MNQ']||{tickValue:0.5}).tickValue}/Tick</span></div>
+                  </div>
                   <span style={{color:"#6366f1",fontSize:12}}>{settings.instrOpen?'▲':'▼'}</span>
                 </button>
                 {settings.instrOpen&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
@@ -3032,21 +3035,21 @@ const sendAiMessage=async()=>{
                   const crv=(tp/sl).toFixed(1);
                   const beWR=Math.round(sl/(sl+tp)*100);
                   return(<>
-                    <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8,marginTop:4}}>🎯 ANZAHL KONTRAKTE</div>
+                    <div style={{fontSize:9,color:DK.muted,fontWeight:600,marginBottom:8,marginTop:4}}>KONTRAKTE</div>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                       <button onClick={()=>saveAcct({...acct,lotSize:Math.max(1,(acct.lotSize||1)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
                       <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:"#a5b4fc"}}>{lots}x</div>
                       <button onClick={()=>saveAcct({...acct,lotSize:Math.min(20,(acct.lotSize||1)+1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
                       <div style={{fontSize:11,color:DK.muted}}>{acct.instrument||"MNQ"}</div>
                     </div>
-                    <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>🛑 STOP LOSS (TICKS)</div>
+                    <div style={{fontSize:9,color:DK.muted,fontWeight:600,marginBottom:8}}>STOP LOSS (TICKS)</div>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                       <button onClick={()=>saveAcct({...acct,slTicks:Math.max(1,(acct.slTicks||40)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
                       <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:R}}>{sl}T</div>
                       <button onClick={()=>saveAcct({...acct,slTicks:(acct.slTicks||40)+1})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
                       <div style={{fontSize:11,color:R,fontWeight:700}}>−${slD}</div>
                     </div>
-                    <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>✅ TAKE PROFIT (TICKS)</div>
+                    <div style={{fontSize:9,color:DK.muted,fontWeight:600,marginBottom:8}}>TAKE PROFIT (TICKS)</div>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                       <button onClick={()=>saveAcct({...acct,tpTicks:Math.max(1,(acct.tpTicks||80)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
                       <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:G}}>{tp}T</div>
