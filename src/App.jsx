@@ -732,7 +732,54 @@ export default function App(){
     const realWR=t09.length>=3?allWins.length/t09.length:0.5;
     const avgWinAmt=allWins.length?allWins.reduce((s,t)=>s+t.pnl,0)/allWins.length:recTP;
     const avgLossAmt=allLoss.length?Math.abs(allLoss.reduce((s,t)=>s+t.pnl,0)/allLoss.length):recSL;
+    // ── KELLY CRITERION ───────────────────────────────────────
+    const b=avgWinAmt>0&&avgLossAmt>0?avgWinAmt/avgLossAmt:1;
+    const kellyRaw=realWR>0&&avgWinAmt>0&&avgLossAmt>0
+      ?Math.max(0,(b*realWR-(1-realWR))/b):0;
+    const kellyPct=Math.round(kellyRaw*100);
+    const halfKellyPct=Math.round(kellyPct/2);
+    const kellyRiskDollar=Math.round(saldo*halfKellyPct/100);
+    const kellyLots=avgLossAmt>0?Math.max(1,Math.floor(kellyRiskDollar/avgLossAmt)):1;
+    const currentRiskPerTrade=recSL*(acct.lotSize||1);
+    const kellyStatus=kellyPct===0?'no_data':
+      currentRiskPerTrade>kellyRiskDollar*1.2?'too_big':
+      currentRiskPerTrade<kellyRiskDollar*0.5?'too_small':'optimal';
     const calcEV=(wr,tp,sl)=>Math.round(wr*tp-(1-wr)*sl);
+    // ── ECHTES RISIKO-KAPITAL (Challenge vs Eigenkapital) ────
+    const isChallenge=accountType==='challenge'||accountType==='pa';
+    const maxDD=acct.maxDD||2000;
+    const dailyDD=acct.dailyDD||1000;
+    const ddFloor=Math.round((acct.size||50000)-maxDD); // EOD Floor
+    const currentBuffer=Math.max(0,Math.round(saldo-ddFloor)); // wächst mit Gewinnen!
+    const effectiveCap=isChallenge
+      ?Math.min(currentBuffer,maxDD)  // Challenge: echter Puffer
+      :saldo;                          // Eigenkapital: volles Konto
+    // Risk per Trade: Daily DD Budget (Challenge) ODER % des Kontos (Eigenkapital)
+    const slPerLot=Math.max(1,Math.round((acct.slTicks||40)*inst.tickValue));
+    // Challenge: Daily DD ist das echte Budget
+    const challengeConservative=Math.round(dailyDD/maxT*0.35); // 35% des Tages-DD
+    const challengeStandard=Math.round(dailyDD/maxT*0.50);     // 50%
+    const challengeAggressive=Math.round(dailyDD/maxT*0.70);   // 70% (gefährlich!)
+    // Eigenkapital: klassische % Regel
+    const ek1pct=Math.round(effectiveCap*0.01);
+    const ek15pct=Math.round(effectiveCap*0.015);
+    const ek2pct=Math.round(effectiveCap*0.02);
+    // Lots berechnen
+    const risk1=isChallenge?challengeConservative:ek1pct;
+    const risk15=isChallenge?challengeStandard:ek15pct;
+    const risk2=isChallenge?challengeAggressive:ek2pct;
+    const lots1pct=Math.max(1,Math.floor(risk1/slPerLot));
+    const lots15pct=Math.max(1,Math.floor(risk15/slPerLot));
+    const lots2pct=Math.max(1,Math.floor(risk2/slPerLot));
+    // Auto-Empfehlung
+    const underPressure=dailyNeeded>0&&dailyNeeded>evReal*0.8;
+    const ddSafe=ddPct<30&&dailyDDPct<30;
+    const bufferGrowing=currentBuffer>maxDD; // Gewinne über Ziel → mehr Spielraum
+    const recRiskLevel=(!ddSafe||!ddSafe)?'konservativ':(bufferGrowing||(!isChallenge&&underPressure&&realWR>=0.55))?'aggressiv':(underPressure&&realWR>=0.45)?'standard':'konservativ';
+    const recRiskTier=recRiskLevel==='aggressiv'?'2%':recRiskLevel==='standard'?'1.5%':'1%';
+    const recRiskLots=recRiskLevel==='aggressiv'?lots2pct:recRiskLevel==='standard'?lots15pct:lots1pct;
+    const recRiskDollar=recRiskLevel==='aggressiv'?risk2:recRiskLevel==='standard'?risk15:risk1;
+    const recRiskPct=recRiskLevel==='aggressiv'?2:recRiskLevel==='standard'?1.5:1;
     const pessWR=0.35,realScWR=Math.max(0.35,realWR),bestWR=Math.min(0.90,realWR*1.25||0.65);
     const pessTP=recTP,pessSL=recSL;
     const evPess=calcEV(pessWR,pessTP,pessSL)*maxT;
@@ -809,7 +856,7 @@ export default function App(){
       evPess,evReal,evBest,pessWR:Math.round(pessWR*100),realScWR:Math.round(realScWR*100),bestWR:Math.round(bestWR*100),
       daysToGoalPess,daysToGoalReal,daysToGoalBest,
       machbar,machbarPct,maxPossible,
-      instrRec,instrQty,instrReason,avgWinAmt:Math.round(avgWinAmt),avgLossAmt:Math.round(avgLossAmt),
+      instrRec,instrQty,instrReason,avgWinAmt:Math.round(avgWinAmt),avgLossAmt:Math.round(avgLossAmt),kellyPct,halfKellyPct,kellyRiskDollar,kellyLots,kellyStatus,risk1pct:risk1,risk15pct:risk15,risk2pct:risk2,lots1pct,lots15pct,lots2pct,recRiskPct,recRiskTier,recRiskLots,recRiskDollar,underPressure,effectiveCap:Math.round(effectiveCap),currentBuffer,ddFloor,isChallenge,bufferGrowing,
       weekNeededTotal,weekPace,weekOnTrack
     };
   },[t09,acct,saldo,settings,disc,monthPnl,challengeStart,goals,todPnl]);
@@ -1937,9 +1984,10 @@ const sendAiMessage=async()=>{
                   <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:7}}>DEIN SETUP HEUTE</div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:7}}>
                     <div style={{background:dm?'rgba(99,102,241,0.1)':'rgba(99,102,241,0.06)',borderRadius:9,padding:'8px 5px',textAlign:'center',border:'1px solid rgba(99,102,241,0.25)'}}>
-                      <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>KONTRAKTE</div>
-                      <div style={{color:dm?'#c7d2fe':'#4c1d95',fontWeight:900,fontSize:18}}>{wz.instrQty||wz.recQty}x</div>
+                      <div style={{color:DK.muted,fontSize:7,marginBottom:1}}>KONTRAKTE</div>
+                      <div style={{color:dm?'#c7d2fe':'#4c1d95',fontWeight:900,fontSize:18}}>{wz.recRiskLots||wz.instrQty||wz.recQty}x</div>
                       <div style={{color:B,fontSize:9,fontWeight:700}}>{wz.instrRec||wz.recSym||acct.instrument||'MNQ'}</div>
+                      <div style={{color:wz.recRiskPct>1?Y:G,fontSize:7,fontWeight:700,marginTop:1}}>{wz.recRiskTier} Risiko</div>
                     </div>
                     <div style={{background:dm?'rgba(239,68,68,0.07)':'rgba(239,68,68,0.05)',borderRadius:9,padding:'8px 5px',textAlign:'center',border:'1px solid rgba(239,68,68,0.2)'}}>
                       <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>STOP LOSS</div>
@@ -1973,6 +2021,63 @@ const sendAiMessage=async()=>{
                     <span style={{fontSize:11,fontWeight:900,color:wz.machbar?G:wz.machbarPct>30?Y:R}}>{wz.machbar?'✅ JA':'⚠️ KRITISCH'} · {wz.machbarPct}%</span>
                   </div>
                   {wz.instrReason?<div style={{fontSize:9,color:Y,marginBottom:6,padding:'4px 8px',background:dm?'rgba(245,158,11,0.06)':'rgba(245,158,11,0.06)',borderRadius:6,border:'1px solid rgba(245,158,11,0.2)'}}>💡 {wz.instrReason}</div>:null}
+                  {/* KELLY CRITERION */}
+                  <div style={{marginBottom:8,padding:'8px 10px',background:dm?'rgba(99,102,241,0.07)':'rgba(99,102,241,0.05)',borderRadius:8,border:'1px solid rgba(99,102,241,0.2)'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                      <span style={{fontSize:8,color:B,fontWeight:700,letterSpacing:'0.8px'}}>📐 KELLY CRITERION</span>
+                      <span style={{fontSize:9,fontWeight:700,color:wz.kellyStatus==='optimal'?G:wz.kellyStatus==='too_big'?R:wz.kellyStatus==='too_small'?Y:DK.muted}}>
+                        {wz.kellyStatus==='no_data'?'Zu wenig Daten':wz.kellyStatus==='optimal'?'✅ Optimal':wz.kellyStatus==='too_big'?'⚠️ Zu groß':'📈 Spielraum'}
+                      </span>
+                    </div>
+                    {wz.kellyPct>0?(<>
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4}}>
+                        <div style={{textAlign:'center'}}>
+                          <div style={{fontSize:7,color:DK.muted}}>FULL KELLY</div>
+                          <div style={{fontSize:13,fontWeight:900,color:R}}>{wz.kellyPct}%</div>
+                          <div style={{fontSize:7,color:DK.muted}}>zu riskant</div>
+                        </div>
+                        <div style={{textAlign:'center'}}>
+                          <div style={{fontSize:7,color:DK.muted}}>HALF-KELLY</div>
+                          <div style={{fontSize:13,fontWeight:900,color:G}}>{wz.halfKellyPct}%</div>
+                          <div style={{fontSize:7,color:DK.muted}}>${wz.kellyRiskDollar}</div>
+                        </div>
+                        <div style={{textAlign:'center'}}>
+                          <div style={{fontSize:7,color:DK.muted}}>EMPFOHLEN</div>
+                          <div style={{fontSize:13,fontWeight:900,color:B}}>{wz.kellyLots}x</div>
+                          <div style={{fontSize:7,color:DK.muted}}>{wz.instrRec||acct.instrument||'?'}</div>
+                        </div>
+                      </div>
+                    </>):<div style={{fontSize:9,color:DK.muted}}>Mind. 10 Trades nötig für Kelly-Berechnung</div>}
+                  </div>
+                  {/* RISIKO TIERS */}
+                  <div style={{marginBottom:8,padding:'8px 10px',background:dm?'rgba(0,0,0,0.15)':'rgba(0,0,0,0.04)',borderRadius:8,border:'1px solid '+DK.miniBorder}}>
+                    <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:6}}>💰 RISIKO MANAGEMENT — % VOM KONTO</div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4,marginBottom:5}}>
+                      {[
+                        {pct:'1%',label:'KONSERVATIV',risk:wz.risk1pct,lots:wz.lots1pct,c:G,rec:wz.recRiskPct===1},
+                        {pct:'1.5%',label:'MODERAT',risk:wz.risk15pct,lots:wz.lots15pct,c:Y,rec:wz.recRiskPct===1.5},
+                        {pct:'2%',label:'AGGRESSIV',risk:wz.risk2pct,lots:wz.lots2pct,c:R,rec:wz.recRiskPct===2},
+                      ].map(t=>(
+                        <div key={t.pct} style={{textAlign:'center',padding:'6px 4px',borderRadius:7,background:t.rec?(dm?'rgba(99,102,241,0.15)':'rgba(99,102,241,0.08)'):'transparent',border:'1px solid '+(t.rec?B:DK.miniBorder)}}>
+                          <div style={{fontSize:7,color:t.c,fontWeight:700}}>{t.pct}</div>
+                          <div style={{fontSize:8,color:DK.muted}}>{t.label}</div>
+                          <div style={{fontSize:12,fontWeight:900,color:t.rec?B:DK.text}}>{t.lots}x</div>
+                          <div style={{fontSize:7,color:DK.muted}}>${t.risk}</div>
+                          {t.rec&&<div style={{fontSize:7,color:B,fontWeight:700}}>← JETZT</div>}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{fontSize:9,color:DK.muted,marginTop:4,padding:'5px 8px',background:dm?'rgba(0,0,0,0.15)':'rgba(0,0,0,0.04)',borderRadius:6}}>
+                      <div style={{marginBottom:2}}>
+                        {wz.isChallenge
+                          ?<span>📊 Challenge/PA: Risiko basiert auf <b style={{color:DK.text}}>Daily DD ${ wz.isChallenge?(acct.dailyDD||1000):wz.effectiveCap}</b></span>
+                          :<span>💼 Eigenkapital: 1% von <b style={{color:DK.text}}>${wz.effectiveCap.toLocaleString()}</b></span>
+                        }
+                      </div>
+                      {wz.bufferGrowing&&<div style={{color:G,fontSize:8}}>📈 Buffer über Startniveau — mehr Spielraum verfügbar!</div>}
+                      {wz.underPressure?<span style={{color:Y}}>⚡ Pace-Druck → max 1.5% empfohlen</span>:<span style={{color:G}}>✅ Kein Druck → 1% Regel sicher</span>}
+                    </div>
+                  </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5}}>
                     {[
                       {l:'PESSIMISTISCH',wr:wz.pessWR,ev:wz.evPess,d:wz.daysToGoalPess,c:R,bg:dm?'rgba(239,68,68,0.06)':'rgba(239,68,68,0.05)',b:'rgba(239,68,68,0.2)'},
