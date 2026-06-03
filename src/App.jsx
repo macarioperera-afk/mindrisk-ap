@@ -3005,27 +3005,27 @@ const sendAiMessage=async()=>{
                 <Field dm={dm} label="LAUFZEIT (TAGE)"><input type="number" defaultValue={acct.challengeDays||30} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,challengeDays:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
               </div>}
               {settingsSection==="setup"&&sec.id==="setup"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-                <button onClick={()=>setSettings(s=>({...s,instrOpen:!s.instrOpen}))} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',background:dm?'rgba(99,102,241,0.08)':'rgba(99,102,241,0.06)',border:'1px solid rgba(99,102,241,0.2)',borderRadius:8,padding:'8px 10px',marginBottom:8,cursor:'pointer'}}>
+
+                {/* INSTRUMENT */}
+                <button onClick={()=>setSettings(s=>({...s,instrOpen:!s.instrOpen}))} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',background:dm?'rgba(99,102,241,0.08)':'rgba(99,102,241,0.06)',border:'1px solid rgba(99,102,241,0.2)',borderRadius:8,padding:'10px 12px',marginBottom:12,cursor:'pointer',textAlign:'left'}}>
                   <div>
-                    <div style={{fontSize:10,color:"#6366f1",fontWeight:700}}>INSTRUMENT</div>
-                    <div style={{fontSize:13,fontWeight:800,color:DK.text,marginTop:2}}>{acct.instrument||'MNQ'} <span style={{fontSize:11,color:DK.muted,fontWeight:400}}>${(INSTRUMENTS[acct.instrument||'MNQ']||{tickValue:0.5}).tickValue}/Tick</span></div>
+                    <div style={{fontSize:10,color:"#6366f1",fontWeight:600,letterSpacing:'0.5px'}}>INSTRUMENT</div>
+                    <div style={{fontSize:14,fontWeight:700,color:DK.text,marginTop:2}}>{acct.instrument||'MNQ'} <span style={{fontSize:11,color:DK.muted,fontWeight:400}}>${(INSTRUMENTS[acct.instrument||'MNQ']||{tickValue:0.5}).tickValue}/Tick</span></div>
                   </div>
-                  <span style={{color:"#6366f1",fontSize:12}}>{settings.instrOpen?'▲':'▼'}</span>
+                  <span style={{color:"#6366f1",fontSize:11}}>{settings.instrOpen?'▲':'▼'}</span>
                 </button>
-                {settings.instrOpen&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
+                {settings.instrOpen&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:12}}>
                   {Object.entries(INSTRUMENTS).map(([sym,inst])=>(
-                    <button key={sym} onClick={()=>{
-                      const defaults={MNQ:{sl:40,tp:80},NQ:{sl:20,tp:40},MES:{sl:40,tp:80},ES:{sl:20,tp:40},MYM:{sl:40,tp:80},YM:{sl:20,tp:40},MGC:{sl:20,tp:40},GC:{sl:10,tp:20},CL:{sl:20,tp:40},MCL:{sl:40,tp:80}};
-                      const d=defaults[sym]||{sl:40,tp:80};
-                      saveAcct({...acct,instrument:sym,slTicks:acct.slTicks||d.sl,tpTicks:acct.tpTicks||d.tp});
-                    }} style={{padding:"8px 6px",borderRadius:8,fontSize:10,fontWeight:700,textAlign:"left",background:(acct.instrument||"MNQ")===sym?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+((acct.instrument||"MNQ")===sym?"#6366f1":DK.miniBorder),color:(acct.instrument||"MNQ")===sym?"#a5b4fc":DK.text}}>
-                      <div style={{fontWeight:800}}>{sym}</div>
-                      <div style={{fontSize:9,color:(acct.instrument||"MNQ")===sym?"#818cf8":DK.muted}}>${INSTRUMENTS[sym].tickValue}/Tick</div>
+                    <button key={sym} onClick={()=>{const defaults={MNQ:{sl:40,tp:80},NQ:{sl:20,tp:40},MES:{sl:40,tp:80},ES:{sl:20,tp:40},MYM:{sl:40,tp:80},YM:{sl:20,tp:40},MGC:{sl:20,tp:40},GC:{sl:10,tp:20},CL:{sl:20,tp:40},MCL:{sl:40,tp:80}};const d=defaults[sym]||{sl:40,tp:80};saveAcct({...acct,instrument:sym,slTicks:acct.slTicks||d.sl,tpTicks:acct.tpTicks||d.tp});}} style={{padding:"8px 6px",borderRadius:8,fontSize:11,fontWeight:600,textAlign:"left",background:(acct.instrument||"MNQ")===sym?"rgba(99,102,241,0.2)":dm?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.04)",border:"1px solid "+((acct.instrument||"MNQ")===sym?"rgba(99,102,241,0.5)":DK.miniBorder),color:(acct.instrument||"MNQ")===sym?"#a5b4fc":DK.text}}>
+                      <div style={{fontWeight:700}}>{sym}</div>
+                      <div style={{fontSize:9,color:(acct.instrument||"MNQ")===sym?"#818cf8":DK.muted}}>${inst.tickValue}/Tick</div>
                     </button>
                   ))}
                 </div>}
+
+                {/* SPINNER ROW COMPONENT */}
                 {(()=>{
-                  const inst=INSTRUMENTS[acct.instrument||"MNQ"]||INSTRUMENTS["MNQ"];
+                  const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
                   const sl=acct.slTicks||40;
                   const tp=acct.tpTicks||80;
                   const lots=acct.lotSize||1;
@@ -3033,133 +3033,94 @@ const sendAiMessage=async()=>{
                   const tpD=Math.round(tp*inst.tickValue*lots);
                   const crv=(tp/sl).toFixed(1);
                   const beWR=Math.round(sl/(sl+tp)*100);
+                  const btnS={width:34,height:34,borderRadius:8,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0};
+                  const row=(label,value,displayVal,onDec,onInc,hint)=>(
+                    <div style={{marginBottom:12}}>
+                      <div style={{fontSize:10,color:DK.muted,fontWeight:600,letterSpacing:'0.3px',marginBottom:6}}>{label}</div>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <button onClick={onDec} style={btnS}>−</button>
+                        <div style={{flex:1,textAlign:'center',fontWeight:700,fontSize:17,color:DK.text}}>{displayVal}</div>
+                        <button onClick={onInc} style={btnS}>+</button>
+                        <div style={{fontSize:11,color:DK.muted,minWidth:52,textAlign:'right'}}>{hint}</div>
+                      </div>
+                    </div>
+                  );
                   return(<>
-                    <div style={{fontSize:9,color:DK.muted,fontWeight:600,marginBottom:8,marginTop:4}}>KONTRAKTE</div>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-                      <button onClick={()=>saveAcct({...acct,lotSize:Math.max(1,(acct.lotSize||1)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
-                      <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:"#a5b4fc"}}>{lots}x</div>
-                      <button onClick={()=>saveAcct({...acct,lotSize:Math.min(20,(acct.lotSize||1)+1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
-                      <div style={{fontSize:11,color:DK.muted}}>{acct.instrument||"MNQ"}</div>
-                    </div>
-                    <div style={{fontSize:9,color:DK.muted,fontWeight:600,marginBottom:8}}>STOP LOSS (TICKS)</div>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-                      <button onClick={()=>saveAcct({...acct,slTicks:Math.max(1,(acct.slTicks||40)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
-                      <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:R}}>{sl}T</div>
-                      <button onClick={()=>saveAcct({...acct,slTicks:(acct.slTicks||40)+1})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
-                      <div style={{fontSize:11,color:R,fontWeight:700}}>−${slD}</div>
-                    </div>
-                    <div style={{fontSize:9,color:DK.muted,fontWeight:600,marginBottom:8}}>TAKE PROFIT (TICKS)</div>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-                      <button onClick={()=>saveAcct({...acct,tpTicks:Math.max(1,(acct.tpTicks||80)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>−</button>
-                      <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:G}}>{tp}T</div>
-                      <button onClick={()=>saveAcct({...acct,tpTicks:(acct.tpTicks||80)+1})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
-                      <div style={{fontSize:11,color:G,fontWeight:700}}>+${tpD}</div>
-                    </div>
-                    {/* HANDELSFENSTER inline in Setup */}
-                <div style={{marginTop:10,padding:'10px 12px',background:dm?'rgba(99,102,241,0.06)':'rgba(99,102,241,0.04)',borderRadius:10,border:'1px solid rgba(99,102,241,0.2)'}}>
-                  <div style={{fontSize:10,color:B,fontWeight:700,marginBottom:8}}>⏰ HANDELSFENSTER</div>
-                  {(()=>{
-                    const [wsH,wsM]=(settings.windowStart||'16:15').split(':').map(Number);
-                    const [weH,weM]=(settings.windowEnd||'17:30').split(':').map(Number);
-                    const adj=(field,dH,dM)=>{let h=(field==='s'?wsH:weH)+dH,m=(field==='s'?wsM:weM)+dM;if(m>=60){m-=60;h++;}if(m<0){m+=60;h--;}h=Math.max(0,Math.min(23,h));m=Math.max(0,Math.min(59,m));const v=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');setSettings(s=>({...s,[field==='s'?'windowStart':'windowEnd']:v}));};
-                    const sp={width:26,height:26,borderRadius:6,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:15,display:'flex',alignItems:'center',justifyContent:'center'};
-                    return(<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                      {[['s','VON',wsH,wsM],['e','BIS',weH,weM]].map(([f,lbl,h,m])=>(
-                        <div key={f}>
-                          <div style={{fontSize:9,color:DK.muted,marginBottom:4}}>{lbl} (CET)</div>
-                          <div style={{display:'flex',alignItems:'center',gap:4}}>
-                            <button onClick={()=>adj(f,-1,0)} style={sp}>−</button>
-                            <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:18,color:DK.text}}>{String(h).padStart(2,'0')}</div>
-                            <button onClick={()=>adj(f,1,0)} style={sp}>+</button>
-                            <span style={{color:DK.muted}}>:</span>
-                            <button onClick={()=>adj(f,0,-15)} style={sp}>−</button>
-                            <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:18,color:DK.text}}>{String(m).padStart(2,'0')}</div>
-                            <button onClick={()=>adj(f,0,15)} style={sp}>+</button>
+                    {row('KONTRAKTE',lots,lots+'x '+(acct.instrument||'MNQ'),
+                      ()=>saveAcct({...acct,lotSize:Math.max(1,(acct.lotSize||1)-1)}),
+                      ()=>saveAcct({...acct,lotSize:Math.min(20,(acct.lotSize||1)+1)}),
+                      ''
+                    )}
+                    {row('STOP LOSS (TICKS)',sl,sl+'T',
+                      ()=>saveAcct({...acct,slTicks:Math.max(1,(acct.slTicks||40)-1)}),
+                      ()=>saveAcct({...acct,slTicks:(acct.slTicks||40)+1}),
+                      '-$'+slD
+                    )}
+                    {row('TAKE PROFIT (TICKS)',tp,tp+'T',
+                      ()=>saveAcct({...acct,tpTicks:Math.max(1,(acct.tpTicks||80)-1)}),
+                      ()=>saveAcct({...acct,tpTicks:(acct.tpTicks||80)+1}),
+                      '+$'+tpD
+                    )}
+
+                    {/* HANDELSFENSTER */}
+                    {(()=>{
+                      const [wsH,wsM]=(settings.windowStart||'16:15').split(':').map(Number);
+                      const [weH,weM]=(settings.windowEnd||'17:30').split(':').map(Number);
+                      const adj=(f,dH,dM)=>{let h=(f==='s'?wsH:weH)+dH,m=(f==='s'?wsM:weM)+dM;if(m>=60){m-=60;h++;}if(m<0){m+=60;h--;}h=Math.max(0,Math.min(23,h));m=Math.max(0,Math.min(59,m));const v=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');setSettings(s=>({...s,[f==='s'?'windowStart':'windowEnd']:v}));};
+                      return(
+                        <div style={{marginBottom:12}}>
+                          <div style={{fontSize:10,color:DK.muted,fontWeight:600,letterSpacing:'0.3px',marginBottom:6}}>HANDELSFENSTER (CET)</div>
+                          <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr',gap:8,alignItems:'center'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:4}}>
+                              <button onClick={()=>adj('s',-1,0)} style={btnS}>−</button>
+                              <div style={{flex:1,textAlign:'center',fontWeight:700,fontSize:16,color:DK.text}}>{String(wsH).padStart(2,'0')}</div>
+                              <button onClick={()=>adj('s',1,0)} style={btnS}>+</button>
+                              <span style={{color:DK.muted,fontSize:13,marginLeft:2}}>:{String(wsM).padStart(2,'0')}</span>
+                            </div>
+                            <div style={{textAlign:'center',color:DK.muted,fontSize:11}}>bis</div>
+                            <div style={{display:'flex',alignItems:'center',gap:4}}>
+                              <button onClick={()=>adj('e',-1,0)} style={btnS}>−</button>
+                              <div style={{flex:1,textAlign:'center',fontWeight:700,fontSize:16,color:DK.text}}>{String(weH).padStart(2,'0')}</div>
+                              <button onClick={()=>adj('e',1,0)} style={btnS}>+</button>
+                              <span style={{color:DK.muted,fontSize:13,marginLeft:2}}>:{String(weM).padStart(2,'0')}</span>
+                            </div>
                           </div>
                         </div>
-                      ))}
-                    </div>);
-                  })()}
-                </div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:10,marginBottom:2}}>
-                  <div>
-                    <div style={{fontSize:10,color:DK.muted,fontWeight:600,marginBottom:5}}>MAX TRADES / TAG</div>
-                    <div style={{display:'flex',alignItems:'center',gap:5}}>
-                      <button onClick={()=>saveAcct({...acct,maxTrades:Math.max(1,(acct.maxTrades||2)-1)})} style={{width:28,height:28,borderRadius:6,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:15}}>−</button>
-                      <div style={{flex:1,textAlign:'center',fontWeight:700,fontSize:15,color:DK.text}}>{acct.maxTrades||2}</div>
-                      <button onClick={()=>saveAcct({...acct,maxTrades:Math.min(10,(acct.maxTrades||2)+1)})} style={{width:28,height:28,borderRadius:6,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:15}}>+</button>
+                      );
+                    })()}
+
+                    {/* MAX TRADES & PAUSE */}
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+                      <div>
+                        <div style={{fontSize:10,color:DK.muted,fontWeight:600,marginBottom:6}}>MAX TRADES / TAG</div>
+                        <div style={{display:'flex',alignItems:'center',gap:6}}>
+                          <button onClick={()=>saveAcct({...acct,maxTrades:Math.max(1,(acct.maxTrades||2)-1)})} style={btnS}>−</button>
+                          <div style={{flex:1,textAlign:'center',fontWeight:700,fontSize:16,color:DK.text}}>{acct.maxTrades||2}</div>
+                          <button onClick={()=>saveAcct({...acct,maxTrades:Math.min(10,(acct.maxTrades||2)+1)})} style={btnS}>+</button>
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{fontSize:10,color:DK.muted,fontWeight:600,marginBottom:6}}>PAUSE (MIN)</div>
+                        <div style={{display:'flex',alignItems:'center',gap:6}}>
+                          <button onClick={()=>setSettings(s=>({...s,pauseMins:Math.max(0,(s.pauseMins||15)-5)}))} style={btnS}>−</button>
+                          <div style={{flex:1,textAlign:'center',fontWeight:700,fontSize:16,color:DK.text}}>{settings.pauseMins||15}</div>
+                          <button onClick={()=>setSettings(s=>({...s,pauseMins:Math.min(60,(s.pauseMins||15)+5)}))} style={btnS}>+</button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div style={{fontSize:10,color:DK.muted,fontWeight:600,marginBottom:5}}>PAUSE (MIN)</div>
-                    <div style={{display:'flex',alignItems:'center',gap:5}}>
-                      <button onClick={()=>setSettings(s=>({...s,pauseMins:Math.max(0,(s.pauseMins||15)-5)}))} style={{width:28,height:28,borderRadius:6,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:15}}>−</button>
-                      <div style={{flex:1,textAlign:'center',fontWeight:700,fontSize:15,color:DK.text}}>{settings.pauseMins||15}</div>
-                      <button onClick={()=>setSettings(s=>({...s,pauseMins:Math.min(60,(s.pauseMins||15)+5)}))} style={{width:28,height:28,borderRadius:6,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:15}}>+</button>
-                    </div>
-                  </div>
-                </div>
-                <div style={{background:"rgba(99,102,241,0.08)",borderRadius:10,padding:"10px 12px",border:"1px solid rgba(99,102,241,0.2)",marginTop:10}}>
-                      <div style={{fontSize:11,fontWeight:700,color:DK.text,marginBottom:4}}>{lots}x {acct.instrument||"MNQ"} — Live Vorschau</div>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:10}}>
-                        <div>SL: <b style={{color:R}}>-${slD}</b></div>
-                        <div>TP: <b style={{color:G}}>+${tpD}</b></div>
-                        <div>CRV: <b style={{color:DK.text}}>{crv}:1</b></div>
-                        <div>Min WR: <b style={{color:Y}}>{beWR}%</b></div>
+
+                    {/* LIVE VORSCHAU */}
+                    <div style={{background:dm?'rgba(99,102,241,0.08)':'rgba(99,102,241,0.06)',borderRadius:10,padding:'10px 14px',border:'1px solid rgba(99,102,241,0.2)'}}>
+                      <div style={{fontSize:11,fontWeight:700,color:DK.text,marginBottom:6}}>{lots}x {acct.instrument||'MNQ'} — Live Vorschau</div>
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:4,fontSize:11}}>
+                        <div style={{color:DK.muted}}>SL: <b style={{color:R}}>-${slD}</b></div>
+                        <div style={{color:DK.muted}}>TP: <b style={{color:G}}>+${tpD}</b></div>
+                        <div style={{color:DK.muted}}>CRV: <b style={{color:DK.text}}>{crv}:1</b></div>
+                        <div style={{color:DK.muted}}>Min WR: <b style={{color:Y}}>{beWR}%</b></div>
                       </div>
                     </div>
                   </>);
                 })()}
-              </div>}
-              {settingsSection==="fenster"&&sec.id==="fenster"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>⏰ HANDELSFENSTER</div>
-                {(()=>{
-                  const [wsH,wsM]=(settings.windowStart||'16:15').split(':').map(Number);
-                  const [weH,weM]=(settings.windowEnd||'17:30').split(':').map(Number);
-                  const adjStart=(dH,dM)=>{let h=wsH+dH,m=wsM+dM;if(m>=60){m-=60;h++;}if(m<0){m+=60;h--;}h=Math.max(0,Math.min(23,h));m=Math.max(0,Math.min(59,m));setSettings(s=>({...s,windowStart:String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')}));};
-                  const adjEnd=(dH,dM)=>{let h=weH+dH,m=weM+dM;if(m>=60){m-=60;h++;}if(m<0){m+=60;h--;}h=Math.max(0,Math.min(23,h));m=Math.max(0,Math.min(59,m));setSettings(s=>({...s,windowEnd:String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')}));};
-                  const spinStyle={width:28,height:28,borderRadius:7,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'};
-                  return(<>
-                    <div style={{marginBottom:12}}>
-                      <div style={{fontSize:8,color:DK.muted,fontWeight:700,marginBottom:6}}>VON (CET)</div>
-                      <div style={{display:'flex',alignItems:'center',gap:6}}>
-                        <button onClick={()=>adjStart(-1,0)} style={spinStyle}>−</button>
-                        <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:22,color:DK.text}}>{String(wsH).padStart(2,'0')}</div>
-                        <button onClick={()=>adjStart(1,0)} style={spinStyle}>+</button>
-                        <span style={{fontSize:18,color:DK.muted,fontWeight:300}}>:</span>
-                        <button onClick={()=>adjStart(0,-15)} style={spinStyle}>−</button>
-                        <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:22,color:DK.text}}>{String(wsM).padStart(2,'0')}</div>
-                        <button onClick={()=>adjStart(0,15)} style={spinStyle}>+</button>
-                      </div>
-                    </div>
-                    <div style={{marginBottom:12}}>
-                      <div style={{fontSize:8,color:DK.muted,fontWeight:700,marginBottom:6}}>BIS (CET)</div>
-                      <div style={{display:'flex',alignItems:'center',gap:6}}>
-                        <button onClick={()=>adjEnd(-1,0)} style={spinStyle}>−</button>
-                        <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:22,color:DK.text}}>{String(weH).padStart(2,'0')}</div>
-                        <button onClick={()=>adjEnd(1,0)} style={spinStyle}>+</button>
-                        <span style={{fontSize:18,color:DK.muted,fontWeight:300}}>:</span>
-                        <button onClick={()=>adjEnd(0,-15)} style={spinStyle}>−</button>
-                        <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:22,color:DK.text}}>{String(weM).padStart(2,'0')}</div>
-                        <button onClick={()=>adjEnd(0,15)} style={spinStyle}>+</button>
-                      </div>
-                    </div>
-                  </>);
-                })()}
-                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>📊 MAX TRADES PRO TAG</div>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-                  <button onClick={()=>saveAcct({...acct,maxTrades:Math.max(1,(acct.maxTrades||2)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-                  <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:DK.text}}>{acct.maxTrades||2}</div>
-                  <button onClick={()=>saveAcct({...acct,maxTrades:Math.min(10,(acct.maxTrades||2)+1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-                  <div style={{fontSize:11,color:DK.muted}}>Trades/Tag</div>
-                </div>
-                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>⏸ PAUSE ZWISCHEN TRADES (MIN)</div>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                  <button onClick={()=>setSettings(s=>({...s,pauseMins:Math.max(0,(s.pauseMins||15)-5)}))} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-                  <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:22,color:DK.text}}>{settings.pauseMins||15}</div>
-                  <button onClick={()=>setSettings(s=>({...s,pauseMins:Math.min(60,(s.pauseMins||15)+5)}))} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-                  <div style={{fontSize:11,color:DK.muted}}>Min Pause</div>
-                </div>
               </div>}
               {settingsSection==="coach"&&sec.id==="coach"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>🤖 COACHING STIL</div>
