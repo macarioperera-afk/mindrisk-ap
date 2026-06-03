@@ -545,14 +545,8 @@ export default function App(){
       const worstDay=Object.entries(dayMap2).sort((a,b)=>(b[1].l-b[1].w)-(a[1].l-a[1].w))[0];
       const dayNames2=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
       if(worstDay&&worstDay[1].l>worstDay[1].w&&worstDay[1].l>=2)patterns.push(dayNames2[worstDay[0]]+' ist dein schlechtster Tag');
-      const patternMsg=patterns.length>0?'
-
-⚠️ Muster erkannt: '+patterns.join(' | '):'';
-      setAiMessages([{role:"assistant",content:greet+" "+(acct.name||"Trader")+"! 👋
-
-Es ist "+nowT+" Uhr. "+statusMsg+patternMsg+"
-
-Tippe '☀️ Tages-Briefing' für die volle KI-Analyse – oder stell direkt eine Frage!",auto:true}]);
+      const patternMsg=patterns.length>0?'\n\n⚠️ Muster erkannt: '+patterns.join(' | '):'';
+      setAiMessages([{role:"assistant",content:greet+" "+(acct.name||"Trader")+"! 👋\n\nEs ist "+nowT+" Uhr. "+statusMsg+patternMsg+"\n\nTippe '☀️ Tages-Briefing' für die volle KI-Analyse – oder stell direkt eine Frage!",auto:true}]);
     },2200);
     return()=>{clearTimeout(t);clearTimeout(t2);};
   },[]);
