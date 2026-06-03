@@ -733,15 +733,17 @@ export default function App(){
     const avgWinAmt=allWins.length?allWins.reduce((s,t)=>s+t.pnl,0)/allWins.length:recTP;
     const avgLossAmt=allLoss.length?Math.abs(allLoss.reduce((s,t)=>s+t.pnl,0)/allLoss.length):recSL;
     // ── KELLY CRITERION ───────────────────────────────────────
-    const b=avgWinAmt>0&&avgLossAmt>0?avgWinAmt/avgLossAmt:1;
-    const kellyRaw=realWR>0&&avgWinAmt>0&&avgLossAmt>0
+    // Kelly nur mit echten Daten (min 10 Trades)
+    const hasEnoughTrades=t09.length>=10;
+    const b=hasEnoughTrades&&avgWinAmt>0&&avgLossAmt>0?avgWinAmt/avgLossAmt:0;
+    const kellyRaw=hasEnoughTrades&&b>0&&realWR>0
       ?Math.max(0,(b*realWR-(1-realWR))/b):0;
     const kellyPct=Math.round(kellyRaw*100);
     const halfKellyPct=Math.round(kellyPct/2);
-    const kellyRiskDollar=Math.round(saldo*halfKellyPct/100);
-    const kellyLots=avgLossAmt>0?Math.max(1,Math.floor(kellyRiskDollar/avgLossAmt)):1;
+    const kellyRiskDollar=halfKellyPct>0?Math.round(saldo*halfKellyPct/100):0;
+    const kellyLots=kellyRiskDollar>0&&avgLossAmt>0?Math.max(1,Math.floor(kellyRiskDollar/avgLossAmt)):0;
     const currentRiskPerTrade=recSL*(acct.lotSize||1);
-    const kellyStatus=kellyPct===0?'no_data':
+    const kellyStatus=!hasEnoughTrades?'no_data':kellyPct===0?'no_data':
       currentRiskPerTrade>kellyRiskDollar*1.2?'too_big':
       currentRiskPerTrade<kellyRiskDollar*0.5?'too_small':'optimal';
     const calcEV=(wr,tp,sl)=>Math.round(wr*tp-(1-wr)*sl);
@@ -1967,7 +1969,7 @@ const sendAiMessage=async()=>{
                 <div style={{padding:'10px 16px',borderBottom:'1px solid '+DK.miniBorder}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
                     <span style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px'}}>CHALLENGE FORTSCHRITT</span>
-                    <span style={{fontWeight:900,fontSize:12,color:wz.profitNeeded<=0?G:DK.text}}>{wz.profitNeeded<=0?'✅ GESCHAFFT!':'+$'+wz.profitSoFar+' / $'+wz.profitTarget}</span>
+                    <span style={{fontWeight:900,fontSize:12,color:wz.profitNeeded<=0?G:DK.text}}>{wz.profitTarget>0&&wz.profitNeeded<=0?'✅ GESCHAFFT!':wz.profitTarget>0?'+$'+wz.profitSoFar+' / $'+wz.profitTarget:'Ziel in Einstellungen setzen'}</span>
                   </div>
                   <div style={{height:5,borderRadius:3,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.08)',overflow:'hidden',marginBottom:5}}>
                     <div style={{height:'100%',width:Math.min(100,wz.profitTarget>0?Math.round(wz.profitSoFar/wz.profitTarget*100):0)+'%',background:'linear-gradient(90deg,'+G+',#00c97a)',borderRadius:3}}/>
@@ -2029,7 +2031,7 @@ const sendAiMessage=async()=>{
                         {wz.kellyStatus==='no_data'?'Zu wenig Daten':wz.kellyStatus==='optimal'?'✅ Optimal':wz.kellyStatus==='too_big'?'⚠️ Zu groß':'📈 Spielraum'}
                       </span>
                     </div>
-                    {wz.kellyPct>0?(<>
+                    {wz.kellyPct>0&&wz.kellyLots>0?(<>
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:4}}>
                         <div style={{textAlign:'center'}}>
                           <div style={{fontSize:7,color:DK.muted}}>FULL KELLY</div>
