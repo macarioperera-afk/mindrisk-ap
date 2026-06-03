@@ -856,19 +856,19 @@ export default function App(){
     const calcEV=(wr,tp,sl)=>Math.round(wr*tp-(1-wr)*sl);
     // ── ECHTES RISIKO-KAPITAL (Challenge vs Eigenkapital) ────
     const isChallenge=accountType==='challenge'||accountType==='pa';
-    const maxDD=acct.maxDD||2000;
-    const dailyDD=acct.dailyDD||1000;
-    const ddFloor=Math.round((acct.size||50000)-maxDD); // EOD Floor
+    const riskMaxDD=acct.riskMaxDD||2000;
+    const riskDailyDD=acct.riskDailyDD||1000;
+    const ddFloor=Math.round((acct.size||50000)-riskMaxDD); // EOD Floor
     const currentBuffer=Math.max(0,Math.round(saldo-ddFloor)); // wächst mit Gewinnen!
     const effectiveCap=isChallenge
-      ?Math.min(currentBuffer,maxDD)  // Challenge: echter Puffer
+      ?Math.min(currentBuffer,riskMaxDD)  // Challenge: echter Puffer
       :saldo;                          // Eigenkapital: volles Konto
     // Risk per Trade: Daily DD Budget (Challenge) ODER % des Kontos (Eigenkapital)
     const slPerLot=Math.max(1,Math.round((acct.slTicks||40)*inst.tickValue));
     // Challenge: Daily DD ist das echte Budget
-    const challengeConservative=Math.round(dailyDD/maxT*0.35); // 35% des Tages-DD
-    const challengeStandard=Math.round(dailyDD/maxT*0.50);     // 50%
-    const challengeAggressive=Math.round(dailyDD/maxT*0.70);   // 70% (gefährlich!)
+    const challengeConservative=Math.round(riskDailyDD/maxT*0.35); // 35% des Tages-DD
+    const challengeStandard=Math.round(riskDailyDD/maxT*0.50);     // 50%
+    const challengeAggressive=Math.round(riskDailyDD/maxT*0.70);   // 70% (gefährlich!)
     // Eigenkapital: klassische % Regel
     const ek1pct=Math.round(effectiveCap*0.01);
     const ek15pct=Math.round(effectiveCap*0.015);
@@ -1153,7 +1153,7 @@ Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
         else msg+=' Regelquote: '+rulePct+'% — besser geht noch.';
         if(wz&&wz.profitTarget>0)msg+=' Fortschritt: $'+wz.profitSoFar+' von $'+wz.profitTarget+' ('+challengeProgress+'%).';
         if(onPace)msg+=' Pace ✅';
-        if(wz&&wz.challengeDaysLeft>0&&wz.dailyNeeded>0)msg+=' Noch '+wz.challengeDaysLeft+'d, tägl. $'+wz.dailyNeeded.';
+        if(wz&&wz.challengeDaysLeft>0&&wz.dailyNeeded>0)msg+=' Noch '+wz.challengeDaysLeft+'d, tägl. $'+wz.dailyNeeded+'.';
       } else {
         msg='❌ '+instrSym+' '+lastT.dir+' -$'+Math.abs(lastT.pnl).toFixed(0);
         if(rulePct<60)msg+=' Regelquote nur '+rulePct+'% — Regelbruch!';
