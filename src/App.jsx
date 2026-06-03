@@ -797,8 +797,8 @@ export default function App(){
     const microMap={NQ:'MNQ',ES:'MES',YM:'MYM',GC:'MGC',CL:'MCL'};
     const fullMap={MNQ:'NQ',MES:'ES',MYM:'YM',MGC:'GC',MCL:'CL'};
     // Basis: wieviel darf 1 Trade maximal kosten?
-    const dailyDD=acct.dailyDD||1000;
-    const maxRiskPerTrade=Math.floor(dailyDD/maxT*0.4); // 40% des tages-DD pro Trade
+    const iDD=acct.dailyDD||1000;
+    const maxRiskPerTrade=Math.floor(iDD/maxT*0.4); // 40% des tages-DD pro Trade
     const slTicks=acct.slTicks||40;
     // Berechne optimale Lots für jedes Instrument
     const calcOptimal=(sym)=>{
