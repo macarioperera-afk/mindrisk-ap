@@ -382,7 +382,7 @@ export default function App(){
       instrument:'MNQ',slTicks:40,tpTicks:80
     };}catch(e){return{type:'challenge',broker:'',number:'',size:50000,maxDD:2000,dailyDD:1000,target:54000,targetDays:30};}
   });
-  const saveAcct=(a)=>{setAcct(a);localStorage.setItem('ttp_account',JSON.stringify(a));};
+  const saveAcct=(a)=>{setAcct(a);localStorage.setItem('ttp_account',JSON.stringify(a));if(authUser?.id)syncSettingsToSupabase(authUser.id,{acct:a,saldo:saldo});};
   const startChallenge=()=>{
     const today=new Date().toISOString().slice(0,10);
     setChallengeStart(today);
@@ -526,7 +526,33 @@ export default function App(){
       setAiOpen(true);
       const greet=h<12?"Guten Morgen":h<17?"Hi":h<21?"Guten Abend":"Hey";
       const nowT=nowHHMM();const[nh,nm]=nowT.split(':').map(Number);const nowMin=nh*60+nm;const wStart=(settings.windowStart||'16:15').split(':').map(Number);const wEnd=(settings.windowEnd||'17:30').split(':').map(Number);const wStartMin=wStart[0]*60+wStart[1];const wEndMin=wEnd[0]*60+wEnd[1];const isWE=new Date().getDay()===0||new Date().getDay()===6;const nowInW=!isWE&&nowMin>=wStartMin&&nowMin<=wEndMin;const nowBefore=!isWE&&nowMin<wStartMin;const minsLeft=nowBefore?wStartMin-nowMin:0;let statusMsg='';if(isWE)statusMsg='Heute ist Wochenende — Märkte geschlossen. Gute Zeit zum Analysieren!';else if(nowInW)statusMsg='⚡ Trading-Fenster ist JETZT OFFEN ('+settings.windowStart+'–'+settings.windowEnd+')!';else if(nowBefore)statusMsg='Fenster öffnet in '+minsLeft+' Minuten ('+settings.windowStart+' Uhr). Geduld!';else statusMsg='Fenster ('+settings.windowEnd+' Uhr) ist vorbei. Heute kein Trade mehr.';
-      setAiMessages([{role:"assistant",content:greet+" "+(acct.name||"Trader")+"! 👋\n\nEs ist "+nowT+" Uhr. "+statusMsg+"\n\nTippe '☀️ Tages-Briefing' für die volle KI-Analyse – oder stell direkt eine Frage!",auto:true}]);
+      // Pattern recognition from last 10 trades
+      const last10=t09.slice(-10);
+      const patterns=[];
+      // Revenge pattern: loss followed by trade within 10 min
+      for(let i=1;i<last10.length;i++){
+        if(last10[i-1].pnl<0&&last10[i].pnl!==undefined){
+          const prev=last10[i-1].time||'';const curr=last10[i].time||'';
+          if(prev&&curr){const [ph,pm]=prev.split(':').map(Number);const [ch,cm]=curr.split(':').map(Number);
+          if((ch*60+cm)-(ph*60+pm)<15)patterns.push('Revenge-Trading erkannt');}
+        }
+      }
+      // Outside window trades
+      const outsideWindow=last10.filter(t=>{if(!t.time)return false;const [h,m]=t.time.split(':').map(Number);const tm=h*60+m;return tm<windowStartMin||tm>windowEndMin;});
+      if(outsideWindow.length>=2)patterns.push(outsideWindow.length+'x außerhalb Handelsfenster');
+      // Worst day
+      const dayMap2={};last10.forEach(t=>{if(!t.date)return;const d=new Date(t.date).getDay();if(!dayMap2[d])dayMap2[d]={w:0,l:0};t.pnl>0?dayMap2[d].w++:dayMap2[d].l++;});
+      const worstDay=Object.entries(dayMap2).sort((a,b)=>(b[1].l-b[1].w)-(a[1].l-a[1].w))[0];
+      const dayNames2=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+      if(worstDay&&worstDay[1].l>worstDay[1].w&&worstDay[1].l>=2)patterns.push(dayNames2[worstDay[0]]+' ist dein schlechtster Tag');
+      const patternMsg=patterns.length>0?'
+
+⚠️ Muster erkannt: '+patterns.join(' | '):'';
+      setAiMessages([{role:"assistant",content:greet+" "+(acct.name||"Trader")+"! 👋
+
+Es ist "+nowT+" Uhr. "+statusMsg+patternMsg+"
+
+Tippe '☀️ Tages-Briefing' für die volle KI-Analyse – oder stell direkt eine Frage!",auto:true}]);
     },2200);
     return()=>{clearTimeout(t);clearTimeout(t2);};
   },[]);
@@ -661,6 +687,78 @@ export default function App(){
   const wzpCalc=useMemo(()=>{
     const inst=INSTRUMENTS[acct.instrument||'MNQ']||INSTRUMENTS['MNQ'];
     const maxT=acct.maxTrades||settings.maxTrades||2;
+
+    // ── MARKT CHARAKTERISTIKA ─────────────────────────────────
+    const MARKET_PROFILE={
+      NQ:{name:'Nasdaq 100',tickVal:5,atr:100,speed:'sehr schnell',minSL:20,recSL:30,risk:'hoch',micro:'MNQ'},
+      MNQ:{name:'Micro Nasdaq',tickVal:0.5,atr:100,speed:'sehr schnell',minSL:20,recSL:30,risk:'niedrig',full:'NQ'},
+      ES:{name:'S&P 500',tickVal:12.5,atr:40,speed:'mittel',minSL:8,recSL:12,risk:'hoch',micro:'MES'},
+      MES:{name:'Micro S&P',tickVal:1.25,atr:40,speed:'mittel',minSL:8,recSL:12,risk:'niedrig',full:'ES'},
+      YM:{name:'Dow Jones',tickVal:5,atr:150,speed:'mittel',minSL:15,recSL:25,risk:'hoch',micro:'MYM'},
+      MYM:{name:'Micro Dow',tickVal:0.5,atr:150,speed:'mittel',minSL:15,recSL:25,risk:'niedrig',full:'YM'},
+      GC:{name:'Gold',tickVal:10,atr:20,speed:'mittel',minSL:10,recSL:15,risk:'hoch',micro:'MGC'},
+      MGC:{name:'Micro Gold',tickVal:1,atr:20,speed:'mittel',minSL:10,recSL:15,risk:'niedrig',full:'GC'},
+    };
+
+    // ── INSTRUMENT ANALYSE AUS ECHTEN TRADES ──────────────────
+    const tradesByInstrument={};
+    t09.forEach(t=>{
+      const sym=(t.contract||acct.instrument||'MNQ').toUpperCase();
+      if(!tradesByInstrument[sym])tradesByInstrument[sym]={trades:[],wins:0,losses:0,pnl:0,totalRisk:0};
+      tradesByInstrument[sym].trades.push(t);
+      if(t.pnl>0)tradesByInstrument[sym].wins++;
+      else tradesByInstrument[sym].losses++;
+      tradesByInstrument[sym].pnl+=t.pnl;
+    });
+    // Per-instrument stats
+    const instrStats=Object.entries(tradesByInstrument).map(([sym,d])=>({
+      sym,
+      trades:d.trades.length,
+      wins:d.wins,
+      losses:d.losses,
+      wr:d.trades.length>0?Math.round(d.wins/d.trades.length*100):0,
+      pnl:Math.round(d.pnl),
+      profile:MARKET_PROFILE[sym]||null,
+    }));
+    // Worst instrument
+    const worstInstr=instrStats.sort((a,b)=>a.wr-b.wr)[0];
+    const bestInstr=[...instrStats].sort((a,b)=>b.wr-a.wr)[0];
+
+    // ── DOWNGRADE EMPFEHLUNG ──────────────────────────────────
+    const maxDD=acct.maxDD||2000;
+    const dailyDDVal=acct.dailyDD||1000;
+    const currentSym=acct.instrument||'MNQ';
+    const currentProfile=MARKET_PROFILE[currentSym];
+    const isMicroAlready=currentProfile&&!currentProfile.micro;
+    const slPerTrade=Math.round((acct.slTicks||40)*(currentProfile?.tickVal||0.5));
+    const ddUsedPct=ddPct;
+    const tradesTillDDGone=slPerTrade>0?Math.floor((maxDD-Math.round(ddUsed))/slPerTrade):999;
+    
+    // Should trader downgrade to micro or reduce size?
+    let downgradeRec=null;
+    let downgradeReason='';
+    const hasMicro=!isMicroAlready&&!!currentProfile?.micro;
+    const wrTooLow=worstInstr&&worstInstr.sym===currentSym&&worstInstr.wr<40;
+    const ddCritical=ddUsedPct>50;
+    const ddDanger=tradesTillDDGone<=5&&tradesTillDDGone>0;
+
+    if(hasMicro&&(ddCritical||wrTooLow)){
+      const microProfile=MARKET_PROFILE[currentProfile.micro];
+      const microSLcost=Math.round((acct.slTicks||40)*(microProfile?.tickVal||0.5));
+      const microTradesTillDD=microSLcost>0?Math.floor((maxDD-Math.round(ddUsed))/microSLcost):999;
+      downgradeRec=currentProfile.micro;
+      if(ddCritical)downgradeReason='DD '+ddUsedPct+'% verbraucht — noch '+tradesTillDDGone+' Verluste bis Konto weg. Im '+currentProfile.micro+': noch '+microTradesTillDD+' möglich.';
+      else downgradeReason='WR im '+currentSym+' nur '+worstInstr.wr+'% — wechsle zu '+currentProfile.micro+' um das Konto zu schützen.';
+    } else if(!hasMicro&&(ddCritical||wrTooLow)){
+      // No micro available — recommend size reduction or market switch
+      downgradeRec='REDUZIEREN';
+      if(ddCritical)downgradeReason='DD '+ddUsedPct+'% verbraucht — kein Micro für '+currentSym+' verfügbar. Reduziere auf 1 Kontrakt oder pause bis DD sich erholt.';
+      else downgradeReason='WR '+worstInstr?.wr+'% im '+currentSym+' zu niedrig. Kein Micro verfügbar — Pause oder Wechsel zu MES/MNQ (andere Märkte mit Micro).';
+    } else if(isMicroAlready&&ddCritical){
+      // Already in micro but DD critical
+      downgradeRec='PAUSE';
+      downgradeReason='Du tradest bereits '+currentSym+' (Micro). DD '+ddUsedPct+'% kritisch — '+tradesTillDDGone+' Trades bis Limit. Heute STOP.';
+    }
     const ddType=acct.ddType||'eod';
     const accountType=acct.type||'challenge';
     // --- Woche ---
@@ -861,6 +959,15 @@ export default function App(){
     if(profitUrgency>1.5&&instrQty<3){
       instrReason+=' ⚡ Pace zu niedrig — überleg '+Math.min(instrQty+1,calcOptimal(instrRec)||instrQty+1)+'x zu handeln';
     }
+    // ── PA KONSISTENZ SCORE ──────────────────────────────────
+    const isPAmode=accountType==='pa'||accountType==='performance';
+    const last20=t09.slice(-20);
+    const consistentTrades=last20.filter(t=>{const r=Object.values(t.rules||{});return r.length>0&&r.filter(Boolean).length/r.length>=0.8;}).length;
+    const consistencyScore=last20.length>0?Math.round(consistentTrades/last20.length*100):0;
+    const consistencyGrade=consistencyScore>=90?'A+':consistencyScore>=80?'A':consistencyScore>=70?'B+':consistencyScore>=60?'B':consistencyScore>=50?'C':'D';
+    const hundredTradeProgress=Math.min(100,Math.round(allT09.length/100*100));
+    const canIncreaseLots=isPAmode&&consistencyScore>=80&&realWR>=0.50;
+    const paFocus=isPAmode&&consistencyScore<80?'Erst Konsistenz auf 80%+ bringen, dann Lots erhöhen':'Konsistenz stark — bereit für nächste Stufe';
     // ── WOCHENZIEL ────────────────────────────────────────────
     const weekNeededTotal=dailyNeeded*Math.min(5,tradDaysLeftWeek+1);
     const weekPace=weekNeededTotal>0?Math.round(weekPnl/weekNeededTotal*100):weekPnl>=0?100:0;
@@ -873,8 +980,8 @@ export default function App(){
       evPess,evReal,evBest,pessWR:Math.round(pessWR*100),realScWR:Math.round(realScWR*100),bestWR:Math.round(bestWR*100),
       daysToGoalPess,daysToGoalReal,daysToGoalBest,
       machbar,machbarPct,maxPossible,
-      instrRec,instrQty,instrReason,avgWinAmt:Math.round(avgWinAmt),avgLossAmt:Math.round(avgLossAmt),kellyPct,halfKellyPct,kellyRiskDollar,kellyLots,kellyStatus,risk1pct:risk1,risk15pct:risk15,risk2pct:risk2,lots1pct,lots15pct,lots2pct,recRiskPct,recRiskTier,recRiskLots,recRiskDollar,underPressure,effectiveCap:Math.round(effectiveCap),currentBuffer,ddFloor,isChallenge,bufferGrowing,
-      weekNeededTotal,weekPace,weekOnTrack
+      instrRec,instrQty,instrReason,avgWinAmt:Math.round(avgWinAmt),avgLossAmt:Math.round(avgLossAmt),instrStats,worstInstr,bestInstr,downgradeRec,downgradeReason,tradesTillDDGone,slPerTrade,kellyPct,halfKellyPct,kellyRiskDollar,kellyLots,kellyStatus,risk1pct:risk1,risk15pct:risk15,risk2pct:risk2,lots1pct,lots15pct,lots2pct,recRiskPct,recRiskTier,recRiskLots,recRiskDollar,underPressure,effectiveCap:Math.round(effectiveCap),currentBuffer,ddFloor,isChallenge,bufferGrowing,
+      weekNeededTotal,weekPace,weekOnTrack,isPAmode,consistencyScore,consistencyGrade,hundredTradeProgress,canIncreaseLots,paFocus
     };
   },[t09,acct,saldo,settings,disc,monthPnl,challengeStart,goals,todPnl]);
 
@@ -1037,9 +1144,33 @@ Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
       const ruleScore=Object.values(lastT.rules||{}).filter(Boolean).length;
       const totalRules=Object.keys(lastT.rules||{}).length;
       const rulePct=totalRules?Math.round(ruleScore/totalRules*100):0;
-      if(ok&&rulePct>=80)return "\uD83C\uDFAF Stark! "+lastT.contract+" "+lastT.dir+" +$"+lastT.pnl.toFixed(0)+". Regelquote: "+rulePct+"%. Heute: "+todayT.length+"/2 Trades.";
-      if(!ok)return "\u274C Verlust $"+lastT.pnl.toFixed(0)+" (Regelquote: "+rulePct+"%). 15 Min Pause sind Pflicht. Kein Rache-Trade!";
-      return "\uD83D\uDCC8 Gewinn +$"+lastT.pnl.toFixed(0)+" aber Regelquote nur "+rulePct+"%. Glueck ist keine Strategie.";
+      const wz=wzpCalc;
+      const ddCrit=wz&&wz.ddPct>50;
+      const downgrade=wz&&wz.downgradeRec&&wz.downgradeRec!=='';
+      const challengeProgress=wz&&wz.profitTarget>0?Math.round(wz.profitSoFar/wz.profitTarget*100):0;
+      const onPace=wz&&wz.evReal>=wz.dailyNeeded;
+      const instrSym=lastT.contract||acct.instrument||'MNQ';
+      const instrWR=wz&&wz.instrStats?wz.instrStats.find(s=>s.sym===instrSym):null;
+      // Build rich feedback
+      let msg='';
+      if(ok){
+        msg='✅ '+instrSym+' '+lastT.dir+' +$'+Math.abs(lastT.pnl).toFixed(0);
+        if(rulePct>=80)msg+=' 🎯 Regelquote: '+rulePct+'%.';
+        else msg+=' Regelquote: '+rulePct+'% — besser geht noch.';
+        if(wz&&wz.profitTarget>0)msg+=' Fortschritt: $'+wz.profitSoFar+' von $'+wz.profitTarget+' ('+challengeProgress+'%).';
+        if(onPace)msg+=' Pace ✅';
+        if(wz&&wz.challengeDaysLeft>0&&wz.dailyNeeded>0)msg+=' Noch '+wz.challengeDaysLeft+'d, tägl. $'+wz.dailyNeeded.';
+      } else {
+        msg='❌ '+instrSym+' '+lastT.dir+' -$'+Math.abs(lastT.pnl).toFixed(0);
+        if(rulePct<60)msg+=' Regelquote nur '+rulePct+'% — Regelbruch!';
+        msg+=' 15 Min Pause. Kein Revenge!';
+        if(ddCrit)msg+=' ⚠️ DD '+wz.ddPct+'% — noch '+wz.tradesTillDDGone+' Verluste bis Limit!';
+        if(downgrade&&wz.downgradeRec!=='PAUSE'&&wz.downgradeRec!=='REDUZIEREN')msg+=' 🚨 Wechsel zu '+wz.downgradeRec+'!';
+        else if(downgrade&&wz.downgradeRec==='REDUZIEREN')msg+=' Position reduzieren!';
+        if(instrWR&&instrWR.wr<40&&instrWR.trades>=5)msg+=' Deine '+instrSym+' WR: '+instrWR.wr+'% — zu niedrig.';
+      }
+      if(wz&&wz.profitNeeded<=0&&wz.profitTarget>0)msg+=' 🏆 Challenge GESCHAFFT!';
+      return msg;
     }
     const msg=(userMsg||"").toLowerCase();
     if(msg.includes("hallo")||msg.includes("hi")){const todDow=new Date().getDay();const isWE=todDow===0||todDow===6;return "Hi "+(acct.name||"Trader")+"! 👋 "+t09.length+" Trades, "+wr+"% WR. "+(isWE?"Heute ist "+["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"][todDow]+" — Erholung und Analyse-Tag. Kein Trading heute!":"Heute: "+todayT.length+"/"+maxTrades+" ("+(todPnlV>=0?"+":"")+"$"+todPnlV.toFixed(0)+")");}
@@ -1385,7 +1516,39 @@ const sendAiMessage=async()=>{
         coachMemory:coachMemory.slice(0,8).map(m=>m.note).join(' | '),
         chatHistorySummary:aiMessages.slice(-6).map(m=>(m.role==='user'?'Du':'Coach')+': '+m.content.slice(0,100).replace(/[\u0080-\uFFFF]/g,'').replace(/\t/g,' ')).join(' | '),
         allTimeWR:allT09.length?Math.round(allT09.filter(t=>t.pnl>0).length/allT09.length*100):0,
-        todayPnl:todPnl
+        todayPnl:todPnl,
+        // Setup & Instrument
+        instrument:acct.instrument||'MNQ',
+        tickValue:(INSTRUMENTS[acct.instrument||'MNQ']||{tickValue:0.5}).tickValue,
+        slTicks:acct.slTicks||40,
+        tpTicks:acct.tpTicks||80,
+        lotSize:acct.lotSize||1,
+        slDollar:wzpCalc?wzpCalc.recSL:Math.round((acct.slTicks||40)*(INSTRUMENTS[acct.instrument||'MNQ']||{tickValue:0.5}).tickValue*(acct.lotSize||1)),
+        tpDollar:wzpCalc?wzpCalc.recTP:Math.round((acct.tpTicks||80)*(INSTRUMENTS[acct.instrument||'MNQ']||{tickValue:0.5}).tickValue*(acct.lotSize||1)),
+        windowStart:settings.windowStart||'16:15',
+        windowEnd:settings.windowEnd||'17:30',
+        // Challenge & WZP
+        accountType:acct.type||'challenge',
+        ddType:acct.ddType||'eod',
+        propFirm:acct.propFirm||acct.broker||'',
+        maxDD:acct.maxDD||2000,
+        dailyDD:acct.dailyDD||1000,
+        profitTarget:wzpCalc?wzpCalc.profitTarget:0,
+        profitSoFar:wzpCalc?wzpCalc.profitSoFar:0,
+        profitNeeded:wzpCalc?wzpCalc.profitNeeded:0,
+        dailyNeeded:wzpCalc?wzpCalc.dailyNeeded:0,
+        challengeDaysLeft:wzpCalc?wzpCalc.challengeDaysLeft:0,
+        machbarPct:wzpCalc?wzpCalc.machbarPct:0,
+        // Per-instrument stats
+        instrStats:wzpCalc&&wzpCalc.instrStats?wzpCalc.instrStats.map(s=>s.sym+':'+s.wr+'%WR/'+s.trades+'T/'+s.pnl+'$').join(', '):'',
+        downgradeRec:wzpCalc?wzpCalc.downgradeRec||'':'',
+        downgradeReason:wzpCalc?wzpCalc.downgradeReason||'':'',
+        tradesTillDDGone:wzpCalc?wzpCalc.tradesTillDDGone:999,
+        ddPct:wzpCalc?wzpCalc.ddPct:0,
+        evReal:wzpCalc?wzpCalc.evReal:0,
+        // PA Consistency
+        consistencyScore:t09.length>=5?Math.round(t09.slice(-20).filter(t=>{const r=Object.values(t.rules||{});return r.length>0&&r.filter(Boolean).length/r.length>=0.8}).length/Math.min(t09.length,20)*100):0,
+        totalTradesAllTime:allT09.length
       };
       // Build messages mit optionalem Bild
       const apiMessages=newMsgs.map((m,i)=>{
@@ -2038,6 +2201,23 @@ const sendAiMessage=async()=>{
                     <span style={{fontSize:11,fontWeight:900,color:wz.machbar?G:wz.machbarPct>30?Y:R}}>{wz.machbar?'✅ JA':'⚠️ KRITISCH'} · {wz.machbarPct}%</span>
                   </div>
                   {wz.instrReason?<div style={{fontSize:9,color:Y,marginBottom:6,padding:'4px 8px',background:dm?'rgba(245,158,11,0.06)':'rgba(245,158,11,0.06)',borderRadius:6,border:'1px solid rgba(245,158,11,0.2)'}}>💡 {wz.instrReason}</div>:null}
+                  {wz.downgradeRec&&<div style={{fontSize:10,fontWeight:700,color:'#fff',marginBottom:6,padding:'8px 10px',background:wz.downgradeRec==='PAUSE'?'rgba(245,158,11,0.9)':'rgba(239,68,68,0.85)',borderRadius:8,border:'1px solid '+(wz.downgradeRec==='PAUSE'?'rgba(245,158,11,0.9)':'rgba(239,68,68,0.9)')}}>
+                    {wz.downgradeRec==='PAUSE'?'🛑 STOP':'🚨 '+(wz.downgradeRec==='REDUZIEREN'?'POSITION REDUZIEREN!':'WECHSEL ZU '+wz.downgradeRec+'!')} {wz.downgradeReason}
+                  </div>}
+                  {wz.tradesTillDDGone<=5&&wz.tradesTillDDGone>0&&!wz.downgradeRec&&<div style={{fontSize:10,fontWeight:700,color:R,marginBottom:6,padding:'6px 10px',background:'rgba(239,68,68,0.08)',borderRadius:8,border:'1px solid rgba(239,68,68,0.3)'}}>
+                    ⚠️ Noch {wz.tradesTillDDGone} Verluste bis Max DD! Vorsicht.
+                  </div>}
+                  {wz.instrStats&&wz.instrStats.length>1&&<div style={{marginBottom:6}}>
+                    <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:4}}>PERFORMANCE PRO INSTRUMENT</div>
+                    {wz.instrStats.map(s=>(
+                      <div key={s.sym} style={{display:'flex',justifyContent:'space-between',padding:'4px 8px',background:DK.mini,borderRadius:6,marginBottom:3,border:'1px solid '+DK.miniBorder}}>
+                        <span style={{fontWeight:700,color:DK.text,fontSize:10}}>{s.sym}</span>
+                        <span style={{fontSize:10,color:s.wr>=50?G:s.wr>=35?Y:R}}>{s.wr}% WR</span>
+                        <span style={{fontSize:10,color:s.pnl>=0?G:R}}>{s.pnl>=0?'+':''}{s.pnl}$</span>
+                        <span style={{fontSize:9,color:DK.muted}}>{s.trades} Trades</span>
+                      </div>
+                    ))}
+                  </div>}
                   {/* KELLY CRITERION */}
                   <div style={{marginBottom:8,padding:'8px 10px',background:dm?'rgba(99,102,241,0.07)':'rgba(99,102,241,0.05)',borderRadius:8,border:'1px solid rgba(99,102,241,0.2)'}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
@@ -2142,6 +2322,20 @@ const sendAiMessage=async()=>{
                       </div>
                     ))}
                   </div>
+                  {wz.isPAmode&&<div style={{marginBottom:8,padding:'8px 10px',background:dm?'rgba(99,102,241,0.07)':'rgba(99,102,241,0.05)',borderRadius:8,border:'1px solid rgba(99,102,241,0.2)'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                      <span style={{fontSize:8,color:B,fontWeight:700,letterSpacing:'0.8px'}}>🎯 PA KONSISTENZ</span>
+                      <span style={{fontSize:14,fontWeight:900,color:wz.consistencyScore>=80?G:wz.consistencyScore>=60?Y:R}}>{wz.consistencyGrade}</span>
+                    </div>
+                    <div style={{height:4,borderRadius:2,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.08)',overflow:'hidden',marginBottom:4}}>
+                      <div style={{height:'100%',width:wz.consistencyScore+'%',background:wz.consistencyScore>=80?G:wz.consistencyScore>=60?Y:R,borderRadius:2}}/>
+                    </div>
+                    <div style={{display:'flex',justifyContent:'space-between',fontSize:8,color:DK.muted,marginBottom:3}}>
+                      <span>Regelquote: <b style={{color:DK.text}}>{wz.consistencyScore}%</b></span>
+                      <span>100-Trade Ziel: <b style={{color:B}}>{wz.hundredTradeProgress}%</b></span>
+                    </div>
+                    <div style={{fontSize:8,color:wz.canIncreaseLots?G:Y}}>{wz.paFocus}</div>
+                  </div>}
                   <div style={{padding:'7px 10px',background:wz.weekOnTrack?dm?'rgba(0,211,149,0.05)':'rgba(0,211,149,0.04)':dm?'rgba(245,158,11,0.05)':'rgba(245,158,11,0.04)',borderRadius:8,border:'1px solid '+(wz.weekOnTrack?'rgba(0,211,149,0.2)':'rgba(245,158,11,0.2)'),marginBottom:cd&&cd.recs?8:0}}>
                     <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
                       <span style={{fontSize:8,color:DK.muted,fontWeight:700}}>DIESE WOCHE</span>
