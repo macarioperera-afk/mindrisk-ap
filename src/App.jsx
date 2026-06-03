@@ -2912,13 +2912,13 @@ const sendAiMessage=async()=>{
 
       {/* BOTTOM NAV */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:100,background:"rgba(15,10,30,0.97)",borderTop:"1px solid rgba(99,102,241,0.4)",boxShadow:"0 -4px 24px rgba(99,102,241,0.15)",display:"flex",paddingBottom:"env(safe-area-inset-bottom,8px)",WebkitTransform:"translate3d(0,0,0)",transform:"translate3d(0,0,0)"}}>        {NAVS.map(nav=>(
-          <button key={nav.k} onClick={()=>setTab(nav.k)} style={{background:"none",color:tab===nav.k?B:(dm?P+"aa":"#6b7280"),padding:isDesktop?"14px 8px 14px":"10px 2px 11px",fontSize:isDesktop?10:8,flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:isDesktop?6:4,borderBottom:tab===nav.k?"2px solid "+B:"2px solid transparent",borderRadius:0,position:"relative",fontWeight:700,letterSpacing:"0.5px",transition:"color 0.2s"}}>
-            <div style={{width:isDesktop?28:22,height:isDesktop?28:22,display:"flex",alignItems:"center",justifyContent:"center",opacity:tab===nav.k?1:0.55,transform:tab===nav.k?"scale(1.1)":"scale(1)",transition:"all 0.2s"}}>
+          <button key={nav.k} onClick={()=>setTab(nav.k)} style={{background:tab===nav.k?"rgba(99,102,241,0.08)":"none",color:tab===nav.k?B:(dm?P+"aa":"#6b7280"),padding:isDesktop?"14px 8px 14px":"10px 2px 11px",fontSize:isDesktop?10:9,flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:isDesktop?6:4,borderBottom:tab===nav.k?"2px solid "+B:"2px solid transparent",borderRadius:0,position:"relative",fontWeight:700,letterSpacing:"0.5px",transition:"all 0.2s"}}>
+            <div style={{width:isDesktop?28:22,height:isDesktop?28:22,display:"flex",alignItems:"center",justifyContent:"center",opacity:tab===nav.k?1:0.5,transform:tab===nav.k?"scale(1.15)":"scale(1)",transition:"all 0.2s",filter:tab===nav.k?"drop-shadow(0 0 6px "+B+") drop-shadow(0 0 12px "+B+"66)":"none"}}>
               {nav.k==="log"&&!allChecked&&!todayBlocked&&!atLimit&&!inPause
                 ?<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#ef4444" strokeWidth="1.8"/><line x1="12" y1="8" x2="12" y2="16" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"/><line x1="8" y1="12" x2="16" y2="12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"/></svg>
                 :nav.svg}
             </div>
-            <span style={{whiteSpace:"nowrap",color:tab===nav.k?B:(dm?P+"aa":"#6b7280")}}>{nav.lb.toUpperCase()}</span>
+            <span style={{whiteSpace:"nowrap",color:tab===nav.k?B:(dm?P+"aa":"#6b7280"),textShadow:tab===nav.k?"0 0 10px "+B+"99":"none",transition:"all 0.2s"}}>{nav.lb.toUpperCase()}</span>
             {nav.k==="log"&&inPause&&<div style={{position:"absolute",top:8,right:"14%",width:6,height:6,borderRadius:"50%",background:Y,boxShadow:"0 0 6px "+Y}}/>}
             {nav.k==="check"&&allChecked&&!todayBlocked&&<div style={{position:"absolute",top:8,right:"14%",width:6,height:6,borderRadius:"50%",background:G,boxShadow:"0 0 8px rgba(0,211,149,0.8)"}}/>}
           </button>
@@ -3006,8 +3006,11 @@ const sendAiMessage=async()=>{
                 <Field dm={dm} label="LAUFZEIT (TAGE)"><input type="number" defaultValue={acct.challengeDays||30} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,challengeDays:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
               </div>}
               {settingsSection==="setup"&&sec.id==="setup"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>📊 INSTRUMENT</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
+                <button onClick={()=>setSettings(s=>({...s,instrOpen:!s.instrOpen}))} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',background:'transparent',border:'none',padding:'0 0 8px 0',cursor:'pointer'}}>
+                  <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px"}}>📊 INSTRUMENT — {acct.instrument||'MNQ'} ${(INSTRUMENTS[acct.instrument||'MNQ']||{tickValue:0.5}).tickValue}/Tick</div>
+                  <span style={{color:"#6366f1",fontSize:12}}>{settings.instrOpen?'▲':'▼'}</span>
+                </button>
+                {settings.instrOpen&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
                   {Object.entries(INSTRUMENTS).map(([sym,inst])=>(
                     <button key={sym} onClick={()=>{
                       const defaults={MNQ:{sl:40,tp:80},NQ:{sl:20,tp:40},MES:{sl:40,tp:80},ES:{sl:20,tp:40},MYM:{sl:40,tp:80},YM:{sl:20,tp:40},MGC:{sl:20,tp:40},GC:{sl:10,tp:20},CL:{sl:20,tp:40},MCL:{sl:40,tp:80}};
@@ -3018,7 +3021,7 @@ const sendAiMessage=async()=>{
                       <div style={{fontSize:9,color:(acct.instrument||"MNQ")===sym?"#818cf8":DK.muted}}>${INSTRUMENTS[sym].tickValue}/Tick</div>
                     </button>
                   ))}
-                </div>
+                </div>}
                 {(()=>{
                   const inst=INSTRUMENTS[acct.instrument||"MNQ"]||INSTRUMENTS["MNQ"];
                   const sl=acct.slTicks||40;
@@ -3050,7 +3053,33 @@ const sendAiMessage=async()=>{
                       <button onClick={()=>saveAcct({...acct,tpTicks:(acct.tpTicks||80)+1})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>+</button>
                       <div style={{fontSize:11,color:G,fontWeight:700}}>+${tpD}</div>
                     </div>
-                    <div style={{background:"rgba(99,102,241,0.08)",borderRadius:10,padding:"10px 12px",border:"1px solid rgba(99,102,241,0.2)"}}>
+                    {/* HANDELSFENSTER inline in Setup */}
+                <div style={{marginTop:10,padding:'10px 12px',background:dm?'rgba(99,102,241,0.06)':'rgba(99,102,241,0.04)',borderRadius:10,border:'1px solid rgba(99,102,241,0.2)'}}>
+                  <div style={{fontSize:10,color:B,fontWeight:700,marginBottom:8}}>⏰ HANDELSFENSTER</div>
+                  {(()=>{
+                    const [wsH,wsM]=(settings.windowStart||'16:15').split(':').map(Number);
+                    const [weH,weM]=(settings.windowEnd||'17:30').split(':').map(Number);
+                    const adj=(field,dH,dM)=>{let h=(field==='s'?wsH:weH)+dH,m=(field==='s'?wsM:weM)+dM;if(m>=60){m-=60;h++;}if(m<0){m+=60;h--;}h=Math.max(0,Math.min(23,h));m=Math.max(0,Math.min(59,m));const v=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');setSettings(s=>({...s,[field==='s'?'windowStart':'windowEnd']:v}));};
+                    const sp={width:26,height:26,borderRadius:6,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:15,display:'flex',alignItems:'center',justifyContent:'center'};
+                    return(<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                      {[['s','VON',wsH,wsM],['e','BIS',weH,weM]].map(([f,lbl,h,m])=>(
+                        <div key={f}>
+                          <div style={{fontSize:9,color:DK.muted,marginBottom:4}}>{lbl} (CET)</div>
+                          <div style={{display:'flex',alignItems:'center',gap:4}}>
+                            <button onClick={()=>adj(f,-1,0)} style={sp}>−</button>
+                            <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:18,color:DK.text}}>{String(h).padStart(2,'0')}</div>
+                            <button onClick={()=>adj(f,1,0)} style={sp}>+</button>
+                            <span style={{color:DK.muted}}>:</span>
+                            <button onClick={()=>adj(f,0,-15)} style={sp}>−</button>
+                            <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:18,color:DK.text}}>{String(m).padStart(2,'0')}</div>
+                            <button onClick={()=>adj(f,0,15)} style={sp}>+</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>);
+                  })()}
+                </div>
+                <div style={{background:"rgba(99,102,241,0.08)",borderRadius:10,padding:"10px 12px",border:"1px solid rgba(99,102,241,0.2)"}}>
                       <div style={{fontSize:11,fontWeight:700,color:DK.text,marginBottom:4}}>{lots}x {acct.instrument||"MNQ"} — Live Vorschau</div>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:10}}>
                         <div>SL: <b style={{color:R}}>-${slD}</b></div>
@@ -3064,10 +3093,39 @@ const sendAiMessage=async()=>{
               </div>}
               {settingsSection==="fenster"&&sec.id==="fenster"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>⏰ HANDELSFENSTER</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-                  <Field dm={dm} label="VON (CET)"><input type="time" defaultValue={settings.windowStart||"16:15"} onBlur={e=>setSettings(s=>({...s,windowStart:e.target.value}))} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                  <Field dm={dm} label="BIS (CET)"><input type="time" defaultValue={settings.windowEnd||"17:30"} onBlur={e=>setSettings(s=>({...s,windowEnd:e.target.value}))} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                </div>
+                {(()=>{
+                  const [wsH,wsM]=(settings.windowStart||'16:15').split(':').map(Number);
+                  const [weH,weM]=(settings.windowEnd||'17:30').split(':').map(Number);
+                  const adjStart=(dH,dM)=>{let h=wsH+dH,m=wsM+dM;if(m>=60){m-=60;h++;}if(m<0){m+=60;h--;}h=Math.max(0,Math.min(23,h));m=Math.max(0,Math.min(59,m));setSettings(s=>({...s,windowStart:String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')}));};
+                  const adjEnd=(dH,dM)=>{let h=weH+dH,m=weM+dM;if(m>=60){m-=60;h++;}if(m<0){m+=60;h--;}h=Math.max(0,Math.min(23,h));m=Math.max(0,Math.min(59,m));setSettings(s=>({...s,windowEnd:String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')}));};
+                  const spinStyle={width:28,height:28,borderRadius:7,background:dm?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)',border:'1px solid '+DK.miniBorder,color:DK.text,fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'};
+                  return(<>
+                    <div style={{marginBottom:12}}>
+                      <div style={{fontSize:8,color:DK.muted,fontWeight:700,marginBottom:6}}>VON (CET)</div>
+                      <div style={{display:'flex',alignItems:'center',gap:6}}>
+                        <button onClick={()=>adjStart(-1,0)} style={spinStyle}>−</button>
+                        <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:22,color:DK.text}}>{String(wsH).padStart(2,'0')}</div>
+                        <button onClick={()=>adjStart(1,0)} style={spinStyle}>+</button>
+                        <span style={{fontSize:18,color:DK.muted,fontWeight:300}}>:</span>
+                        <button onClick={()=>adjStart(0,-15)} style={spinStyle}>−</button>
+                        <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:22,color:DK.text}}>{String(wsM).padStart(2,'0')}</div>
+                        <button onClick={()=>adjStart(0,15)} style={spinStyle}>+</button>
+                      </div>
+                    </div>
+                    <div style={{marginBottom:12}}>
+                      <div style={{fontSize:8,color:DK.muted,fontWeight:700,marginBottom:6}}>BIS (CET)</div>
+                      <div style={{display:'flex',alignItems:'center',gap:6}}>
+                        <button onClick={()=>adjEnd(-1,0)} style={spinStyle}>−</button>
+                        <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:22,color:DK.text}}>{String(weH).padStart(2,'0')}</div>
+                        <button onClick={()=>adjEnd(1,0)} style={spinStyle}>+</button>
+                        <span style={{fontSize:18,color:DK.muted,fontWeight:300}}>:</span>
+                        <button onClick={()=>adjEnd(0,-15)} style={spinStyle}>−</button>
+                        <div style={{flex:1,textAlign:'center',fontWeight:900,fontSize:22,color:DK.text}}>{String(weM).padStart(2,'0')}</div>
+                        <button onClick={()=>adjEnd(0,15)} style={spinStyle}>+</button>
+                      </div>
+                    </div>
+                  </>);
+                })()}
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>📊 MAX TRADES PRO TAG</div>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                   <button onClick={()=>saveAcct({...acct,maxTrades:Math.max(1,(acct.maxTrades||2)-1)})} style={{width:36,height:36,borderRadius:8,background:dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",border:"1px solid "+DK.miniBorder,color:DK.text,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
