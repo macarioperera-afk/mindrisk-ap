@@ -525,7 +525,8 @@ export default function App(){
       const inWindow=(h===16&&m>=15)||(h===17&&m<=30);
       setAiOpen(true);
       const greet=h<12?"Guten Morgen":h<17?"Hi":h<21?"Guten Abend":"Hey";
-      setAiMessages([{role:"assistant",content:greet+" "+(acct.name||"Trader")+"! 👋\n\nHeute ist "+tod+". "+(inWindow?"⚡ Trading-Fenster ist OFFEN!":"Trading-Fenster: 16:15–17:30 Uhr.")+"\n\nTippe '☀️ Tages-Briefing' für die volle KI-Analyse – oder stell direkt eine Frage!",auto:true}]);
+      const nowT=nowHHMM();const[nh,nm]=nowT.split(':').map(Number);const nowMin=nh*60+nm;const wStart=(settings.windowStart||'16:15').split(':').map(Number);const wEnd=(settings.windowEnd||'17:30').split(':').map(Number);const wStartMin=wStart[0]*60+wStart[1];const wEndMin=wEnd[0]*60+wEnd[1];const isWE=new Date().getDay()===0||new Date().getDay()===6;const nowInW=!isWE&&nowMin>=wStartMin&&nowMin<=wEndMin;const nowBefore=!isWE&&nowMin<wStartMin;const minsLeft=nowBefore?wStartMin-nowMin:0;let statusMsg='';if(isWE)statusMsg='Heute ist Wochenende — Märkte geschlossen. Gute Zeit zum Analysieren!';else if(nowInW)statusMsg='⚡ Trading-Fenster ist JETZT OFFEN ('+settings.windowStart+'–'+settings.windowEnd+')!';else if(nowBefore)statusMsg='Fenster öffnet in '+minsLeft+' Minuten ('+settings.windowStart+' Uhr). Geduld!';else statusMsg='Fenster ('+settings.windowEnd+' Uhr) ist vorbei. Heute kein Trade mehr.';
+      setAiMessages([{role:"assistant",content:greet+" "+(acct.name||"Trader")+"! 👋\n\nEs ist "+nowT+" Uhr. "+statusMsg+"\n\nTippe '☀️ Tages-Briefing' für die volle KI-Analyse – oder stell direkt eine Frage!",auto:true}]);
     },2200);
     return()=>{clearTimeout(t);clearTimeout(t2);};
   },[]);
