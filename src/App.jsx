@@ -2270,8 +2270,8 @@ const sendAiMessage=async()=>{
                       {wz.underPressure?<span style={{color:Y}}>⚡ Pace-Druck → max 1.5% empfohlen</span>:<span style={{color:G}}>✅ Kein Druck → 1% Regel sicher</span>}
                     </div>
                   </div>
-                  </>{/* /hasTrades Kelly+Risiko */}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5}}>
+                  </div>}{/* /hasTrades Kelly+Risiko */}
+                  {hasData&&<div style={{padding:'0 16px 8px',borderBottom:'1px solid '+DK.miniBorder}}><div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5}}>
                     {[
                       {l:'PESSIMISTISCH',wr:wz.pessWR,ev:wz.evPess,d:wz.daysToGoalPess,c:R,bg:dm?'rgba(239,68,68,0.06)':'rgba(239,68,68,0.05)',b:'rgba(239,68,68,0.2)'},
                       {l:'REALISTISCH',wr:wz.realScWR,ev:wz.evReal,d:wz.daysToGoalReal,c:Y,bg:dm?'rgba(245,158,11,0.06)':'rgba(245,158,11,0.05)',b:'rgba(245,158,11,0.25)'},
@@ -2284,8 +2284,7 @@ const sendAiMessage=async()=>{
                         <div style={{fontSize:8,color:DK.muted,marginTop:2}}>{s.d<=wz.challengeDaysLeft?<span style={{color:s.c,fontWeight:700}}>{s.d}d ✓</span>:<span style={{color:R}}>&gt;{wz.challengeDaysLeft}d</span>}</div>
                       </div>
                     ))}
-                  </div>
-                </div>
+                  </div></div>}{/* /hasData szenarien */}
 
                 {/* STATS + DD + WOCHE */}
                 <div style={{padding:'10px 16px'}}>
