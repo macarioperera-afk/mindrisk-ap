@@ -884,8 +884,8 @@ export default function App(){
     // Auto-Empfehlung
     
     const ddSafe=ddPct<30&&dailyDDPct<30;
-    const bufferGrowing=currentBuffer>maxDD; // Gewinne über Ziel → mehr Spielraum
-    const recRiskLevel=(!ddSafe||!ddSafe)?'konservativ':(bufferGrowing||(!isChallenge&&underPressure&&realWR>=0.55))?'aggressiv':(underPressure&&realWR>=0.45)?'standard':'konservativ';
+     // Gewinne über Ziel → mehr Spielraum
+    const recRiskLevel=(!ddSafe||!ddSafe)?'konservativ':'konservativ';
     const recRiskTier=recRiskLevel==='aggressiv'?'2%':recRiskLevel==='standard'?'1.5%':'1%';
     const recRiskLots=recRiskLevel==='aggressiv'?lots2pct:recRiskLevel==='standard'?lots15pct:lots1pct;
     const recRiskDollar=recRiskLevel==='aggressiv'?risk2:recRiskLevel==='standard'?risk15:risk1;
