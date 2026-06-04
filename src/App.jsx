@@ -538,7 +538,7 @@ export default function App(){
         }
       }
       // Outside window trades
-      const outsideWindow=last10.filter(t=>{if(!t.time)return false;const [h,m]=t.time.split(':').map(Number);const tm=h*60+m;return tm<windowStartMin||tm>windowEndMin;});
+      const outsideWindow=last10.filter(t=>{if(!t.time)return false;const [h,m]=t.time.split(':').map(Number);const tm=h*60+m;return tm<wStartMin||tm>wEndMin||tm>windowEndMin;});
       if(outsideWindow.length>=2)patterns.push(outsideWindow.length+'x außerhalb Handelsfenster');
       // Worst day
       const dayMap2={};last10.forEach(t=>{if(!t.date)return;const d=new Date(t.date).getDay();if(!dayMap2[d])dayMap2[d]={w:0,l:0};t.pnl>0?dayMap2[d].w++:dayMap2[d].l++;});
