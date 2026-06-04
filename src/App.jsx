@@ -3125,7 +3125,7 @@ const sendAiMessage=async()=>{
                     {m.note}
                   </div>
                 ))}
-                {coachMemory.length>0&&<button onClick={()=>{if(window.confirm("KI Gedächtnis löschen?"))saveCoachMemory([]);}} style={{marginTop:4,fontSize:10,color:R,background:"none",border:"none",padding:0,cursor:"pointer",textDecoration:"underline"}}>Gedächtnis löschen</button>}
+                {coachMemory.length>0&&<button onClick={()=>{if(window.confirm("KI Gedächtnis löschen?"))setCoachMemory([]);localStorage.setItem('ttp_coach_memory','[]');;}} style={{marginTop:4,fontSize:10,color:R,background:"none",border:"none",padding:0,cursor:"pointer",textDecoration:"underline"}}>Gedächtnis löschen</button>}
               </div>}
               {settingsSection==="goals"&&sec.id==="goals"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>🎯 ZIELE</div>
