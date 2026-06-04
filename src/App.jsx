@@ -725,7 +725,7 @@ export default function App(){
     const slPerFull=fullInst?Math.round((acct.slTicks||40)*fullInst.tickValue):9999;
     const canFull=fullInst&&slPerFull<=maxRisk;
     const recFull=canFull?Math.max(1,Math.floor(maxRisk/slPerFull)):0;
-    const recSym=canFull&&recMicro>=8?curFullSym:(acct.instrument||'MNQ');
+    const recSym=canFull&&recMicro>=8?fullSym:(acct.instrument||'MNQ');
     const recQty=recSym===fullSym?recFull:recMicro;
     const recTickVal=(INSTRUMENTS[recSym]||inst).tickValue;
     const recSL=Math.round((acct.slTicks||40)*recTickVal*recQty);
