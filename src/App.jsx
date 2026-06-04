@@ -883,7 +883,7 @@ export default function App(){
     const lots2pct=Math.max(1,Math.floor(risk2/slPerLot));
     // Auto-Empfehlung
     
-    const ddSafe=ddPct<30&&dailyDDPct<30;
+    const ddSafe=ddPct<30&&dailyDDPct<30;const bufferGrowing=currentBuffer>maxDD;
      // Gewinne über Ziel → mehr Spielraum
     const recRiskLevel=(!ddSafe||!ddSafe)?'konservativ':'konservativ';
     const recRiskTier=recRiskLevel==='aggressiv'?'2%':recRiskLevel==='standard'?'1.5%':'1%';
