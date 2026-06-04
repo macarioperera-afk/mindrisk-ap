@@ -882,7 +882,7 @@ export default function App(){
     const lots15pct=Math.max(1,Math.floor(risk15/slPerLot));
     const lots2pct=Math.max(1,Math.floor(risk2/slPerLot));
     // Auto-Empfehlung
-    const underPressure=dailyNeeded>0&&dailyNeeded>evReal*0.8;
+    
     const ddSafe=ddPct<30&&dailyDDPct<30;
     const bufferGrowing=currentBuffer>maxDD; // Gewinne über Ziel → mehr Spielraum
     const recRiskLevel=(!ddSafe||!ddSafe)?'konservativ':(bufferGrowing||(!isChallenge&&underPressure&&realWR>=0.55))?'aggressiv':(underPressure&&realWR>=0.45)?'standard':'konservativ';
@@ -893,7 +893,7 @@ export default function App(){
     const pessWR=0.35,realScWR=Math.max(0.35,realWR),bestWR=Math.min(0.90,realWR*1.25||0.65);
     const pessTP=recTP,pessSL=recSL;
     const evPess=calcEV(pessWR,pessTP,pessSL)*maxT;
-    const evReal=calcEV(realScWR,avgWinAmt,avgLossAmt)*maxT;
+    const evReal=calcEV(realScWR,avgWinAmt,avgLossAmt)*maxT;const underPressure=dailyNeeded>0&&dailyNeeded>evReal*0.8;
     const evBest=calcEV(bestWR,avgWinAmt*1.1,avgLossAmt*0.9)*maxT;
     const daysToGoalPess=evPess>0?Math.ceil(profitNeeded/evPess):999;
     const daysToGoalReal=evReal>0?Math.ceil(profitNeeded/evReal):999;
