@@ -3094,7 +3094,7 @@ const sendAiMessage=async()=>{
                   ))}
                 
                 {/* PREVIEW + BESTÄTIGEN */}
-                {pfPreview&&<div style={{marginTop:12,background:dm?"rgba(99,102,241,0.08)":"rgba(99,102,241,0.05)",border:"2px solid rgba(99,102,241,0.3)",borderRadius:12,padding:14}}>
+                {pfPreview&&<div style={{marginTop:12,background:dm?"rgba(99,102,241,0.08)":"rgba(99,102,241,0.05)",border:"2px solid rgba(99,102,241,0.3)",borderRadius:12,padding:14,width:"100%",boxSizing:"border-box",clear:"both"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                     <div style={{fontSize:12,fontWeight:800,color:DK.text}}>📋 {pfPreview.firmName} Vorschau</div>
                     <button onClick={()=>setPfPreview(null)} style={{background:"none",color:DK.muted,fontSize:16,padding:"0 4px"}}>×</button>
@@ -3169,11 +3169,11 @@ const sendAiMessage=async()=>{
                     }} style={{padding:"7px 4px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.size===s?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.size===s?"#6366f1":DK.miniBorder),color:acct.size===s?"#a5b4fc":DK.text}}>${s>=1000?s/1000+"k":s}</button>
                   ))}
                 </div>
-                <Field dm={dm} label={"GEWINNZIEL ($) — Ziel-Saldo eingeben"}><input type="number" defaultValue={acct.target||54000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,target:v});}} placeholder="z.B. 54000" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label={"GEWINNZIEL ($) — Ziel-Saldo eingeben"}><input type="number" key={"target-"+acct.target} defaultValue={acct.target||54000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,target:v});}} placeholder="z.B. 54000" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/></Field>
                 <div style={{fontSize:9,color:DK.muted,marginBottom:8}}>Profit = Ziel-Saldo − Start-Saldo = <b style={{color:G}}>${((acct.target||54000)-(acct.size||50000)).toLocaleString()}</b></div>
-                <Field dm={dm} label={"MAX DRAWDOWN ($) — Floor: $"+((acct.size||50000)-(acct.maxDD||2000)).toLocaleString()}><input type="number" defaultValue={acct.maxDD||2000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,maxDD:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:R,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="DAILY DD LIMIT ($)"><input type="number" defaultValue={acct.dailyDD||1000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,dailyDD:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:Y,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="LAUFZEIT (TAGE)"><input type="number" defaultValue={acct.challengeDays||30} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,challengeDays:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label={"MAX DRAWDOWN ($) — Floor: $"+((acct.size||50000)-(acct.maxDD||2000)).toLocaleString()}><input type="number" key={"maxdd-"+acct.maxDD} defaultValue={acct.maxDD||2000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,maxDD:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:R,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="DAILY DD LIMIT ($)"><input type="number" key={"dailydd-"+acct.dailyDD} defaultValue={acct.dailyDD||1000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,dailyDD:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:Y,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="LAUFZEIT (TAGE)"><input type="number" key={"days-"+acct.challengeDays} defaultValue={acct.challengeDays||30} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,challengeDays:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
               </div>}
               {settingsSection==="setup"&&sec.id==="setup"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
 
