@@ -1089,8 +1089,7 @@ Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
     return Object.entries(m).sort(([a],[b])=>b.localeCompare(a)).map(([mo,v])=>({
       mo,pnl:Math.round(v.pnl*100)/100,trades:v.trades,wins:v.wins,losses:v.losses,
       wr:Math.round(v.wins/v.trades*100),days:v.days.size
-    }));
-  },[t09]);
+    }));  },[t09]);
 
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(""),2800);};
 
@@ -2127,7 +2126,7 @@ const sendAiMessage=async()=>{
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
                       <div style={{width:9,height:9,borderRadius:'50%',background:ac,flexShrink:0}}/>
                       <div>
-                        <div style={{fontWeight:900,fontSize:16,color:DK.text}}>Weg zur Profitabilität</div>
+                        <div style={{fontWeight:900,fontSize:16,color:DK.text}}>ProfitMap</div>
                         <div style={{fontSize:9,color:B,fontWeight:700,letterSpacing:'0.8px',marginTop:1}}>{acct.propFirm||'CHALLENGE'} · {acct.instrument||'MNQ'} · {(acct.ddType||'eod').toUpperCase()} DD</div>
                       </div>
                     </div>
@@ -2181,8 +2180,7 @@ const sendAiMessage=async()=>{
                       <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>TAKE PROFIT</div>
                       <div style={{color:G,fontWeight:900,fontSize:18}}>{cd?cd.adaptiveTP:acct.tpTicks||80}T</div>
                       <div style={{color:G,fontSize:9,fontWeight:700}}>+${wz.recTP}</div>
-                    </div>
-                  </div>
+                    </div>                  </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:5}}>
                     <div style={{background:DK.mini,borderRadius:8,padding:'7px 10px',border:'1px solid '+DK.miniBorder}}>
                       <div style={{color:DK.muted,fontSize:7,marginBottom:1}}>MAX TRADES / TAG</div>
