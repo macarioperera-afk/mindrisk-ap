@@ -49,6 +49,105 @@ const INSTRUMENTS = {
   '6E':  { name:'Euro/USD',        exchange:'CME', tick:0.0001,tickValue:12.50,currency:'USD', micro:false, full:'6E' },
 };
 
+
+// ============================================================
+// PROP FIRM DATENBANK — Offizielle Challenge-Regeln
+// Zuletzt aktualisiert: Juni 2026
+// ============================================================
+const PROP_FIRMS = {
+  'TTP': {
+    name: 'The Trading Pit',
+    type: 'futures',
+    ddType: 'eod_trailing',
+    accounts: {
+      20000:  { maxDD: 1000, dailyDD: 600,  target: 22000, days: 30, profitPct: 10 },
+      50000:  { maxDD: 2000, dailyDD: 1000, target: 53000, days: 30, profitPct: 6  },
+      100000: { maxDD: 3500, dailyDD: 1750, target: 106000,days: 30, profitPct: 6  },
+      150000: { maxDD: 5000, dailyDD: 2500, target: 159000,days: 30, profitPct: 6  },
+    }
+  },
+  'FTMO': {
+    name: 'FTMO',
+    type: 'cfd',
+    ddType: 'static',
+    accounts: {
+      10000:  { maxDD: 1000, dailyDD: 500,  target: 11000, days: 30, profitPct: 10 },
+      25000:  { maxDD: 2500, dailyDD: 1250, target: 27500, days: 30, profitPct: 10 },
+      50000:  { maxDD: 5000, dailyDD: 2500, target: 55000, days: 30, profitPct: 10 },
+      100000: { maxDD: 10000,dailyDD: 5000, target: 110000,days: 30, profitPct: 10 },
+      200000: { maxDD: 20000,dailyDD: 10000,target: 220000,days: 30, profitPct: 10 },
+    }
+  },
+  'Apex': {
+    name: 'Apex Trader Funding',
+    type: 'futures',
+    ddType: 'eod_trailing',
+    accounts: {
+      25000:  { maxDD: 1500, dailyDD: 0,    target: 26500, days: 0,  profitPct: 6  },
+      50000:  { maxDD: 2500, dailyDD: 0,    target: 53000, days: 0,  profitPct: 6  },
+      75000:  { maxDD: 2750, dailyDD: 0,    target: 79250, days: 0,  profitPct: 6  },
+      100000: { maxDD: 3000, dailyDD: 0,    target: 106000,days: 0,  profitPct: 6  },
+      150000: { maxDD: 5000, dailyDD: 0,    target: 159000,days: 0,  profitPct: 6  },
+      250000: { maxDD: 6500, dailyDD: 0,    target: 265000,days: 0,  profitPct: 6  },
+    }
+  },
+  'TopStep': {
+    name: 'Topstep',
+    type: 'futures',
+    ddType: 'eod_trailing',
+    accounts: {
+      50000:  { maxDD: 2000, dailyDD: 1000, target: 53000, days: 0,  profitPct: 6  },
+      100000: { maxDD: 3000, dailyDD: 1500, target: 106000,days: 0,  profitPct: 6  },
+      150000: { maxDD: 4500, dailyDD: 2250, target: 159000,days: 0,  profitPct: 6  },
+    }
+  },
+  'MyFundedFutures': {
+    name: 'MyFundedFutures',
+    type: 'futures',
+    ddType: 'eod_trailing',
+    accounts: {
+      25000:  { maxDD: 1500, dailyDD: 600,  target: 26500, days: 0,  profitPct: 6  },
+      50000:  { maxDD: 2500, dailyDD: 1000, target: 53000, days: 0,  profitPct: 6  },
+      100000: { maxDD: 4000, dailyDD: 2000, target: 106000,days: 0,  profitPct: 6  },
+      150000: { maxDD: 6000, dailyDD: 3000, target: 159000,days: 0,  profitPct: 6  },
+    }
+  },
+  'Earn2Trade': {
+    name: 'Earn2Trade',
+    type: 'futures',
+    ddType: 'eod_trailing',
+    accounts: {
+      25000:  { maxDD: 1500, dailyDD: 750,  target: 26500, days: 0,  profitPct: 6  },
+      50000:  { maxDD: 2000, dailyDD: 1000, target: 53500, days: 0,  profitPct: 7  },
+      100000: { maxDD: 3500, dailyDD: 1750, target: 108000,days: 0,  profitPct: 8  },
+    }
+  },
+  'Eigenes': {
+    name: 'Eigenes Konto',
+    type: 'private',
+    ddType: 'static',
+    accounts: {
+      5000:   { maxDD: 500,  dailyDD: 200,  target: 5500,  days: 0,  profitPct: 10 },
+      10000:  { maxDD: 1000, dailyDD: 400,  target: 11000, days: 0,  profitPct: 10 },
+      25000:  { maxDD: 2500, dailyDD: 1000, target: 27500, days: 0,  profitPct: 10 },
+      50000:  { maxDD: 5000, dailyDD: 2000, target: 55000, days: 0,  profitPct: 10 },
+      100000: { maxDD: 10000,dailyDD: 4000, target: 110000,days: 0,  profitPct: 10 },
+    }
+  },
+};
+
+// Helper: Prop Firm Regeln laden
+const getPropFirmRules = (firm, size) => {
+  const f = PROP_FIRMS[firm];
+  if(!f) return null;
+  // Finde nächstgelegene Kontogröße
+  const sizes = Object.keys(f.accounts).map(Number).sort((a,b)=>a-b);
+  const closest = sizes.reduce((prev, curr) => 
+    Math.abs(curr - size) < Math.abs(prev - size) ? curr : prev
+  );
+  return { ...f.accounts[closest], firm: f.name, ddType: f.ddType, type: f.type };
+};
+
 // Helper: Ticks → Dollar
 const ticksToDollar = (ticks, symbol, qty=1) => {
   const inst = INSTRUMENTS[symbol] || INSTRUMENTS['MNQ'];
@@ -183,43 +282,6 @@ const Field=({label,children,dm:fdm})=>(
 );
 
 const sanitize=s=>typeof s==="string"?s.replace(/[\uD800-\uDFFF]/g,""):s;
-
-
-// ── SUPABASE SYNC FUNCTIONS ──────────────────────────────
-const loadFromSupabase = async (userId) => {
-  try {
-    const [tradesRes, settingsRes] = await Promise.all([
-      supabase.from('trades').select('*').eq('user_id', userId),
-      supabase.from('settings').select('*').eq('user_id', userId).single()
-    ]);
-    return {
-      trades: tradesRes.data || [],
-      settings: settingsRes.data || null
-    };
-  } catch(e) {
-    console.error('loadFromSupabase error:', e);
-    return null;
-  }
-};
-
-const syncTradesToSupabase = async (userId, newTrades) => {
-  try {
-    await supabase.from('trades').upsert(
-      newTrades.map(t => ({...t, user_id: userId})),
-      {onConflict: 'id'}
-    );
-  } catch(e) { console.error('syncTrades error:', e); }
-};
-
-const syncSettingsToSupabase = async (userId, data) => {
-  try {
-    await supabase.from('settings').upsert({
-      user_id: userId,
-      ...data,
-      updated_at: new Date().toISOString()
-    }, {onConflict: 'user_id'});
-  } catch(e) { console.error('syncSettings error:', e); }
-};
 
 export default function App(){
   const[trades,setTrades]=useState(()=>{
@@ -540,13 +602,6 @@ export default function App(){
     });
     const{data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
       setAuthUser(session?.user||null);
-      // Clear localStorage when user changes to prevent data leakage
-      if(!session?.user){
-        const keys=['ttp_trades','ttp_account','ttp_saldo','ttp_maxdd_level','ttp_goals',
-          'ttp_settings','ttp_challenge_start','ttp_coach_profile','ttp_coach_memory',
-          'ttp_onboarding_done','ttp_chat_history','ttp_checks','ttp_journal','ttp_problems'];
-        keys.forEach(k=>localStorage.removeItem(k));
-      }
     });
     return()=>subscription.unsubscribe();
   },[]);
@@ -714,6 +769,7 @@ export default function App(){
   },[t09,acct]);
 
   const[wzpExp,setWzpExp]=useState(false);
+  const[pfPreview,setPfPreview]=useState(null); // {maxDD,dailyDD,target,ddType,firm}
   const[wzpData,setWzpData]=useState(()=>{
     try{const d=JSON.parse(localStorage.getItem('ttp_wzp_data')||'null');
       if(d&&d.date===new Date().toISOString().split('T')[0])return d;
@@ -1091,8 +1147,7 @@ Berechne basierend auf ECHTEN Trade-Daten:
 2. Adaptives TP in Ticks (basierend auf avg Win $${avgWin})
 3. Empfohlene Kontrakt-Anzahl (basierend auf Max-Risiko $${maxRiskPerTrade} und adaptivem SL)
 4. Ampel-Status (green/yellow/red)
-5. Wochenziel und Tagesziel in $
-6. Challenge-Wahrscheinlichkeit % (nur wenn Challenge)
+5. Wochenziel und Tagesziel in $6. Challenge-Wahrscheinlichkeit % (nur wenn Challenge)
 7. 3 konkrete Empfehlungen auf Deutsch
 
 Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
@@ -1104,7 +1159,8 @@ Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
       });
       if(!res.ok){setWzpLoading(false);return;}
       const d=await res.json();
-      const raw=(d.message||'').replace(/```json|```/g,'').trim();      const parsed=JSON.parse(raw);
+      const raw=(d.message||'').replace(/```json|```/g,'').trim();
+      const parsed=JSON.parse(raw);
       const result={...parsed,date:new Date().toISOString().split('T')[0],ts:Date.now()};
       setWzpData(result);
       localStorage.setItem('ttp_wzp_data',JSON.stringify(result));
@@ -1786,7 +1842,7 @@ const sendAiMessage=async()=>{
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div style={{background:DK.mini,borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
                 <div style={{color:DK.muted,fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>KONTO ($)</div>
-                <select value={onboardData.size} onChange={e=>setOnboardData(p=>({...p,size:parseInt(e.target.value),target:parseInt(e.target.value)+parseInt(e.target.value)*0.08,maxDD:parseInt(e.target.value)*0.04,dailyDD:parseInt(e.target.value)*0.02}))} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}>
+                <select value={onboardData.size} onChange={e=>{const s=parseInt(e.target.value);const rules=getPropFirmRules(onboardData.firm||'TTP',s);setOnboardData(p=>({...p,size:s,target:rules?(s+Math.round(s*(rules.profitPct/100))):Math.round(s*1.08),maxDD:rules?rules.maxDD:Math.round(s*0.04),dailyDD:rules?rules.dailyDD||Math.round(rules.maxDD*0.5):Math.round(s*0.02)}))}} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}>
                   {[25000,50000,75000,100000,125000,150000,200000].map(s=><option key={s} value={s}>${(s/1000).toFixed(0)}k</option>)}
                 </select>
               </div>
@@ -2210,7 +2266,8 @@ const sendAiMessage=async()=>{
                   <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:7}}>DEIN SETUP HEUTE</div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:7}}>
                     <div style={{background:dm?'rgba(99,102,241,0.1)':'rgba(99,102,241,0.06)',borderRadius:9,padding:'8px 5px',textAlign:'center',border:'1px solid rgba(99,102,241,0.25)'}}>
-                      <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>KONTRAKTE</div>                      <div style={{color:dm?'#c7d2fe':'#4c1d95',fontWeight:900,fontSize:18}}>{wz.recRiskLots||wz.instrQty||wz.recQty}x</div>
+                      <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>KONTRAKTE</div>
+                      <div style={{color:dm?'#c7d2fe':'#4c1d95',fontWeight:900,fontSize:18}}>{wz.recRiskLots||wz.instrQty||wz.recQty}x</div>
                       <div style={{color:B,fontSize:9,fontWeight:700}}>{wz.instrRec||wz.recSym||acct.instrument||'MNQ'}</div>
                       <div style={{color:wz.recRiskPct>1?Y:G,fontSize:7,fontWeight:700,marginTop:1}}>{wz.recRiskTier} Risiko</div>
                     </div>
@@ -2239,8 +2296,7 @@ const sendAiMessage=async()=>{
                   </div>
                 </div>
 
-                {/* DOWNGRADE WARNING */}
-                {wz.downgradeRec&&<div style={{margin:'0 16px 8px',padding:'8px 10px',background:wz.downgradeRec==='PAUSE'?'rgba(245,158,11,0.9)':'rgba(239,68,68,0.85)',borderRadius:8,marginTop:8}}>
+                {/* DOWNGRADE WARNING */}                {wz.downgradeRec&&<div style={{margin:'0 16px 8px',padding:'8px 10px',background:wz.downgradeRec==='PAUSE'?'rgba(245,158,11,0.9)':'rgba(239,68,68,0.85)',borderRadius:8,marginTop:8}}>
                   <div style={{fontSize:10,fontWeight:700,color:'#fff'}}>{wz.downgradeRec==='PAUSE'?'🛑 STOP':(wz.downgradeRec==='REDUZIEREN'?'🚨 POSITION REDUZIEREN':'🚨 WECHSEL ZU '+wz.downgradeRec+'!')}</div>
                   <div style={{fontSize:9,color:'rgba(255,255,255,0.9)',marginTop:2}}>{wz.downgradeReason}</div>
                 </div>}
@@ -3018,9 +3074,73 @@ const sendAiMessage=async()=>{
               {settingsSection==="konto"&&sec.id==="konto"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>🏦 PROP FIRMA</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:12}}>
-                  {["TTP","FTMO","TopStep","Apex","MyFundedFX","Eigenes"].map(f=>(
-                    <button key={f} onClick={()=>saveAcct({...acct,propFirm:f})} style={{padding:"8px 4px",borderRadius:8,fontSize:11,fontWeight:700,background:acct.propFirm===f?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.propFirm===f?"#6366f1":DK.miniBorder),color:acct.propFirm===f?"#a5b4fc":DK.text}}>{f}</button>
+                  {["TTP","FTMO","TopStep","Apex","MyFundedFutures","Earn2Trade","Eigenes"].map(f=>(
+                    <button key={f} onClick={()=>{
+                      const rules=getPropFirmRules(f, acct.size||50000);
+                      if(rules){
+                        setPfPreview({
+                          firm:f,firmName:rules.firm,
+                          maxDD:rules.maxDD,
+                          dailyDD:rules.dailyDD||Math.round(rules.maxDD*0.5),
+                          target:(acct.size||50000)+Math.round((acct.size||50000)*(rules.profitPct/100)),
+                          ddType:rules.ddType==='eod_trailing'?'trailing':'eod',
+                          challengeDays:rules.days||30,
+                          profitPct:rules.profitPct
+                        });
+                      } else {
+                        saveAcct({...acct,propFirm:f});
+                      }
+                    }} style={{padding:"8px 4px",borderRadius:8,fontSize:11,fontWeight:700,background:(pfPreview?.firm===f||acct.propFirm===f)?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+((pfPreview?.firm===f||acct.propFirm===f)?"#6366f1":DK.miniBorder),color:(pfPreview?.firm===f||acct.propFirm===f)?"#a5b4fc":DK.text}}>{f}</button>
                   ))}
+                
+                {/* PREVIEW + BESTÄTIGEN */}
+                {pfPreview&&<div style={{marginTop:12,background:dm?"rgba(99,102,241,0.08)":"rgba(99,102,241,0.05)",border:"2px solid rgba(99,102,241,0.3)",borderRadius:12,padding:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                    <div style={{fontSize:12,fontWeight:800,color:DK.text}}>📋 {pfPreview.firmName} Vorschau</div>
+                    <button onClick={()=>setPfPreview(null)} style={{background:"none",color:DK.muted,fontSize:16,padding:"0 4px"}}>×</button>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                    <div>
+                      <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>MAX DRAWDOWN</div>
+                      <input type="number" value={pfPreview.maxDD} onChange={e=>setPfPreview(p=>({...p,maxDD:parseInt(e.target.value)||p.maxDD}))}
+                        style={{background:DK.input||DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"6px 10px",fontSize:13,fontWeight:700,color:R,width:"100%",outline:"none"}}/>
+                    </div>
+                    <div>
+                      <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>DAILY DD</div>
+                      <input type="number" value={pfPreview.dailyDD} onChange={e=>setPfPreview(p=>({...p,dailyDD:parseInt(e.target.value)||p.dailyDD}))}
+                        style={{background:DK.input||DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"6px 10px",fontSize:13,fontWeight:700,color:Y,width:"100%",outline:"none"}}/>
+                    </div>
+                    <div>
+                      <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>GEWINNZIEL ($)</div>
+                      <input type="number" value={pfPreview.target} onChange={e=>setPfPreview(p=>({...p,target:parseInt(e.target.value)||p.target}))}
+                        style={{background:DK.input||DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"6px 10px",fontSize:13,fontWeight:700,color:G,width:"100%",outline:"none"}}/>
+                    </div>
+                    <div>
+                      <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>LAUFZEIT (TAGE)</div>
+                      <input type="number" value={pfPreview.challengeDays} onChange={e=>setPfPreview(p=>({...p,challengeDays:parseInt(e.target.value)||p.challengeDays}))}
+                        style={{background:DK.input||DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"6px 10px",fontSize:13,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/>
+                    </div>
+                  </div>
+                  <div style={{fontSize:9,color:DK.muted,marginBottom:10,padding:"6px 8px",background:"rgba(245,158,11,0.08)",borderRadius:6,border:"1px solid rgba(245,158,11,0.2)"}}>
+                    ⚠️ Bitte offizielle Regeln deiner Firma prüfen — Werte können sich ändern.
+                  </div>
+                  <button onClick={()=>{
+                    const newAcct={...acct,propFirm:pfPreview.firm,
+                      maxDD:pfPreview.maxDD,
+                      dailyDD:pfPreview.dailyDD,
+                      target:pfPreview.target,
+                      ddType:pfPreview.ddType,
+                      challengeDays:pfPreview.challengeDays
+                    };
+                    saveAcct(newAcct);
+                    setMaxDDLevel((acct.size||50000)-pfPreview.maxDD);
+                    localStorage.setItem('ttp_maxdd_level',(acct.size||50000)-pfPreview.maxDD);
+                    setPfPreview(null);
+                    showToast('✅ '+pfPreview.firmName+' Regeln in ProfitMap geladen!');
+                  }} style={{width:"100%",padding:"12px",borderRadius:10,fontWeight:800,fontSize:13,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",border:"none"}}>
+                    ✅ Bestätigen & in ProfitMap laden
+                  </button>
+                </div>}
                 </div>
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>📋 KONTO TYP</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,marginBottom:12}}>
@@ -3037,7 +3157,16 @@ const sendAiMessage=async()=>{
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>💰 KONTO GRÖßE</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5,marginBottom:12}}>
                   {[25000,50000,75000,100000,150000,200000].map(s=>(
-                    <button key={s} onClick={()=>saveAcct({...acct,size:s})} style={{padding:"7px 4px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.size===s?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.size===s?"#6366f1":DK.miniBorder),color:acct.size===s?"#a5b4fc":DK.text}}>${s>=1000?s/1000+"k":s}</button>
+                    <button key={s} onClick={()=>{
+                      const rules=getPropFirmRules(acct.propFirm||'TTP', s);
+                      const newMaxDD=rules?rules.maxDD:Math.round(s*0.04);
+                      const newDailyDD=rules?rules.dailyDD||Math.round(rules.maxDD*0.5):Math.round(s*0.02);
+                      const newTarget=rules?(s+Math.round(s*(rules.profitPct/100))):Math.round(s*1.08);
+                      saveAcct({...acct,size:s,maxDD:newMaxDD,dailyDD:newDailyDD,target:newTarget});
+                      setSaldo(s);localStorage.setItem('ttp_saldo',s);
+                      setMaxDDLevel(s-newMaxDD);localStorage.setItem('ttp_maxdd_level',s-newMaxDD);
+                      showToast('✅ Konto $'+(s/1000)+'k — '+( rules?rules.firm:'')+' Regeln geladen');
+                    }} style={{padding:"7px 4px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.size===s?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.size===s?"#6366f1":DK.miniBorder),color:acct.size===s?"#a5b4fc":DK.text}}>${s>=1000?s/1000+"k":s}</button>
                   ))}
                 </div>
                 <Field dm={dm} label={"GEWINNZIEL ($) — Ziel-Saldo eingeben"}><input type="number" defaultValue={acct.target||54000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,target:v});}} placeholder="z.B. 54000" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/></Field>
