@@ -54,11 +54,11 @@ const INSTRUMENTS = {
 // PROP FIRM DATENBANK — Verifiziert Juni 2026
 // ============================================================
 const PROP_FIRMS = {
-  'TTP': { name:'The Trading Pit', ddType:'trailing', note:'Futures Prime · 7% EOD Trailing',
+  'TTP': { name:'The Trading Pit', ddType:'trailing', note:'Futures · EOD Trailing DD',
     accounts:[
-      {size:50000,  maxDD:3500,  dailyDD:2000, target:5000,  days:30},
-      {size:100000, maxDD:7000,  dailyDD:4000, target:10000, days:30},
-      {size:150000, maxDD:10500, dailyDD:6000, target:15000, days:30},
+      {size:50000,  maxDD:2000, dailyDD:1000, target:3000, days:30},
+      {size:100000, maxDD:3000, dailyDD:2000, target:6000, days:30},
+      {size:150000, maxDD:4500, dailyDD:3000, target:9000, days:30},
     ]},
   'FTMO': { name:'FTMO', ddType:'static', note:'2-Step · 10% Static · 5% Daily',
     accounts:[
@@ -1144,8 +1144,8 @@ Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
       const d=await res.json();
       const raw=(d.message||'').replace(/```json|```/g,'').trim();
       const parsed=JSON.parse(raw);
-      const result={...parsed,date:new Date().toISOString().split('T')[0],ts:Date.now()};      setWzpData(result);
-      localStorage.setItem('ttp_wzp_data',JSON.stringify(result));
+      const result={...parsed,date:new Date().toISOString().split('T')[0],ts:Date.now()};
+      setWzpData(result);      localStorage.setItem('ttp_wzp_data',JSON.stringify(result));
     }catch(e){console.error('WZP Claude error:',e);}
     setWzpLoading(false);
   };
@@ -2290,9 +2290,9 @@ const sendAiMessage=async()=>{
                     <span style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px'}}>ZIEL ERREICHBAR?</span>
                     <span style={{fontSize:11,fontWeight:900,color:wz.machbar?G:wz.machbarPct>30?Y:R}}>{wz.machbar?'✅ JA':'⚠️ KRITISCH'} · {wz.machbarPct}%</span>
                   </div>
-                  {wz.instrReason&&<div style={{fontSize:9,color:Y,marginBottom:6,padding:'4px 8px',background:'rgba(245,158,11,0.06)',borderRadius:6,border:'1px solid rgba(245,158,11,0.2)'}}>💡 {wz.instrReason}</div>}                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:8}}>
-                    {[
-                      {l:'PESSIMISTISCH',wr:wz.pessWR,ev:wz.evPess,d:wz.daysToGoalPess,c:R,bg:dm?'rgba(239,68,68,0.06)':'rgba(239,68,68,0.05)',b:'rgba(239,68,68,0.2)'},
+                  {wz.instrReason&&<div style={{fontSize:9,color:Y,marginBottom:6,padding:'4px 8px',background:'rgba(245,158,11,0.06)',borderRadius:6,border:'1px solid rgba(245,158,11,0.2)'}}>💡 {wz.instrReason}</div>}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:8}}>
+                    {[                      {l:'PESSIMISTISCH',wr:wz.pessWR,ev:wz.evPess,d:wz.daysToGoalPess,c:R,bg:dm?'rgba(239,68,68,0.06)':'rgba(239,68,68,0.05)',b:'rgba(239,68,68,0.2)'},
                       {l:'REALISTISCH',wr:wz.realScWR,ev:wz.evReal,d:wz.daysToGoalReal,c:Y,bg:dm?'rgba(245,158,11,0.06)':'rgba(245,158,11,0.05)',b:'rgba(245,158,11,0.25)'},
                       {l:'OPTIMISTISCH',wr:wz.bestWR,ev:wz.evBest,d:wz.daysToGoalBest,c:G,bg:dm?'rgba(0,211,149,0.06)':'rgba(0,211,149,0.05)',b:'rgba(0,211,149,0.2)'},
                     ].map(s=>(
@@ -3079,9 +3079,10 @@ const sendAiMessage=async()=>{
                   return(
                     <div style={{marginBottom:20}}>
                       <div style={{fontSize:10,color:B,fontWeight:700,letterSpacing:"1px",marginBottom:10}}>2 · {firm.name.toUpperCase()} — KONTO WÄHLEN</div>
-                      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
                         {firm.accounts.map(a=>{
                           const sel=pfPreview&&pfPreview.size===a.size;
+                          const fmt=v=>v>=1000?"$"+(v/1000).toLocaleString("de-DE",{maximumFractionDigits:1})+"k":"$"+v;
                           return(
                             <button key={a.size} onClick={()=>setPfPreview({
                               firm:pfSelectedFirm,firmName:firm.name,size:a.size,
@@ -3089,23 +3090,25 @@ const sendAiMessage=async()=>{
                               target:a.size+a.target,challengeDays:a.days||30,
                               ddType:firm.ddType
                             })}
-                              style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-                                padding:"12px 14px",borderRadius:10,
-                                background:sel?"rgba(99,102,241,0.18)":dm?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.04)",
+                              style={{padding:"14px 16px",borderRadius:12,textAlign:"left",
+                                background:sel?"linear-gradient(135deg,rgba(99,102,241,0.18),rgba(168,85,247,0.1))":dm?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.04)",
                                 border:"1.5px solid "+(sel?"#6366f1":DK.miniBorder),transition:"all .15s"}}>
-                              <span style={{fontSize:15,fontWeight:800,color:sel?"#a5b4fc":DK.text}}>${a.size>=1000?(a.size/1000)+"k":a.size}</span>
-                              <div style={{display:"flex",gap:14,alignItems:"center"}}>
-                                <div style={{textAlign:"right"}}>
-                                  <div style={{fontSize:7,color:DK.muted}}>MAX DD</div>
-                                  <div style={{fontSize:12,fontWeight:700,color:R}}>${(a.maxDD/1000).toFixed(a.maxDD>=10000?0:1)}k</div>
+                              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:sel||true?10:0}}>
+                                <span style={{fontSize:18,fontWeight:800,color:sel?"#a5b4fc":DK.text}}>${a.size>=1000?(a.size/1000)+"k":a.size}</span>
+                                {sel&&<span style={{fontSize:11,color:B,fontWeight:700}}>✓ gewählt</span>}
+                              </div>
+                              <div style={{display:"grid",gridTemplateColumns:a.dailyDD>0?"1fr 1fr 1fr":"1fr 1fr",gap:8}}>
+                                <div style={{background:dm?"rgba(0,0,0,0.2)":"rgba(255,255,255,0.5)",borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                                  <div style={{fontSize:8,color:DK.muted,marginBottom:3,letterSpacing:"0.5px"}}>MAX DD</div>
+                                  <div style={{fontSize:14,fontWeight:800,color:R}}>{fmt(a.maxDD)}</div>
                                 </div>
-                                {a.dailyDD>0&&<div style={{textAlign:"right"}}>
-                                  <div style={{fontSize:7,color:DK.muted}}>DAILY</div>
-                                  <div style={{fontSize:12,fontWeight:700,color:Y}}>${(a.dailyDD/1000).toFixed(a.dailyDD>=10000?0:1)}k</div>
+                                {a.dailyDD>0&&<div style={{background:dm?"rgba(0,0,0,0.2)":"rgba(255,255,255,0.5)",borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                                  <div style={{fontSize:8,color:DK.muted,marginBottom:3,letterSpacing:"0.5px"}}>DAILY DD</div>
+                                  <div style={{fontSize:14,fontWeight:800,color:Y}}>{fmt(a.dailyDD)}</div>
                                 </div>}
-                                <div style={{textAlign:"right"}}>
-                                  <div style={{fontSize:7,color:DK.muted}}>ZIEL</div>
-                                  <div style={{fontSize:12,fontWeight:700,color:G}}>+${(a.target/1000).toFixed(a.target>=10000?0:1)}k</div>
+                                <div style={{background:dm?"rgba(0,0,0,0.2)":"rgba(255,255,255,0.5)",borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
+                                  <div style={{fontSize:8,color:DK.muted,marginBottom:3,letterSpacing:"0.5px"}}>ZIEL</div>
+                                  <div style={{fontSize:14,fontWeight:800,color:G}}>+{fmt(a.target)}</div>
                                 </div>
                               </div>
                             </button>
