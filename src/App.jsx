@@ -184,6 +184,43 @@ const Field=({label,children,dm:fdm})=>(
 
 const sanitize=s=>typeof s==="string"?s.replace(/[\uD800-\uDFFF]/g,""):s;
 
+
+// ── SUPABASE SYNC FUNCTIONS ──────────────────────────────
+const loadFromSupabase = async (userId) => {
+  try {
+    const [tradesRes, settingsRes] = await Promise.all([
+      supabase.from('trades').select('*').eq('user_id', userId),
+      supabase.from('settings').select('*').eq('user_id', userId).single()
+    ]);
+    return {
+      trades: tradesRes.data || [],
+      settings: settingsRes.data || null
+    };
+  } catch(e) {
+    console.error('loadFromSupabase error:', e);
+    return null;
+  }
+};
+
+const syncTradesToSupabase = async (userId, newTrades) => {
+  try {
+    await supabase.from('trades').upsert(
+      newTrades.map(t => ({...t, user_id: userId})),
+      {onConflict: 'id'}
+    );
+  } catch(e) { console.error('syncTrades error:', e); }
+};
+
+const syncSettingsToSupabase = async (userId, data) => {
+  try {
+    await supabase.from('settings').upsert({
+      user_id: userId,
+      ...data,
+      updated_at: new Date().toISOString()
+    }, {onConflict: 'user_id'});
+  } catch(e) { console.error('syncSettings error:', e); }
+};
+
 export default function App(){
   const[trades,setTrades]=useState(()=>{
     try{
@@ -503,6 +540,13 @@ export default function App(){
     });
     const{data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
       setAuthUser(session?.user||null);
+      // Clear localStorage when user changes to prevent data leakage
+      if(!session?.user){
+        const keys=['ttp_trades','ttp_account','ttp_saldo','ttp_maxdd_level','ttp_goals',
+          'ttp_settings','ttp_challenge_start','ttp_coach_profile','ttp_coach_memory',
+          'ttp_onboarding_done','ttp_chat_history','ttp_checks','ttp_journal','ttp_problems'];
+        keys.forEach(k=>localStorage.removeItem(k));
+      }
     });
     return()=>subscription.unsubscribe();
   },[]);
@@ -1060,8 +1104,7 @@ Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
       });
       if(!res.ok){setWzpLoading(false);return;}
       const d=await res.json();
-      const raw=(d.message||'').replace(/```json|```/g,'').trim();
-      const parsed=JSON.parse(raw);
+      const raw=(d.message||'').replace(/```json|```/g,'').trim();      const parsed=JSON.parse(raw);
       const result={...parsed,date:new Date().toISOString().split('T')[0],ts:Date.now()};
       setWzpData(result);
       localStorage.setItem('ttp_wzp_data',JSON.stringify(result));
@@ -1089,7 +1132,8 @@ Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
     return Object.entries(m).sort(([a],[b])=>b.localeCompare(a)).map(([mo,v])=>({
       mo,pnl:Math.round(v.pnl*100)/100,trades:v.trades,wins:v.wins,losses:v.losses,
       wr:Math.round(v.wins/v.trades*100),days:v.days.size
-    }));  },[t09]);
+    }));
+  },[t09]);
 
   const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(""),2800);};
 
@@ -2166,8 +2210,7 @@ const sendAiMessage=async()=>{
                   <div style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px',marginBottom:7}}>DEIN SETUP HEUTE</div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:7}}>
                     <div style={{background:dm?'rgba(99,102,241,0.1)':'rgba(99,102,241,0.06)',borderRadius:9,padding:'8px 5px',textAlign:'center',border:'1px solid rgba(99,102,241,0.25)'}}>
-                      <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>KONTRAKTE</div>
-                      <div style={{color:dm?'#c7d2fe':'#4c1d95',fontWeight:900,fontSize:18}}>{wz.recRiskLots||wz.instrQty||wz.recQty}x</div>
+                      <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>KONTRAKTE</div>                      <div style={{color:dm?'#c7d2fe':'#4c1d95',fontWeight:900,fontSize:18}}>{wz.recRiskLots||wz.instrQty||wz.recQty}x</div>
                       <div style={{color:B,fontSize:9,fontWeight:700}}>{wz.instrRec||wz.recSym||acct.instrument||'MNQ'}</div>
                       <div style={{color:wz.recRiskPct>1?Y:G,fontSize:7,fontWeight:700,marginTop:1}}>{wz.recRiskTier} Risiko</div>
                     </div>
@@ -2180,7 +2223,8 @@ const sendAiMessage=async()=>{
                       <div style={{color:DK.muted,fontSize:7,marginBottom:2}}>TAKE PROFIT</div>
                       <div style={{color:G,fontWeight:900,fontSize:18}}>{cd?cd.adaptiveTP:acct.tpTicks||80}T</div>
                       <div style={{color:G,fontSize:9,fontWeight:700}}>+${wz.recTP}</div>
-                    </div>                  </div>
+                    </div>
+                  </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:5}}>
                     <div style={{background:DK.mini,borderRadius:8,padding:'7px 10px',border:'1px solid '+DK.miniBorder}}>
                       <div style={{color:DK.muted,fontSize:7,marginBottom:1}}>MAX TRADES / TAG</div>
