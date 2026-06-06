@@ -51,101 +51,60 @@ const INSTRUMENTS = {
 
 
 // ============================================================
-// PROP FIRM DATENBANK — Offizielle Challenge-Regeln
-// Zuletzt aktualisiert: Juni 2026
+// PROP FIRM DATENBANK — Verifiziert Juni 2026
 // ============================================================
 const PROP_FIRMS = {
-  'TTP': {
-    name: 'The Trading Pit',
-    type: 'futures',
-    ddType: 'eod_trailing',
-    accounts: {
-      20000:  { maxDD: 1000, dailyDD: 600,  target: 22000, days: 30, profitPct: 10 },
-      50000:  { maxDD: 2000, dailyDD: 1000, target: 53000, days: 30, profitPct: 6  },
-      100000: { maxDD: 3500, dailyDD: 1750, target: 106000,days: 30, profitPct: 6  },
-      150000: { maxDD: 5000, dailyDD: 2500, target: 159000,days: 30, profitPct: 6  },
-    }
-  },
-  'FTMO': {
-    name: 'FTMO',
-    type: 'cfd',
-    ddType: 'static',
-    accounts: {
-      10000:  { maxDD: 1000, dailyDD: 500,  target: 11000, days: 30, profitPct: 10 },
-      25000:  { maxDD: 2500, dailyDD: 1250, target: 27500, days: 30, profitPct: 10 },
-      50000:  { maxDD: 5000, dailyDD: 2500, target: 55000, days: 30, profitPct: 10 },
-      100000: { maxDD: 10000,dailyDD: 5000, target: 110000,days: 30, profitPct: 10 },
-      200000: { maxDD: 20000,dailyDD: 10000,target: 220000,days: 30, profitPct: 10 },
-    }
-  },
-  'Apex': {
-    name: 'Apex Trader Funding',
-    type: 'futures',
-    ddType: 'eod_trailing',
-    accounts: {
-      25000:  { maxDD: 1500, dailyDD: 0,    target: 26500, days: 0,  profitPct: 6  },
-      50000:  { maxDD: 2500, dailyDD: 0,    target: 53000, days: 0,  profitPct: 6  },
-      75000:  { maxDD: 2750, dailyDD: 0,    target: 79250, days: 0,  profitPct: 6  },
-      100000: { maxDD: 3000, dailyDD: 0,    target: 106000,days: 0,  profitPct: 6  },
-      150000: { maxDD: 5000, dailyDD: 0,    target: 159000,days: 0,  profitPct: 6  },
-      250000: { maxDD: 6500, dailyDD: 0,    target: 265000,days: 0,  profitPct: 6  },
-    }
-  },
-  'TopStep': {
-    name: 'Topstep',
-    type: 'futures',
-    ddType: 'eod_trailing',
-    accounts: {
-      50000:  { maxDD: 2000, dailyDD: 1000, target: 53000, days: 0,  profitPct: 6  },
-      100000: { maxDD: 3000, dailyDD: 1500, target: 106000,days: 0,  profitPct: 6  },
-      150000: { maxDD: 4500, dailyDD: 2250, target: 159000,days: 0,  profitPct: 6  },
-    }
-  },
-  'MyFundedFutures': {
-    name: 'MyFundedFutures',
-    type: 'futures',
-    ddType: 'eod_trailing',
-    accounts: {
-      25000:  { maxDD: 1500, dailyDD: 600,  target: 26500, days: 0,  profitPct: 6  },
-      50000:  { maxDD: 2500, dailyDD: 1000, target: 53000, days: 0,  profitPct: 6  },
-      100000: { maxDD: 4000, dailyDD: 2000, target: 106000,days: 0,  profitPct: 6  },
-      150000: { maxDD: 6000, dailyDD: 3000, target: 159000,days: 0,  profitPct: 6  },
-    }
-  },
-  'Earn2Trade': {
-    name: 'Earn2Trade',
-    type: 'futures',
-    ddType: 'eod_trailing',
-    accounts: {
-      25000:  { maxDD: 1500, dailyDD: 750,  target: 26500, days: 0,  profitPct: 6  },
-      50000:  { maxDD: 2000, dailyDD: 1000, target: 53500, days: 0,  profitPct: 7  },
-      100000: { maxDD: 3500, dailyDD: 1750, target: 108000,days: 0,  profitPct: 8  },
-    }
-  },
-  'Eigenes': {
-    name: 'Eigenes Konto',
-    type: 'private',
-    ddType: 'static',
-    accounts: {
-      5000:   { maxDD: 500,  dailyDD: 200,  target: 5500,  days: 0,  profitPct: 10 },
-      10000:  { maxDD: 1000, dailyDD: 400,  target: 11000, days: 0,  profitPct: 10 },
-      25000:  { maxDD: 2500, dailyDD: 1000, target: 27500, days: 0,  profitPct: 10 },
-      50000:  { maxDD: 5000, dailyDD: 2000, target: 55000, days: 0,  profitPct: 10 },
-      100000: { maxDD: 10000,dailyDD: 4000, target: 110000,days: 0,  profitPct: 10 },
-    }
-  },
-};
-
-// Helper: Prop Firm Regeln laden
-const getPropFirmRules = (firm, size) => {
-  const f = PROP_FIRMS[firm];
-  if(!f) return null;
-  // Finde nächstgelegene Kontogröße
-  const sizes = Object.keys(f.accounts).map(Number).sort((a,b)=>a-b);
-  const closest = sizes.reduce((prev, curr) => 
-    Math.abs(curr - size) < Math.abs(prev - size) ? curr : prev
-  );
-  return { ...f.accounts[closest], firm: f.name, ddType: f.ddType, type: f.type };
+  'TTP': { name:'The Trading Pit', ddType:'trailing', note:'Futures Prime · 7% EOD Trailing',
+    accounts:[
+      {size:50000,  maxDD:3500,  dailyDD:2000, target:5000,  days:30},
+      {size:100000, maxDD:7000,  dailyDD:4000, target:10000, days:30},
+      {size:150000, maxDD:10500, dailyDD:6000, target:15000, days:30},
+    ]},
+  'FTMO': { name:'FTMO', ddType:'static', note:'2-Step · 10% Static · 5% Daily',
+    accounts:[
+      {size:10000,  maxDD:1000,  dailyDD:500,  target:1000,  days:0},
+      {size:25000,  maxDD:2500,  dailyDD:1250, target:2500,  days:0},
+      {size:50000,  maxDD:5000,  dailyDD:2500, target:5000,  days:0},
+      {size:100000, maxDD:10000, dailyDD:5000, target:10000, days:0},
+      {size:200000, maxDD:20000, dailyDD:10000,target:20000, days:0},
+    ]},
+  'Apex': { name:'Apex Trader Funding', ddType:'trailing', note:'EOD Trailing · Kein Daily DD',
+    accounts:[
+      {size:25000,  maxDD:1500,  dailyDD:0, target:1500,  days:0},
+      {size:50000,  maxDD:2500,  dailyDD:0, target:3000,  days:0},
+      {size:75000,  maxDD:2750,  dailyDD:0, target:4250,  days:0},
+      {size:100000, maxDD:3000,  dailyDD:0, target:6000,  days:0},
+      {size:150000, maxDD:5000,  dailyDD:0, target:9000,  days:0},
+      {size:250000, maxDD:6500,  dailyDD:0, target:15000, days:0},
+      {size:300000, maxDD:7500,  dailyDD:0, target:20000, days:0},
+    ]},
+  'TopStep': { name:'Topstep', ddType:'trailing', note:'EOD Trailing',
+    accounts:[
+      {size:50000,  maxDD:2000, dailyDD:1000, target:3000, days:0},
+      {size:100000, maxDD:3000, dailyDD:2000, target:6000, days:0},
+      {size:150000, maxDD:4500, dailyDD:3000, target:9000, days:0},
+    ]},
+  'MyFundedFutures': { name:'MyFundedFutures', ddType:'trailing', note:'8% Trailing',
+    accounts:[
+      {size:25000,  maxDD:1500, dailyDD:0, target:1500, days:0},
+      {size:50000,  maxDD:2000, dailyDD:0, target:3000, days:0},
+      {size:100000, maxDD:3500, dailyDD:0, target:6000, days:0},
+      {size:150000, maxDD:4500, dailyDD:0, target:9000, days:0},
+    ]},
+  'Earn2Trade': { name:'Earn2Trade', ddType:'trailing', note:'Trailing DD',
+    accounts:[
+      {size:25000,  maxDD:1500, dailyDD:550,  target:1750, days:0},
+      {size:50000,  maxDD:2000, dailyDD:1100, target:3000, days:0},
+      {size:100000, maxDD:3500, dailyDD:2200, target:6000, days:0},
+    ]},
+  'Eigenes': { name:'Eigenes Konto', ddType:'static', note:'Eigenkapital — frei wählbar',
+    accounts:[
+      {size:5000,   maxDD:500,   dailyDD:250,  target:500,  days:0},
+      {size:10000,  maxDD:1000,  dailyDD:500,  target:1000, days:0},
+      {size:25000,  maxDD:2500,  dailyDD:1250, target:2500, days:0},
+      {size:50000,  maxDD:5000,  dailyDD:2500, target:5000, days:0},
+      {size:100000, maxDD:10000, dailyDD:5000, target:10000,days:0},
+    ]},
 };
 
 // Helper: Ticks → Dollar
@@ -282,6 +241,25 @@ const Field=({label,children,dm:fdm})=>(
 );
 
 const sanitize=s=>typeof s==="string"?s.replace(/[\uD800-\uDFFF]/g,""):s;
+
+
+const loadFromSupabase = async (userId) => {
+  try {
+    const [tradesRes, settingsRes] = await Promise.all([
+      supabase.from('trades').select('*').eq('user_id', userId),
+      supabase.from('settings').select('*').eq('user_id', userId).single()
+    ]);
+    return { trades: tradesRes.data || [], settings: settingsRes.data || null };
+  } catch(e) { console.error('loadFromSupabase error:', e); return null; }
+};
+const syncTradesToSupabase = async (userId, newTrades) => {
+  try { await supabase.from('trades').upsert(newTrades.map(t => ({...t, user_id: userId})), {onConflict: 'id'}); }
+  catch(e) { console.error('syncTrades error:', e); }
+};
+const syncSettingsToSupabase = async (userId, data) => {
+  try { await supabase.from('settings').upsert({user_id: userId, ...data, updated_at: new Date().toISOString()}, {onConflict: 'user_id'}); }
+  catch(e) { console.error('syncSettings error:', e); }
+};
 
 export default function App(){
   const[trades,setTrades]=useState(()=>{
@@ -602,6 +580,9 @@ export default function App(){
     });
     const{data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
       setAuthUser(session?.user||null);
+      if(!session?.user){
+        ['ttp_trades','ttp_account','ttp_saldo','ttp_maxdd_level','ttp_goals','ttp_settings','ttp_challenge_start','ttp_coach_profile','ttp_coach_memory','ttp_onboarding_done','ttp_chat_history','ttp_checks','ttp_journal','ttp_problems'].forEach(k=>localStorage.removeItem(k));
+      }
     });
     return()=>subscription.unsubscribe();
   },[]);
@@ -769,7 +750,8 @@ export default function App(){
   },[t09,acct]);
 
   const[wzpExp,setWzpExp]=useState(false);
-  const[pfPreview,setPfPreview]=useState(null); // {maxDD,dailyDD,target,ddType,firm}
+  const[pfSelectedFirm,setPfSelectedFirm]=useState(null);
+  const[pfPreview,setPfPreview]=useState(null);
   const[wzpData,setWzpData]=useState(()=>{
     try{const d=JSON.parse(localStorage.getItem('ttp_wzp_data')||'null');
       if(d&&d.date===new Date().toISOString().split('T')[0])return d;
@@ -1147,7 +1129,8 @@ Berechne basierend auf ECHTEN Trade-Daten:
 2. Adaptives TP in Ticks (basierend auf avg Win $${avgWin})
 3. Empfohlene Kontrakt-Anzahl (basierend auf Max-Risiko $${maxRiskPerTrade} und adaptivem SL)
 4. Ampel-Status (green/yellow/red)
-5. Wochenziel und Tagesziel in $6. Challenge-Wahrscheinlichkeit % (nur wenn Challenge)
+5. Wochenziel und Tagesziel in $
+6. Challenge-Wahrscheinlichkeit % (nur wenn Challenge)
 7. 3 konkrete Empfehlungen auf Deutsch
 
 Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
@@ -1161,8 +1144,7 @@ Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
       const d=await res.json();
       const raw=(d.message||'').replace(/```json|```/g,'').trim();
       const parsed=JSON.parse(raw);
-      const result={...parsed,date:new Date().toISOString().split('T')[0],ts:Date.now()};
-      setWzpData(result);
+      const result={...parsed,date:new Date().toISOString().split('T')[0],ts:Date.now()};      setWzpData(result);
       localStorage.setItem('ttp_wzp_data',JSON.stringify(result));
     }catch(e){console.error('WZP Claude error:',e);}
     setWzpLoading(false);
@@ -1842,7 +1824,7 @@ const sendAiMessage=async()=>{
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div style={{background:DK.mini,borderRadius:12,padding:"12px 16px",border:"1px solid "+DK.miniBorder}}>
                 <div style={{color:DK.muted,fontSize:10,fontWeight:700,letterSpacing:"1px",marginBottom:6}}>KONTO ($)</div>
-                <select value={onboardData.size} onChange={e=>{const s=parseInt(e.target.value);const rules=getPropFirmRules(onboardData.firm||'TTP',s);setOnboardData(p=>({...p,size:s,target:rules?(s+Math.round(s*(rules.profitPct/100))):Math.round(s*1.08),maxDD:rules?rules.maxDD:Math.round(s*0.04),dailyDD:rules?rules.dailyDD||Math.round(rules.maxDD*0.5):Math.round(s*0.02)}))}} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}>
+                <select value={onboardData.size} onChange={e=>setOnboardData(p=>({...p,size:parseInt(e.target.value),target:parseInt(e.target.value)+parseInt(e.target.value)*0.08,maxDD:parseInt(e.target.value)*0.04,dailyDD:parseInt(e.target.value)*0.02}))} style={{background:"transparent",border:"none",fontSize:15,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}>
                   {[25000,50000,75000,100000,125000,150000,200000].map(s=><option key={s} value={s}>${(s/1000).toFixed(0)}k</option>)}
                 </select>
               </div>
@@ -2296,7 +2278,8 @@ const sendAiMessage=async()=>{
                   </div>
                 </div>
 
-                {/* DOWNGRADE WARNING */}                {wz.downgradeRec&&<div style={{margin:'0 16px 8px',padding:'8px 10px',background:wz.downgradeRec==='PAUSE'?'rgba(245,158,11,0.9)':'rgba(239,68,68,0.85)',borderRadius:8,marginTop:8}}>
+                {/* DOWNGRADE WARNING */}
+                {wz.downgradeRec&&<div style={{margin:'0 16px 8px',padding:'8px 10px',background:wz.downgradeRec==='PAUSE'?'rgba(245,158,11,0.9)':'rgba(239,68,68,0.85)',borderRadius:8,marginTop:8}}>
                   <div style={{fontSize:10,fontWeight:700,color:'#fff'}}>{wz.downgradeRec==='PAUSE'?'🛑 STOP':(wz.downgradeRec==='REDUZIEREN'?'🚨 POSITION REDUZIEREN':'🚨 WECHSEL ZU '+wz.downgradeRec+'!')}</div>
                   <div style={{fontSize:9,color:'rgba(255,255,255,0.9)',marginTop:2}}>{wz.downgradeReason}</div>
                 </div>}
@@ -2307,8 +2290,7 @@ const sendAiMessage=async()=>{
                     <span style={{fontSize:8,color:DK.muted,fontWeight:700,letterSpacing:'0.8px'}}>ZIEL ERREICHBAR?</span>
                     <span style={{fontSize:11,fontWeight:900,color:wz.machbar?G:wz.machbarPct>30?Y:R}}>{wz.machbar?'✅ JA':'⚠️ KRITISCH'} · {wz.machbarPct}%</span>
                   </div>
-                  {wz.instrReason&&<div style={{fontSize:9,color:Y,marginBottom:6,padding:'4px 8px',background:'rgba(245,158,11,0.06)',borderRadius:6,border:'1px solid rgba(245,158,11,0.2)'}}>💡 {wz.instrReason}</div>}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:8}}>
+                  {wz.instrReason&&<div style={{fontSize:9,color:Y,marginBottom:6,padding:'4px 8px',background:'rgba(245,158,11,0.06)',borderRadius:6,border:'1px solid rgba(245,158,11,0.2)'}}>💡 {wz.instrReason}</div>}                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:5,marginBottom:8}}>
                     {[
                       {l:'PESSIMISTISCH',wr:wz.pessWR,ev:wz.evPess,d:wz.daysToGoalPess,c:R,bg:dm?'rgba(239,68,68,0.06)':'rgba(239,68,68,0.05)',b:'rgba(239,68,68,0.2)'},
                       {l:'REALISTISCH',wr:wz.realScWR,ev:wz.evReal,d:wz.daysToGoalReal,c:Y,bg:dm?'rgba(245,158,11,0.06)':'rgba(245,158,11,0.05)',b:'rgba(245,158,11,0.25)'},
@@ -3071,110 +3053,119 @@ const sendAiMessage=async()=>{
                 <Field dm={dm} label="KONTO NUMMER"><input defaultValue={acct.number||""} onBlur={e=>saveAcct({...acct,number:e.target.value})} placeholder="z.B. P-14" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
                 <Field dm={dm} label="BROKER / PROP FIRM (Freitext)"><input defaultValue={acct.broker||""} onBlur={e=>saveAcct({...acct,broker:e.target.value})} placeholder="z.B. The Trading Pit" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
               </div>}
-              {settingsSection==="konto"&&sec.id==="konto"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
-                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>🏦 PROP FIRMA</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:12}}>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:pfPreview?8:0}}>
-                {["TTP","FTMO","TopStep","Apex","MyFundedFutures","Earn2Trade","Eigenes"].map(f=>(
-                  <button key={f} onClick={()=>{
-                    const rules=getPropFirmRules(f, acct.size||50000);
-                    if(rules){
-                      setPfPreview({
-                        firm:f,firmName:rules.firm,
-                        maxDD:rules.maxDD,
-                        dailyDD:rules.dailyDD||Math.round(rules.maxDD*0.5),
-                        target:(acct.size||50000)+Math.round((acct.size||50000)*(rules.profitPct/100)),
-                        ddType:rules.ddType==='eod_trailing'?'trailing':'eod',
-                        challengeDays:rules.days||30,
-                        profitPct:rules.profitPct
-                      });
-                    }
-                  }} style={{padding:"8px 4px",borderRadius:8,fontSize:11,fontWeight:700,
-                    background:(pfPreview?.firm===f||(!pfPreview&&acct.propFirm===f))?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",
-                    border:"1px solid "+((pfPreview?.firm===f||(!pfPreview&&acct.propFirm===f))?"#6366f1":DK.miniBorder),
-                    color:(pfPreview?.firm===f||(!pfPreview&&acct.propFirm===f))?"#a5b4fc":DK.text}}>
-                    {f==='MyFundedFutures'?'MyFF':f}
-                  </button>
-                ))}
+              {settingsSection==="konto"&&sec.id==="konto"&&<div style={{padding:"16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
+
+                {/* SCHRITT 1: PROP FIRMA */}
+                <div style={{fontSize:10,color:B,fontWeight:700,letterSpacing:"1px",marginBottom:10}}>1 · PROP FIRMA WÄHLEN</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
+                  {Object.entries(PROP_FIRMS).map(([key,f])=>{
+                    const active=pfSelectedFirm===key||(!pfSelectedFirm&&acct.propFirm===key);
+                    return(
+                      <button key={key} onClick={()=>{setPfSelectedFirm(key);setPfPreview(null);}}
+                        style={{padding:"14px 10px",borderRadius:12,textAlign:"left",
+                          background:active?"linear-gradient(135deg,rgba(99,102,241,0.2),rgba(168,85,247,0.12))":dm?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.04)",
+                          border:"1.5px solid "+(active?"#6366f1":DK.miniBorder),
+                          transition:"all .15s"}}>
+                        <div style={{fontSize:13,fontWeight:800,color:active?"#a5b4fc":DK.text,marginBottom:2}}>{key==='MyFundedFutures'?'MyFunded':key}</div>
+                        <div style={{fontSize:8,color:DK.muted,lineHeight:1.3}}>{f.note}</div>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* PREVIEW — volle Breite unter den Buttons */}
-                {pfPreview&&<div style={{background:dm?"rgba(99,102,241,0.08)":"rgba(99,102,241,0.05)",border:"2px solid rgba(99,102,241,0.3)",borderRadius:12,padding:14,marginBottom:12}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                    <div style={{fontSize:12,fontWeight:800,color:DK.text}}>📋 {pfPreview.firmName}</div>
-                    <button onClick={()=>setPfPreview(null)} style={{background:"none",color:DK.muted,fontSize:18,padding:"0 4px",lineHeight:1}}>×</button>
+                {/* SCHRITT 2: KONTO WÄHLEN */}
+                {pfSelectedFirm&&(()=>{
+                  const firm=PROP_FIRMS[pfSelectedFirm];
+                  return(
+                    <div style={{marginBottom:20}}>
+                      <div style={{fontSize:10,color:B,fontWeight:700,letterSpacing:"1px",marginBottom:10}}>2 · {firm.name.toUpperCase()} — KONTO WÄHLEN</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                        {firm.accounts.map(a=>{
+                          const sel=pfPreview&&pfPreview.size===a.size;
+                          return(
+                            <button key={a.size} onClick={()=>setPfPreview({
+                              firm:pfSelectedFirm,firmName:firm.name,size:a.size,
+                              maxDD:a.maxDD,dailyDD:a.dailyDD,
+                              target:a.size+a.target,challengeDays:a.days||30,
+                              ddType:firm.ddType
+                            })}
+                              style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                                padding:"12px 14px",borderRadius:10,
+                                background:sel?"rgba(99,102,241,0.18)":dm?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.04)",
+                                border:"1.5px solid "+(sel?"#6366f1":DK.miniBorder),transition:"all .15s"}}>
+                              <span style={{fontSize:15,fontWeight:800,color:sel?"#a5b4fc":DK.text}}>${a.size>=1000?(a.size/1000)+"k":a.size}</span>
+                              <div style={{display:"flex",gap:14,alignItems:"center"}}>
+                                <div style={{textAlign:"right"}}>
+                                  <div style={{fontSize:7,color:DK.muted}}>MAX DD</div>
+                                  <div style={{fontSize:12,fontWeight:700,color:R}}>${(a.maxDD/1000).toFixed(a.maxDD>=10000?0:1)}k</div>
+                                </div>
+                                {a.dailyDD>0&&<div style={{textAlign:"right"}}>
+                                  <div style={{fontSize:7,color:DK.muted}}>DAILY</div>
+                                  <div style={{fontSize:12,fontWeight:700,color:Y}}>${(a.dailyDD/1000).toFixed(a.dailyDD>=10000?0:1)}k</div>
+                                </div>}
+                                <div style={{textAlign:"right"}}>
+                                  <div style={{fontSize:7,color:DK.muted}}>ZIEL</div>
+                                  <div style={{fontSize:12,fontWeight:700,color:G}}>+${(a.target/1000).toFixed(a.target>=10000?0:1)}k</div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* SCHRITT 3: VORSCHAU + BESTÄTIGEN */}
+                {pfPreview&&<div style={{marginBottom:20,background:"linear-gradient(135deg,rgba(99,102,241,0.1),rgba(168,85,247,0.06))",border:"2px solid rgba(99,102,241,0.35)",borderRadius:14,padding:16}}>
+                  <div style={{fontSize:10,color:B,fontWeight:700,letterSpacing:"1px",marginBottom:12}}>3 · BESTÄTIGEN & ANPASSEN</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+                    {[
+                      {l:"MAX DRAWDOWN ($)",k:"maxDD",c:R},
+                      {l:"DAILY DD ($)",k:"dailyDD",c:Y},
+                      {l:"GEWINNZIEL ($)",k:"target",c:G},
+                      {l:"LAUFZEIT (TAGE)",k:"challengeDays",c:DK.text},
+                    ].map(f=>(
+                      <div key={f.k}>
+                        <div style={{fontSize:9,color:DK.muted,fontWeight:600,marginBottom:4}}>{f.l}</div>
+                        <input type="number" value={pfPreview[f.k]} onChange={e=>setPfPreview(p=>({...p,[f.k]:parseInt(e.target.value)||0}))}
+                          style={{width:"100%",background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:9,padding:"10px 12px",fontSize:15,fontWeight:800,color:f.c,outline:"none",boxSizing:"border-box"}}/>
+                      </div>
+                    ))}
                   </div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-                    <div>
-                      <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>MAX DRAWDOWN</div>
-                      <input type="number" value={pfPreview.maxDD} onChange={e=>setPfPreview(p=>({...p,maxDD:parseInt(e.target.value)||p.maxDD}))}
-                        style={{background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"8px 10px",fontSize:14,fontWeight:700,color:R,width:"100%",outline:"none"}}/>
-                    </div>
-                    <div>
-                      <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>DAILY DD</div>
-                      <input type="number" value={pfPreview.dailyDD} onChange={e=>setPfPreview(p=>({...p,dailyDD:parseInt(e.target.value)||p.dailyDD}))}
-                        style={{background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"8px 10px",fontSize:14,fontWeight:700,color:Y,width:"100%",outline:"none"}}/>
-                    </div>
-                    <div>
-                      <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>GEWINNZIEL ($)</div>
-                      <input type="number" value={pfPreview.target} onChange={e=>setPfPreview(p=>({...p,target:parseInt(e.target.value)||p.target}))}
-                        style={{background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"8px 10px",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/>
-                    </div>
-                    <div>
-                      <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>LAUFZEIT (TAGE)</div>
-                      <input type="number" value={pfPreview.challengeDays} onChange={e=>setPfPreview(p=>({...p,challengeDays:parseInt(e.target.value)||p.challengeDays}))}
-                        style={{background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"8px 10px",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/>
-                    </div>
-                  </div>
-                  <div style={{fontSize:10,color:"#f59e0b",marginBottom:10,padding:"6px 10px",background:"rgba(245,158,11,0.08)",borderRadius:6,border:"1px solid rgba(245,158,11,0.2)"}}>
-                    ⚠️ Regeln prüfen — können sich ändern.
+                  <div style={{fontSize:10,color:"#f59e0b",marginBottom:12,padding:"8px 12px",background:"rgba(245,158,11,0.08)",borderRadius:8,border:"1px solid rgba(245,158,11,0.2)",lineHeight:1.4}}>
+                    ⚠️ Bitte prüfe die Regeln auf der offiziellen Website deiner Firma — sie können sich ändern.
                   </div>
                   <button onClick={()=>{
-                    const newAcct={...acct,propFirm:pfPreview.firm,maxDD:pfPreview.maxDD,dailyDD:pfPreview.dailyDD,target:pfPreview.target,ddType:pfPreview.ddType,challengeDays:pfPreview.challengeDays};
+                    const newAcct={...acct,propFirm:pfPreview.firm,size:pfPreview.size,maxDD:pfPreview.maxDD,dailyDD:pfPreview.dailyDD,target:pfPreview.target,ddType:pfPreview.ddType,challengeDays:pfPreview.challengeDays};
                     saveAcct(newAcct);
-                    setMaxDDLevel((acct.size||50000)-pfPreview.maxDD);
-                    localStorage.setItem('ttp_maxdd_level',(acct.size||50000)-pfPreview.maxDD);
-                    setPfPreview(null);
-                    showToast('✅ '+pfPreview.firmName+' in ProfitMap geladen!');
-                  }} style={{width:"100%",padding:"13px",borderRadius:10,fontWeight:800,fontSize:14,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",border:"none"}}>
-                    ✅ Bestätigen & in ProfitMap laden
+                    setSaldo(pfPreview.size);localStorage.setItem('ttp_saldo',pfPreview.size);
+                    setMaxDDLevel(pfPreview.size-pfPreview.maxDD);localStorage.setItem('ttp_maxdd_level',pfPreview.size-pfPreview.maxDD);
+                    showToast('✅ '+pfPreview.firmName+' $'+(pfPreview.size/1000)+'k geladen!');
+                    setPfSelectedFirm(null);setPfPreview(null);
+                  }} style={{width:"100%",padding:"15px",borderRadius:12,fontWeight:800,fontSize:15,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",border:"none",boxShadow:"0 4px 16px rgba(99,102,241,0.3)"}}>
+                    In ProfitMap laden →
                   </button>
                 </div>}
-                </div>
-                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>📋 KONTO TYP</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,marginBottom:12}}>
-                  {[["challenge","🎯 Challenge"],["pa","💼 Performance"],["private","🏠 Eigenkapital"]].map(([v,l])=>(
-                    <button key={v} onClick={()=>saveAcct({...acct,type:v})} style={{padding:"8px 4px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.type===v?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.type===v?"#6366f1":DK.miniBorder),color:acct.type===v?"#a5b4fc":DK.text}}>{l}</button>
+
+                {/* AKTUELL GELADEN */}
+                {!pfSelectedFirm&&acct.propFirm&&<div style={{padding:"12px 14px",background:dm?"rgba(0,211,149,0.06)":"rgba(0,211,149,0.04)",borderRadius:10,border:"1px solid rgba(0,211,149,0.2)"}}>
+                  <div style={{fontSize:9,color:G,fontWeight:700,marginBottom:4}}>✅ AKTUELL GELADEN</div>
+                  <div style={{fontSize:13,fontWeight:700,color:DK.text}}>{PROP_FIRMS[acct.propFirm]?.name||acct.propFirm} · ${((acct.size||50000)/1000)}k</div>
+                  <div style={{fontSize:10,color:DK.muted,marginTop:2}}>Max DD ${acct.maxDD} · Daily ${acct.dailyDD} · Ziel +${(acct.target||0)-(acct.size||0)}</div>
+                </div>}
+
+                {/* KONTO TYP */}
+                <div style={{fontSize:10,color:B,fontWeight:700,letterSpacing:"1px",marginTop:20,marginBottom:10}}>KONTO TYP</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                  {[["challenge","🎯","Challenge"],["pa","💼","Performance"],["private","🏠","Eigenkapital"]].map(([v,ic,l])=>(
+                    <button key={v} onClick={()=>saveAcct({...acct,type:v})} style={{padding:"12px 4px",borderRadius:10,fontSize:11,fontWeight:700,background:acct.type===v?"rgba(99,102,241,0.2)":dm?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.04)",border:"1.5px solid "+(acct.type===v?"#6366f1":DK.miniBorder),color:acct.type===v?"#a5b4fc":DK.text,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                      <span style={{fontSize:18}}>{ic}</span>{l}
+                    </button>
                   ))}
                 </div>
-                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>⚡ DD TYP</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:12}}>
-                  {[["eod","📅 EOD"],["trailing","📈 Trailing"]].map(([v,l])=>(
-                    <button key={v} onClick={()=>saveAcct({...acct,ddType:v})} style={{padding:"8px 4px",borderRadius:8,fontSize:11,fontWeight:700,background:(acct.ddType||"eod")===v?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+((acct.ddType||"eod")===v?"#6366f1":DK.miniBorder),color:(acct.ddType||"eod")===v?"#a5b4fc":DK.text}}>{l}</button>
-                  ))}
-                </div>
-                <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>💰 KONTO GRÖßE</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5,marginBottom:12}}>
-                  {[25000,50000,75000,100000,150000,200000].map(s=>(
-                    <button key={s} onClick={()=>{
-                      const rules=getPropFirmRules(acct.propFirm||'TTP', s);
-                      const newMaxDD=rules?rules.maxDD:Math.round(s*0.04);
-                      const newDailyDD=rules?rules.dailyDD||Math.round(rules.maxDD*0.5):Math.round(s*0.02);
-                      const newTarget=rules?(s+Math.round(s*(rules.profitPct/100))):Math.round(s*1.08);
-                      saveAcct({...acct,size:s,maxDD:newMaxDD,dailyDD:newDailyDD,target:newTarget});
-                      setSaldo(s);localStorage.setItem('ttp_saldo',s);
-                      setMaxDDLevel(s-newMaxDD);localStorage.setItem('ttp_maxdd_level',s-newMaxDD);
-                      showToast('✅ Konto $'+(s/1000)+'k — '+( rules?rules.firm:'')+' Regeln geladen');
-                    }} style={{padding:"7px 4px",borderRadius:8,fontSize:10,fontWeight:700,background:acct.size===s?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+(acct.size===s?"#6366f1":DK.miniBorder),color:acct.size===s?"#a5b4fc":DK.text}}>${s>=1000?s/1000+"k":s}</button>
-                  ))}
-                </div>
-                <Field dm={dm} label={"GEWINNZIEL ($) — Ziel-Saldo eingeben"}><input type="number" key={"target-"+acct.target} defaultValue={acct.target||54000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,target:v});}} placeholder="z.B. 54000" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/></Field>
-                <div style={{fontSize:9,color:DK.muted,marginBottom:8}}>Profit = Ziel-Saldo − Start-Saldo = <b style={{color:G}}>${((acct.target||54000)-(acct.size||50000)).toLocaleString()}</b></div>
-                <Field dm={dm} label={"MAX DRAWDOWN ($) — Floor: $"+((acct.size||50000)-(acct.maxDD||2000)).toLocaleString()}><input type="number" key={"maxdd-"+acct.maxDD} defaultValue={acct.maxDD||2000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,maxDD:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:R,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="DAILY DD LIMIT ($)"><input type="number" key={"dailydd-"+acct.dailyDD} defaultValue={acct.dailyDD||1000} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,dailyDD:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:Y,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="LAUFZEIT (TAGE)"><input type="number" key={"days-"+acct.challengeDays} defaultValue={acct.challengeDays||30} onBlur={e=>{const v=parseInt(e.target.value);if(!isNaN(v))saveAcct({...acct,challengeDays:v});}} style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
               </div>}
-              {settingsSection==="setup"&&sec.id==="setup"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
+                            {settingsSection==="setup"&&sec.id==="setup"&&<div style={{padding:"12px 14px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
 
                 {/* INSTRUMENT */}
                 <button onClick={()=>setSettings(s=>({...s,instrOpen:!s.instrOpen}))} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',background:dm?'rgba(99,102,241,0.08)':'rgba(99,102,241,0.06)',border:'1px solid rgba(99,102,241,0.2)',borderRadius:8,padding:'7px 10px',marginBottom:10,cursor:'pointer'}}>
