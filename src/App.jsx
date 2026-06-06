@@ -3074,70 +3074,69 @@ const sendAiMessage=async()=>{
               {settingsSection==="konto"&&sec.id==="konto"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>🏦 PROP FIRMA</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:12}}>
-                  {["TTP","FTMO","TopStep","Apex","MyFundedFutures","Earn2Trade","Eigenes"].map(f=>(
-                    <button key={f} onClick={()=>{
-                      const rules=getPropFirmRules(f, acct.size||50000);
-                      if(rules){
-                        setPfPreview({
-                          firm:f,firmName:rules.firm,
-                          maxDD:rules.maxDD,
-                          dailyDD:rules.dailyDD||Math.round(rules.maxDD*0.5),
-                          target:(acct.size||50000)+Math.round((acct.size||50000)*(rules.profitPct/100)),
-                          ddType:rules.ddType==='eod_trailing'?'trailing':'eod',
-                          challengeDays:rules.days||30,
-                          profitPct:rules.profitPct
-                        });
-                      } else {
-                        saveAcct({...acct,propFirm:f});
-                      }
-                    }} style={{padding:"8px 4px",borderRadius:8,fontSize:11,fontWeight:700,background:(pfPreview?.firm===f||acct.propFirm===f)?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",border:"1px solid "+((pfPreview?.firm===f||acct.propFirm===f)?"#6366f1":DK.miniBorder),color:(pfPreview?.firm===f||acct.propFirm===f)?"#a5b4fc":DK.text}}>{f}</button>
-                  ))}
-                
-                {/* PREVIEW + BESTÄTIGEN */}
-                {pfPreview&&<div style={{marginTop:12,background:dm?"rgba(99,102,241,0.08)":"rgba(99,102,241,0.05)",border:"2px solid rgba(99,102,241,0.3)",borderRadius:12,padding:14,width:"100%",boxSizing:"border-box",clear:"both"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:pfPreview?8:0}}>
+                {["TTP","FTMO","TopStep","Apex","MyFundedFutures","Earn2Trade","Eigenes"].map(f=>(
+                  <button key={f} onClick={()=>{
+                    const rules=getPropFirmRules(f, acct.size||50000);
+                    if(rules){
+                      setPfPreview({
+                        firm:f,firmName:rules.firm,
+                        maxDD:rules.maxDD,
+                        dailyDD:rules.dailyDD||Math.round(rules.maxDD*0.5),
+                        target:(acct.size||50000)+Math.round((acct.size||50000)*(rules.profitPct/100)),
+                        ddType:rules.ddType==='eod_trailing'?'trailing':'eod',
+                        challengeDays:rules.days||30,
+                        profitPct:rules.profitPct
+                      });
+                    }
+                  }} style={{padding:"8px 4px",borderRadius:8,fontSize:11,fontWeight:700,
+                    background:(pfPreview?.firm===f||(!pfPreview&&acct.propFirm===f))?"rgba(99,102,241,0.25)":dm?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.06)",
+                    border:"1px solid "+((pfPreview?.firm===f||(!pfPreview&&acct.propFirm===f))?"#6366f1":DK.miniBorder),
+                    color:(pfPreview?.firm===f||(!pfPreview&&acct.propFirm===f))?"#a5b4fc":DK.text}}>
+                    {f==='MyFundedFutures'?'MyFF':f}
+                  </button>
+                ))}
+                </div>
+
+                {/* PREVIEW — volle Breite unter den Buttons */}
+                {pfPreview&&<div style={{background:dm?"rgba(99,102,241,0.08)":"rgba(99,102,241,0.05)",border:"2px solid rgba(99,102,241,0.3)",borderRadius:12,padding:14,marginBottom:12}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                    <div style={{fontSize:12,fontWeight:800,color:DK.text}}>📋 {pfPreview.firmName} Vorschau</div>
-                    <button onClick={()=>setPfPreview(null)} style={{background:"none",color:DK.muted,fontSize:16,padding:"0 4px"}}>×</button>
+                    <div style={{fontSize:12,fontWeight:800,color:DK.text}}>📋 {pfPreview.firmName}</div>
+                    <button onClick={()=>setPfPreview(null)} style={{background:"none",color:DK.muted,fontSize:18,padding:"0 4px",lineHeight:1}}>×</button>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
                     <div>
                       <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>MAX DRAWDOWN</div>
                       <input type="number" value={pfPreview.maxDD} onChange={e=>setPfPreview(p=>({...p,maxDD:parseInt(e.target.value)||p.maxDD}))}
-                        style={{background:DK.input||DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"6px 10px",fontSize:13,fontWeight:700,color:R,width:"100%",outline:"none"}}/>
+                        style={{background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"8px 10px",fontSize:14,fontWeight:700,color:R,width:"100%",outline:"none"}}/>
                     </div>
                     <div>
                       <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>DAILY DD</div>
                       <input type="number" value={pfPreview.dailyDD} onChange={e=>setPfPreview(p=>({...p,dailyDD:parseInt(e.target.value)||p.dailyDD}))}
-                        style={{background:DK.input||DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"6px 10px",fontSize:13,fontWeight:700,color:Y,width:"100%",outline:"none"}}/>
+                        style={{background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"8px 10px",fontSize:14,fontWeight:700,color:Y,width:"100%",outline:"none"}}/>
                     </div>
                     <div>
                       <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>GEWINNZIEL ($)</div>
                       <input type="number" value={pfPreview.target} onChange={e=>setPfPreview(p=>({...p,target:parseInt(e.target.value)||p.target}))}
-                        style={{background:DK.input||DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"6px 10px",fontSize:13,fontWeight:700,color:G,width:"100%",outline:"none"}}/>
+                        style={{background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"8px 10px",fontSize:14,fontWeight:700,color:G,width:"100%",outline:"none"}}/>
                     </div>
                     <div>
                       <div style={{fontSize:9,color:DK.muted,marginBottom:3}}>LAUFZEIT (TAGE)</div>
                       <input type="number" value={pfPreview.challengeDays} onChange={e=>setPfPreview(p=>({...p,challengeDays:parseInt(e.target.value)||p.challengeDays}))}
-                        style={{background:DK.input||DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"6px 10px",fontSize:13,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/>
+                        style={{background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:8,padding:"8px 10px",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/>
                     </div>
                   </div>
-                  <div style={{fontSize:9,color:DK.muted,marginBottom:10,padding:"6px 8px",background:"rgba(245,158,11,0.08)",borderRadius:6,border:"1px solid rgba(245,158,11,0.2)"}}>
-                    ⚠️ Bitte offizielle Regeln deiner Firma prüfen — Werte können sich ändern.
+                  <div style={{fontSize:10,color:"#f59e0b",marginBottom:10,padding:"6px 10px",background:"rgba(245,158,11,0.08)",borderRadius:6,border:"1px solid rgba(245,158,11,0.2)"}}>
+                    ⚠️ Regeln prüfen — können sich ändern.
                   </div>
                   <button onClick={()=>{
-                    const newAcct={...acct,propFirm:pfPreview.firm,
-                      maxDD:pfPreview.maxDD,
-                      dailyDD:pfPreview.dailyDD,
-                      target:pfPreview.target,
-                      ddType:pfPreview.ddType,
-                      challengeDays:pfPreview.challengeDays
-                    };
+                    const newAcct={...acct,propFirm:pfPreview.firm,maxDD:pfPreview.maxDD,dailyDD:pfPreview.dailyDD,target:pfPreview.target,ddType:pfPreview.ddType,challengeDays:pfPreview.challengeDays};
                     saveAcct(newAcct);
                     setMaxDDLevel((acct.size||50000)-pfPreview.maxDD);
                     localStorage.setItem('ttp_maxdd_level',(acct.size||50000)-pfPreview.maxDD);
                     setPfPreview(null);
-                    showToast('✅ '+pfPreview.firmName+' Regeln in ProfitMap geladen!');
-                  }} style={{width:"100%",padding:"12px",borderRadius:10,fontWeight:800,fontSize:13,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",border:"none"}}>
+                    showToast('✅ '+pfPreview.firmName+' in ProfitMap geladen!');
+                  }} style={{width:"100%",padding:"13px",borderRadius:10,fontWeight:800,fontSize:14,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",border:"none"}}>
                     ✅ Bestätigen & in ProfitMap laden
                   </button>
                 </div>}
