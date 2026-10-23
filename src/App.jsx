@@ -1,3 +1,11 @@
+import TopBar from './components/TopBar.jsx';
+import AnalyticsWorkspace from './components/AnalyticsWorkspace.jsx';
+import './premium.css';
+import Playbooks from './components/Playbooks.jsx';
+import WeeklyReview from './components/WeeklyReview.jsx';
+import DesktopOverview from './components/DesktopOverview.jsx';
+import './desktop.css';
+import JournalWorkspace from './components/JournalWorkspace.jsx';
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -6,11 +14,97 @@ const SUPA_KEY="sb_publishable_a9rGWRoY6g99XC9nqSNc-g_XbhpxALh";
 const supabase=createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'mindrisk_auth'}});
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 
+// Authenticated coach requests: no browser-exposed provider credentials.
+async function fetchCoach(options) {
+  const { data, error } = await supabase.auth.getSession();
+  const token = data?.session?.access_token;
+  if (error || !token) throw new Error('Bitte erneut anmelden, um den KI-Coach zu nutzen.');
+  return fetch('/api/chat', {
+    ...options,
+    headers: { ...(options?.headers || {}), Authorization: `Bearer ${token}` }
+  });
+}
+
+// Journal-based daily risk overview. This is NOT a broker-side risk lock.
+function RiskBudgetCard({dailyLossTotal,limit,tradeCount,maxTrades,dk,onCoach}) {
+  const validLimit=Number.isFinite(Number(limit))&&Number(limit)>0?Number(limit):null;
+  const loss=Math.max(0,Number(dailyLossTotal)||0);
+  const used=validLimit?Math.min(100,loss/validLimit*100):0;
+  const remaining=validLimit?Math.max(0,validLimit-loss):null;
+  const level=!validLimit?'unknown':used>=100?'critical':used>=75?'warning':'normal';
+  const color=level==='critical'?'#ef4444':level==='warning'?'#f59e0b':'#00d395';
+  const radius=68, circumference=Math.PI*radius;
+  const usedTrades=Math.max(0,Number(tradeCount)||0);
+  const allowedTrades=Number(maxTrades)>0?Number(maxTrades):null;
+  return <section aria-label="Risikobudget" style={{background:dk.card,border:'1px solid '+dk.miniBorder,borderRadius:16,padding:18,minWidth:0}}>
+    <div style={{fontSize:15,fontWeight:800,color:dk.text}}>Risk Budget</div>
+    <div style={{fontSize:11,color:dk.muted,marginTop:4}}>Tagesverlustlimit · nur dokumentierte Trades</div>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',marginTop:12}}>
+      <svg viewBox="0 0 180 112" width="100%" style={{maxWidth:260,overflow:'visible'}} role="img" aria-label={validLimit?`${used.toFixed(0)} Prozent des Tagesverlustlimits verbraucht`:'Tagesverlustlimit nicht konfiguriert'}>
+        <path d="M 22 91 A 68 68 0 0 1 158 91" stroke={dk.miniBorder} strokeWidth="14" fill="none" strokeLinecap="round"/>
+        <path d="M 22 91 A 68 68 0 0 1 158 91" stroke={color} strokeWidth="14" fill="none" strokeLinecap="round" strokeDasharray={`${circumference*used/100} ${circumference}`} />
+        <text x="90" y="73" textAnchor="middle" fontSize="28" fontWeight="800" fill={dk.text}>{validLimit?`${Math.round(used)}%`:'—'}</text>
+        <text x="90" y="92" textAnchor="middle" fontSize="10" fill={dk.muted}>Limit verbraucht</text>
+      </svg>
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:4}}>
+      <div style={{background:dk.mini,borderRadius:10,padding:11}}><div style={{color:dk.muted,fontSize:10}}>Verfügbarer Puffer</div><div style={{color:color,fontWeight:800,fontSize:18,marginTop:5}}>{remaining===null?'—':'$'+remaining.toFixed(2)}</div></div>
+      <div style={{background:dk.mini,borderRadius:10,padding:11}}><div style={{color:dk.muted,fontSize:10}}>Trades heute</div><div style={{color:dk.text,fontWeight:800,fontSize:18,marginTop:5}}>{usedTrades}{allowedTrades?' / '+allowedTrades:''}</div></div>
+    </div>
+    <div role="status" style={{marginTop:12,color:color,fontSize:12,fontWeight:700}}>{level==='critical'?'Tagesverlustlimit erreicht – keine weiteren Trades.':level==='warning'?'Warnung: Weniger als 25 % Verlustpuffer verbleiben.':level==='unknown'?'Bitte Tagesverlustlimit im Konto konfigurieren.':'Tagesverlustlimit aktuell nicht erreicht.'}</div>
+    <p style={{color:dk.muted,fontSize:10,lineHeight:1.5,margin:'8px 0 12px'}}>Keine Broker-Sperre: Offene Positionen, Gebühren und nicht erfasste Trades werden nicht berücksichtigt. Gewinne erhöhen hier nicht den Verlustpuffer.</p>
+    <button type="button" onClick={onCoach} style={{background:'rgba(99,102,241,.15)',border:'1px solid rgba(99,102,241,.4)',borderRadius:9,padding:'10px 12px',width:'100%',color:dk.text,fontWeight:700,cursor:'pointer'}}>Risiko mit AI Coach besprechen →</button>
+  </section>;
+}
+
+// Monthly performance calendar: only persisted trades, never demo figures.
+function PerformanceCalendar({trades,dk,isDesktop}) {
+  const [monthOffset,setMonthOffset]=useState(0);
+  const current=new Date();
+  const first=new Date(current.getFullYear(),current.getMonth()+monthOffset,1);
+  const year=first.getFullYear(),month=first.getMonth();
+  const days=new Date(year,month+1,0).getDate();
+  const start=(first.getDay()+6)%7;
+  const totals={};
+  (trades||[]).forEach(t=>{
+    const date=typeof t.date==='string'?t.date.slice(0,10):'';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
+    const pnl=Number(t.pnl);
+    if(!Number.isFinite(pnl))return;
+    if(!totals[date])totals[date]={pnl:0,count:0};
+    totals[date].pnl+=pnl;totals[date].count++;
+  });
+  const cells=Array.from({length:Math.ceil((start+days)/7)*7},(_,i)=>{
+    const day=i-start+1;
+    if(day<1||day>days)return null;
+    const key=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    return {day,key,stats:totals[key]};
+  });
+  const monthKey=`${year}-${String(month+1).padStart(2,'0')}`;
+  const monthTrades=Object.entries(totals).filter(([k])=>k.startsWith(monthKey));
+  const monthPnl=monthTrades.reduce((a,[,v])=>a+v.pnl,0);
+  return <section aria-label="Trading-Performance-Kalender" style={{background:dk.card,border:'1px solid '+dk.miniBorder,borderRadius:16,padding:isDesktop?20:14,minWidth:0}}>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:16}}>
+      <div><div style={{fontWeight:800,fontSize:15,color:dk.text}}>Performance-Kalender</div><div style={{fontSize:11,color:dk.muted,marginTop:4}}>{monthTrades.length} Handelstage · <span style={{color:pc(monthPnl)}}>{fd(monthPnl)}</span></div></div>
+      <div style={{display:'flex',alignItems:'center',gap:8}}>
+        <button type="button" aria-label="Vorheriger Monat" onClick={()=>setMonthOffset(n=>n-1)} style={{background:dk.mini,color:dk.text,border:'1px solid '+dk.miniBorder,borderRadius:8,padding:'5px 10px',cursor:'pointer'}}>‹</button>
+        <span style={{fontSize:12,color:dk.text,fontWeight:700,minWidth:105,textAlign:'center'}}>{first.toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</span>
+        <button type="button" aria-label="Nächster Monat" onClick={()=>setMonthOffset(n=>Math.min(n+1,0))} disabled={monthOffset>=0} style={{background:dk.mini,color:dk.text,border:'1px solid '+dk.miniBorder,borderRadius:8,padding:'5px 10px',opacity:monthOffset>=0?.35:1,cursor:monthOffset>=0?'default':'pointer'}}>›</button>
+      </div>
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(7,minmax(0,1fr))',gap:5}}>
+      {['Mo','Di','Mi','Do','Fr','Sa','So'].map(d=><div key={d} style={{textAlign:'center',fontSize:10,color:dk.muted,paddingBottom:5}}>{d}</div>)}
+      {cells.map((cell,i)=><div key={cell?.key||'empty'+i} title={cell?.stats?`${cell.key}: ${fd(cell.stats.pnl)} · ${cell.stats.count} Trades`:cell?.key||''} style={{aspectRatio:'1',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:cell?.stats?800:500,color:cell?.stats?cell.stats.pnl>=0?'#b5ffe7':'#fecaca':dk.muted,background:cell?.stats?(cell.stats.pnl>0?'rgba(0,211,149,.24)':cell.stats.pnl<0?'rgba(239,68,68,.23)':'rgba(99,102,241,.2)'):'rgba(125,140,170,.05)',border:'1px solid '+(cell?.stats?'rgba(125,140,170,.2)':'transparent')}}>{cell?.day||''}</div>)}
+    </div>
+    <div style={{display:'flex',gap:14,marginTop:14,color:dk.muted,fontSize:10,flexWrap:'wrap'}}><span>🟩 Gewinn</span><span>🟥 Verlust</span><span>⬛ Kein Trade</span></div>
+  </section>;
+}
+
 const G="#00d395",R="#ef4444",B="#6366f1",Y="#f59e0b",P="#a855f7",O="#f97316";
 const pc=v=>v>0?G:v<0?R:"#8b96b0";
 const fd=v=>(v>=0?"+":"-")+"$"+Math.abs(v).toFixed(2);
 const fs=v=>(v>=0?"+":"-")+"$"+Math.abs(v).toFixed(0);
-const todayISO=()=>new Date().toISOString().split("T")[0];
+const todayISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;};
 const nowHHMM=()=>new Date().toTimeString().slice(0,5);
 const uid=()=>"t"+Date.now()+Math.random().toString(36).slice(2,5);
 const BUFFER=2000;const DAILY_DD_LIMIT=1000;
@@ -216,9 +310,10 @@ const emptyForm=()=>({date:todayISO(),time:nowHHMM(),contract:"MNQ",dir:"LONG",p
 const Pill=({bg,color,children})=>(
   <span style={{display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:bg,color}}>{children}</span>
 );
-const Card=({children,style,onClick})=>(
-  <div onClick={onClick} style={{background:"var(--mr-card)",border:"1px solid var(--mr-card-border)",borderRadius:14,padding:16,overflow:"hidden",boxShadow:"var(--mr-shadow)",...style}}>{children}</div>
+const Card=({children,style,onClick,className=""})=>(
+  <div className={"mr-panel "+className} onClick={onClick} style={{background:"var(--mr-card)",border:"1px solid var(--mr-card-border)",borderRadius:14,padding:16,overflow:"hidden",boxShadow:"var(--mr-shadow)",...style}}>{children}</div>
 );
+const PageIntro=({eyebrow,title,description,children})=>(<header className="mr-page-intro"><div><span className="mr-eyebrow">{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>{children}</header>);
 const Bar2=({pct,color})=>(
   <div style={{height:10,borderRadius:5,background:"var(--mr-bar-track)"}}>
     <div style={{height:"100%",borderRadius:5,width:Math.min(100,Math.max(0,pct))+"%",background:"linear-gradient(90deg,"+color+"aa,"+color+")",transition:"width .6s ease",boxShadow:"0 0 10px "+color+"55"}}/>
@@ -286,6 +381,10 @@ export default function App(){
     }catch(e){return SEED;}
   });
   const[authUser,setAuthUser]=useState(null);
+  const[playbooks,setPlaybooks]=useState([]);
+  useEffect(()=>{if(!authUser?.id){setPlaybooks([]);return;}try{const parsed=JSON.parse(localStorage.getItem('mindrisk_playbooks_'+authUser.id)||'[]');setPlaybooks(Array.isArray(parsed)?parsed:[]);}catch{setPlaybooks([])}},[authUser?.id]);
+  const savePlaybooks=next=>{if(!authUser?.id)return;try{localStorage.setItem('mindrisk_playbooks_'+authUser.id,JSON.stringify(next));setPlaybooks(next);}catch{showToast('Playbook konnte nicht gespeichert werden. Bitte Gerätespeicher prüfen.')}};
+
   const[authLoading,setAuthLoading]=useState(true);
   const[authScreen,setAuthScreen]=useState("login"); // login | register
   const[authEmail,setAuthEmail]=useState("");
@@ -297,6 +396,7 @@ export default function App(){
   const[onboardData,setOnboardData]=useState({name:'',firm:'TTP',firmOther:'',size:50000,maxDD:2000,dailyDD:1000,target:54000,number:'',instrument:'MNQ',psychAnswers:{}});
   const[showSplash,setShowSplash]=useState(true);
   const[tab,setTab]=useState("dash");
+  const[routinePhase,setRoutinePhase]=useState("prepare");
   const[dm,setDm]=useState(()=>localStorage.getItem('ttp_dm')!=='light');
   const saveDm=(v)=>{setDm(v);localStorage.setItem('ttp_dm',v?'dark':'light');};
   useEffect(()=>{
@@ -304,7 +404,7 @@ export default function App(){
     let el=document.getElementById(id);
     if(!el){el=document.createElement('style');el.id=id;document.head.appendChild(el);}
     const dark=[
-      '--mr-card:linear-gradient(145deg,#141e35 0%,#0f1828 100%)',
+      '--mr-card:linear-gradient(145deg,#141c31 0%,#101729 100%)',
       '--mr-card-border:rgba(99,102,241,0.18)',
       '--mr-shadow:0 4px 24px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.05)',
       '--mr-mini:#13162a',
@@ -313,7 +413,7 @@ export default function App(){
       '--mr-border:#2d3548',
       '--mr-input:#0d1320',
       '--mr-divider:#1e2235',
-      '--mr-overlay:rgba(0,0,0,0.2)','--mr-muted:#6b7a9a','--mr-text:#f0f4ff',
+      '--mr-overlay:rgba(0,0,0,0.2)','--mr-muted:#96a3bd','--mr-text:#f0f4ff',
     ].join(';');
     const light=[
       '--mr-card:#ffffff',
@@ -366,7 +466,8 @@ export default function App(){
     catch(e){return{pnl:1500,disc:80,targetBalance:53000};}
   });
   const[settingsOpen,setSettingsOpen]=useState(false);
-  const[settingsSection,setSettingsSection]=useState(null);
+  const[settingsSection,setSettingsSection]=useState("profile");
+  useEffect(()=>{if(!settingsOpen)return;const handler=e=>{if(e.key==='Escape')setSettingsOpen(false)};document.addEventListener('keydown',handler);return()=>document.removeEventListener('keydown',handler)},[settingsOpen]);
   const[goalPeriod,setGoalPeriod]=useState('month');
   const[settings,setSettings]=useState(()=>{
     try{
@@ -395,7 +496,10 @@ export default function App(){
 
   const signOut=async()=>{
     await supabase.auth.signOut();
-    localStorage.clear();
+    // Preserve non-MindRisk browser data; Supabase handles its own session.
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("ttp_")) localStorage.removeItem(key);
+    }
     window.location.reload();
   };
 
@@ -443,7 +547,7 @@ export default function App(){
     setAiLoading(true);
     setAiMessages([{role:'assistant',content:'Analysiere deinen Profil...'}]);
     try{
-      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:'',coachMemory:'',chatHistorySummary:''}})});
+      const res=await fetchCoach({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:'',coachMemory:'',chatHistorySummary:''}})});
       const d=await res.json();
       if(d.message)setAiMessages([{role:'assistant',content:d.message}]);
     }catch(e){setAiMessages([{role:'assistant',content:'Willkommen bei MindRisk! Ich bin dein persönlicher Trading Coach.'}]);}
@@ -490,16 +594,16 @@ export default function App(){
     });
   };
   const ALL_RULES=[
-    {k:"r1",l:"Max 2 Trades pro Tag",icon:"#"},
-    {k:"r2",l:"Nur 16:15–17:30 Uhr traden",icon:"⏰"},
+    {k:"r1",l:`Maximal ${settings.maxTrades} Trades pro Tag`,icon:"#"},
+    {k:"r2",l:`Handelsfenster ${settings.windowStart}–${settings.windowEnd} Uhr einhalten`,icon:"⏰"},
     {k:"r3",l:"SL immer vor Entry setzen",icon:"◉"},
     {k:"r4",l:"TP immer vor Entry setzen",icon:"◎"},
     {k:"r5",l:"Kein Trade nach 2 Verlusten",icon:"◆"},
-    {k:"r6",l:"15 Min Pause zwischen Trades",icon:"⏸"},
+    {k:"r6",l:`${settings.pauseMins} Minuten Pause zwischen Trades`,icon:"⏸"},
     {k:"r7",l:"Nur MNQ – kein NQ",icon:"▣"},
     {k:"r8",l:"Kein Impuls-Trade – nur Setup",icon:"∿"},
     {k:"r9",l:"Erst Check-in bevor traden",icon:"✓"},
-    {k:"r10",l:"Daily DD $1.000 → Rechner aus",icon:"⌥"},
+    {k:"r10",l:"Bei erreichtem Tagesverlustlimit aufhören",icon:"⌥"},
   ];
   const doMindCheckIn=async()=>{
     if(!mindCheckIn.mood||!mindCheckIn.energy||!mindCheckIn.stress){showToast("Bitte alle 3 bewerten!");return;}
@@ -519,7 +623,7 @@ export default function App(){
       ?"Trader Check-in: Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5, Stress "+mindCheckIn.stress+"/5. Gib Rat: wenn er tradet dann max 1 Trade mit weniger Risiko. 2 motivierende Sätze."
       :"Trader Check-in: alles gut! Fokus "+mindCheckIn.mood+"/5, Energie "+mindCheckIn.energy+"/5. Gib ihm einen kurzen motivierenden Satz für den Trading-Tag.";
     try{
-      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:coachProfile||'',coachMemory:coachMemory.slice(0,3).map(m=>m.note).join(' | ')}})});
+      const res=await fetchCoach({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:coachProfile||'',coachMemory:coachMemory.slice(0,3).map(m=>m.note).join(' | ')}})});
       const d=await res.json();
       setMindMsg(d.message||statusText);
     }catch(e){setMindMsg(statusText);}
@@ -554,7 +658,7 @@ export default function App(){
   const[tick,setTick]=useState(0);
   const[screenW,setScreenW]=useState(typeof window!=="undefined"?window.innerWidth:520);
   useEffect(()=>{const h=()=>setScreenW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);
-  const isDesktop=screenW>=800;
+  const isDesktop=screenW>=1100;
 
   useEffect(()=>{const id=setInterval(()=>setTick(t=>t+1),1000);return()=>clearInterval(id);},[]);
 
@@ -603,7 +707,7 @@ export default function App(){
       const h=new Date().getHours();
       const m=new Date().getMinutes();
       const inWindow=(h===16&&m>=15)||(h===17&&m<=30);
-      setAiOpen(true);
+      // Keep the coach available without covering the dashboard on startup.
       const greet=h<12?"Guten Morgen":h<17?"Hi":h<21?"Guten Abend":"Hey";
       const nowT=nowHHMM();const[nh,nm]=nowT.split(':').map(Number);const nowMin=nh*60+nm;const wStart=(settings.windowStart||'16:15').split(':').map(Number);const wEnd=(settings.windowEnd||'17:30').split(':').map(Number);const wStartMin=wStart[0]*60+wStart[1];const wEndMin=wEnd[0]*60+wEnd[1];const isWE=new Date().getDay()===0||new Date().getDay()===6;const nowInW=!isWE&&nowMin>=wStartMin&&nowMin<=wEndMin;const nowBefore=!isWE&&nowMin<wStartMin;const minsLeft=nowBefore?wStartMin-nowMin:0;let statusMsg='';if(isWE)statusMsg='Heute ist Wochenende — Märkte geschlossen. Gute Zeit zum Analysieren!';else if(nowInW)statusMsg='⚡ Trading-Fenster ist JETZT OFFEN ('+settings.windowStart+'–'+settings.windowEnd+')!';else if(nowBefore)statusMsg='Fenster öffnet in '+minsLeft+' Minuten ('+settings.windowStart+' Uhr). Geduld!';else statusMsg='Fenster ('+settings.windowEnd+' Uhr) ist vorbei. Heute kein Trade mehr.';
       // Pattern recognition from last 10 trades
@@ -618,7 +722,7 @@ export default function App(){
         }
       }
       // Outside window trades
-      const outsideWindow=last10.filter(t=>{if(!t.time)return false;const [h,m]=t.time.split(':').map(Number);const tm=h*60+m;return tm<wStartMin||tm>wEndMin||tm>windowEndMin;});
+      const outsideWindow=last10.filter(t=>{if(!t.time)return false;const [h,m]=t.time.split(':').map(Number);const tm=h*60+m;return tm<wStartMin||tm>wEndMin;});
       if(outsideWindow.length>=2)patterns.push(outsideWindow.length+'x außerhalb Handelsfenster');
       // Worst day
       const dayMap2={};last10.forEach(t=>{if(!t.date)return;const d=new Date(t.date).getDay();if(!dayMap2[d])dayMap2[d]={w:0,l:0};t.pnl>0?dayMap2[d].w++:dayMap2[d].l++;});
@@ -656,11 +760,22 @@ export default function App(){
   const allT09=useMemo(()=>trades.filter(t=>t&&typeof t.date==="string").sort((a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1),[trades]);
   const t09=useMemo(()=>allT09.filter(t=>t.date>=challengeStart),[allT09,challengeStart]);
   const netPnl=useMemo(()=>Math.round(t09.reduce((s,t)=>s+t.pnl,0)*100)/100,[t09]);
+  // Actual journal metrics; no fictional performance figures.
+  const journalMetrics=useMemo(()=>{
+    const wins=t09.filter(t=>Number(t.pnl)>0);
+    const losses=t09.filter(t=>Number(t.pnl)<0);
+    const grossWin=wins.reduce((n,t)=>n+Number(t.pnl),0);
+    const grossLoss=Math.abs(losses.reduce((n,t)=>n+Number(t.pnl),0));
+    return {winRate:t09.length?100*wins.length/t09.length:null,profitFactor:grossLoss?grossWin/grossLoss:null,tradeCount:t09.length};
+  },[t09]);
   const kontoabstand=Math.max(0,Math.round((saldo-maxDDLevel)*100)/100);
   const todT=t09.filter(t=>t.date===todayISO());
-  const todPnl=Math.round(todT.reduce((s,t)=>s+t.pnl,0)*100)/100;
+  const todPnl=Math.round(todT.reduce((s,t)=>s+(Number(t.pnl)||0),0)*100)/100;
+  // Gross realized losses: winning trades must not replenish a fixed daily risk budget.
+  const todGrossLoss=Math.round(todT.reduce((s,t)=>s+Math.max(0,-(Number(t.pnl)||0)),0)*100)/100;
   const dailyLoss=Math.abs(Math.min(0,todPnl));
-  const dailyDDHit=dailyLoss>=DAILY_DD_LIMIT;
+  const effectiveDailyDD=Number(acct.dailyDD)>0?Number(acct.dailyDD):DAILY_DD_LIMIT;
+  const dailyDDHit=todGrossLoss>=effectiveDailyDD;
   const tradeCount=todT.length;
   const atLimit=tradeCount>=DAILY_LIMIT;
   const overtradingToday=tradeCount>=OVERTRADING_AT;
@@ -1135,7 +1250,7 @@ Berechne basierend auf ECHTEN Trade-Daten:
 
 Antworte NUR mit diesem JSON (keine Markdown-Backticks, kein Text):
 {"ampel":"green|yellow|red","ampelReason":"kurze Begründung","adaptiveSL":35,"adaptiveTP":68,"recContracts":2,"recSymbol":"MNQ","dailyTarget":80,"weeklyTarget":400,"challengeProb":72,"winRate":${wr},"avgWin":${avgWin},"avgLoss":${avgLoss},"evPerTrade":15,"evPerDay":30,"recs":[{"icon":"📊","title":"Titel","text":"Text"},{"icon":"🎯","title":"Titel","text":"Text"},{"icon":"🛡️","title":"Titel","text":"Text"}],"insight":"Ein konkreter Insight-Satz"}`;
-      const res=await fetch('/api/chat',{
+      const res=await fetchCoach({
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({messages:[{role:'user',content:prompt}],context:{coachProfile:'Antworte ausschließlich mit JSON. Kein erklärender Text.'}})
@@ -1371,7 +1486,7 @@ Soll ich jetzt traden? Klare Ja/Nein Empfehlung mit kurzem Grund. Max 3 Sätze.`
         broker:acct.propFirm||acct.broker||'',
         accountNumber:acct.number||''
       };
-      const res=await fetch('/api/chat',{
+      const res=await fetchCoach({
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({messages:[{role:"user",content:prompt}],context:ctx})
       });
@@ -1489,7 +1604,7 @@ const analyzeProblems=async()=>{
       ", Heute: "+todT.length+" Trades ("+todayPnlStr+")"+
       ", Overtrading-Tage: "+(profitPlan?.overtradeDays||0)+
       ". Gib mir für JEDES Problem einen konkreten 1-2 Satz Plan was ich ab morgen genau machen soll.";
-    const res=await fetch('/api/chat',{
+    const res=await fetchCoach({
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -1638,7 +1753,7 @@ const sendAiMessage=async()=>{
       });
       setAiImage(null);
       setAiImagePreview(null);
-      const res=await fetch('/api/chat',{
+      const res=await fetchCoach({
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({messages:apiMessages,context:ctx})
@@ -1729,10 +1844,11 @@ const sendAiMessage=async()=>{
   const chiOpen=chiH>=8&&chiH<15;
   const NAVS=[
   {k:"dash",lb:"Dashboard",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><polyline points="2,17 8,10 13,14 22,5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="8" cy="10" r="1.5" fill="currentColor"/><circle cx="13" cy="14" r="1.5" fill="currentColor"/><line x1="2" y1="21" x2="22" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/></svg>},
-  {k:"mind",lb:"Mind",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-1.96-3 2.5 2.5 0 0 1 0-5A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 1.96-3 2.5 2.5 0 0 0 0-5A2.5 2.5 0 0 0 14.5 2Z"/></svg>},
-  {k:"log",lb:"Loggen",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>},
+  {k:"mind",lb:"Routine",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-1.96-3 2.5 2.5 0 0 1 0-5A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 1.96-3 2.5 2.5 0 0 0 0-5A2.5 2.5 0 0 0 14.5 2Z"/></svg>},
+  {k:"log",lb:"Erfassen",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>},
   {k:"analyse",lb:"Analyse",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 20 Q7 12 10 15 Q13 18 16 8 Q18 2 21 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/><circle cx="21" cy="4" r="2" fill="currentColor" opacity="0.8"/><circle cx="10" cy="15" r="1.5" fill="currentColor" opacity="0.6"/></svg>},
-  {k:"hist",lb:"History",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="2" rx="1" fill="currentColor" opacity="0.9"/><rect x="3" y="9" width="14" height="2" rx="1" fill="currentColor" opacity="0.7"/><rect x="3" y="14" width="16" height="2" rx="1" fill="currentColor" opacity="0.5"/><rect x="3" y="19" width="10" height="2" rx="1" fill="currentColor" opacity="0.35"/></svg>},
+  {k:"hist",lb:"Journal",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="2" rx="1" fill="currentColor" opacity="0.9"/><rect x="3" y="9" width="14" height="2" rx="1" fill="currentColor" opacity="0.7"/><rect x="3" y="14" width="16" height="2" rx="1" fill="currentColor" opacity="0.5"/><rect x="3" y="19" width="10" height="2" rx="1" fill="currentColor" opacity="0.35"/></svg>},
+  {k:"playbooks",lb:"Playbooks",svg:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-3H4V4Z"/><path d="M20 4h-4a3 3 0 0 0-3 3m0 14a4 4 0 0 1 4-3h3V4Z"/></svg>},
 ];
 
   return(
@@ -1916,6 +2032,22 @@ const sendAiMessage=async()=>{
       </div>}
 
       <style>{`
+/* MindRisk premium dashboard layer – preserves all legacy functionality */
+.mindrisk-dashboard-v3 { color: #e9f2ff; }
+.mindrisk-welcome { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:12px 6px 24px; }
+.mindrisk-eyebrow { font-size:10px; letter-spacing:2px; color:#7c9bd0; font-weight:800; margin-bottom:9px; }
+.mindrisk-welcome h1 { font-size:clamp(22px,2.6vw,32px); margin:0 0 8px; font-weight:800; letter-spacing:-.8px; color:#eef5ff; }
+.mindrisk-welcome p { color:#8c9bb5; font-size:12px; margin:0; }
+.mindrisk-coach-cta { border:1px solid rgba(96,183,255,.4); border-radius:12px; color:#d6edff; background:linear-gradient(125deg,#143d65,#1a2753); font-weight:750; padding:13px 16px; white-space:nowrap; cursor:pointer; }
+.mindrisk-metric-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+.mindrisk-metric { background:linear-gradient(145deg,#15243a,#10192c); border:1px solid #253b55; border-radius:15px; padding:17px; min-width:0; box-shadow:0 9px 28px rgba(0,0,0,.12); }
+.mindrisk-metric-top { display:flex; align-items:center; gap:9px; color:#9bacc8; font-size:10px; font-weight:750; letter-spacing:.5px; }
+.mindrisk-metric-icon { background:#20354f; border-radius:9px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.mindrisk-metric-value { font-size:clamp(19px,2.2vw,28px); font-weight:850; letter-spacing:-.5px; margin:14px 0 7px; overflow-wrap:anywhere; }
+.mindrisk-metric-hint { color:#8499b8; font-size:10px; }
+@media(max-width:1100px){.mindrisk-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.mindrisk-welcome{align-items:flex-start;flex-direction:column;padding:4px 0 18px}.mindrisk-coach-cta{width:100%}.mindrisk-metric-grid{gap:9px;margin-bottom:14px}.mindrisk-metric{padding:12px}.mindrisk-metric-top{font-size:9px;gap:6px}.mindrisk-metric-icon{width:24px;height:24px;font-size:15px}.mindrisk-metric-value{font-size:20px;margin:11px 0 6px}}
+
         *{box-sizing:border-box;margin:0;padding:0}
         html,body{overflow-x:hidden;max-width:100%}
         input,select,textarea{max-width:100%;box-sizing:border-box;background:var(--mr-input);color:var(--mr-text,#e2e8f0);border:1px solid var(--mr-border);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;outline:none;width:100%}
@@ -1955,6 +2087,50 @@ const sendAiMessage=async()=>{
           .mr-desktop-full{grid-column:1/-1}
           .mr-desktop-sidebar{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
         }
+.mindrisk-v10-focus{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;}
+.mindrisk-dashboard-v3 .mindrisk-welcome{margin-bottom:22px;}
+.mindrisk-dashboard-v3 .mindrisk-metric{transition:transform .2s ease,border-color .2s ease;}
+@media(hover:hover){.mindrisk-dashboard-v3 .mindrisk-metric:hover{transform:translateY(-2px);border-color:rgba(99,102,241,.48);}}
+@media(max-width:800px){.mindrisk-v10-focus{grid-template-columns:minmax(0,1fr)}.mindrisk-v10-next{padding:17px!important}.mindrisk-dashboard-v3 .mindrisk-welcome{margin-bottom:17px;}}
+
+/* Shared workspace design, original MindRisk palette. */
+.mr-page-intro{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:12px 0 26px;grid-column:1/-1}
+.mr-eyebrow{font-size:10px;font-weight:750;letter-spacing:2px;color:#818cf8}
+.mr-page-intro h1{font-size:clamp(25px,3vw,36px);font-weight:750;letter-spacing:-1px;line-height:1.15;margin:12px 0;color:var(--mr-text)}
+.mr-page-intro p{font-size:13px;line-height:1.7;color:var(--mr-muted);max-width:540px}
+.mr-workspace{max-width:1180px;margin:0 auto;padding-bottom:32px;gap:18px!important}
+.mr-workspace .mr-panel{border-color:var(--mr-card-border)!important;border-radius:20px!important;padding:24px!important;background:var(--mr-card)!important;box-shadow:0 12px 35px #0000000a!important}
+.mr-workspace input,.mr-workspace textarea,.mr-workspace select,.mr-settings input,.mr-settings select,.mr-settings textarea{font-size:14px!important;line-height:1.5;min-height:40px;border-radius:10px}
+.mr-workspace button,.mr-settings button{cursor:pointer;min-height:36px;transition:background .18s,transform .18s}
+.mr-workspace button:focus-visible,.mr-settings button:focus-visible,.mr-import summary:focus-visible{outline:2px solid #818cf8;outline-offset:3px}
+.mr-workspace button:disabled{cursor:not-allowed}
+.mr-import{border:1px solid var(--mr-card-border);border-radius:16px;background:var(--mr-card)}
+.mr-import summary{padding:20px;cursor:pointer;font-size:14px;font-weight:650;list-style:none}
+.mr-import summary span{float:right;color:var(--mr-muted);font-size:11px;font-weight:400}
+.mr-settings{padding:32px!important;box-shadow:-30px 0 90px #0007}
+.mr-settings-help{color:var(--mr-muted);font-size:13px;line-height:1.6;margin:-8px 0 24px}
+.mr-settings-nav{display:flex;gap:6px;flex-wrap:wrap;padding:6px;border:1px solid var(--mr-card-border);border-radius:14px;margin-bottom:24px;background:var(--mr-mini)}
+.mr-settings-nav button{padding:10px 14px;border:0;border-radius:9px;background:transparent;color:var(--mr-muted);font-size:12px;font-weight:650}
+.mr-settings-nav button[aria-pressed=true]{background:#6366f1;color:white;box-shadow:0 4px 12px #6366f133}
+.mr-settings-section-title{padding:22px!important;cursor:default!important;background:transparent!important}
+.mr-settings-section-title>div:first-child>div:first-child{font-size:20px!important;letter-spacing:-.4px;margin-bottom:6px}
+.mr-settings-section-title+div{padding:24px!important;background:transparent!important}
+@media(min-width:1000px){.mr-workspace-mind{display:grid!important;grid-template-columns:1fr 1fr;align-items:start}.mr-workspace-mind>.mr-panel:first-of-type{grid-row:span 2}.mr-settings-section-title+div{max-width:730px;margin:auto}}
+@media(max-width:600px){.mr-workspace .mr-panel{padding:19px!important;border-radius:17px!important}.mr-page-intro{padding:8px 0 14px}.mr-settings{width:100vw!important;padding:24px 16px!important}.mr-settings-nav{flex-wrap:nowrap;overflow-x:auto}.mr-settings-nav button{flex-shrink:0}.mr-import summary span{float:none;display:block;margin-top:6px}.mr-settings-section-title+div{padding:18px!important}}
+@media(prefers-reduced-motion:reduce){.mr-workspace *,.mr-settings *{animation:none!important;transition:none!important}}
+
+.mr-journal{background:var(--mr-card);border:1px solid var(--mr-card-border);border-radius:20px;padding:24px}
+.mr-journal-toolbar{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:12px}
+.mr-journal-toolbar label{font-size:11px;color:var(--mr-muted);display:flex;flex-direction:column;gap:8px;min-width:0}
+.mr-journal-toolbar input,.mr-journal-toolbar select{width:100%;min-width:0;background:var(--mr-mini);border:1px solid var(--mr-mini-border);padding:10px;color:var(--mr-text)}
+.mr-journal-summary{display:flex;align-items:center;gap:36px;padding:26px 0;border-bottom:1px solid var(--mr-card-border);flex-wrap:wrap}
+.mr-journal-summary span,.mr-trade-detail summary span{display:block;font-size:11px;color:var(--mr-muted);margin-bottom:7px}
+.mr-journal-summary strong{font-size:24px;letter-spacing:-.7px}.mr-journal-summary small{font-size:12px;color:var(--mr-muted);font-weight:400}
+.mr-journal-summary button{margin-left:auto;background:var(--mr-mini);color:var(--mr-muted);padding:8px 12px;border:1px solid var(--mr-mini-border);border-radius:8px;font-size:11px}
+.mr-journal-caption{font-size:11px;color:var(--mr-muted);padding:18px 0;line-height:1.6}
+.mr-trade-detail{border-bottom:1px solid var(--mr-card-border)}.mr-trade-detail summary{display:flex;justify-content:space-between;gap:16px;list-style:none;cursor:pointer;padding:18px 0}.mr-trade-detail summary>div:last-child{text-align:right}.mr-trade-detail summary strong{font-size:15px;font-weight:650}.mr-trade-detail summary span{margin:8px 0 0}.mr-trade-detail[open] summary{border-bottom:1px solid var(--mr-card-border)}
+.mr-trade-body{padding:22px;background:var(--mr-mini);border-radius:12px;margin-bottom:16px}.mr-trade-body dl{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:24px}.mr-trade-body dt{font-size:10px;color:var(--mr-muted);margin-bottom:7px}.mr-trade-body dd{font-size:13px}.mr-trade-body h3{font-size:12px;margin-bottom:8px}.mr-trade-body p{font-size:13px;color:var(--mr-muted);line-height:1.7}.mr-delete-trade{margin-top:22px;color:#ef4444;background:transparent;border:1px solid #ef444433;padding:8px 12px;border-radius:8px;font-size:11px}.mr-journal-empty{text-align:center;padding:48px 16px}.mr-journal-empty h2{font-size:20px;margin-bottom:12px}.mr-journal-empty p{font-size:13px;line-height:1.7;color:var(--mr-muted);max-width:440px;margin:0 auto 20px}.mr-journal-empty button{background:#6366f1;color:white;border:0;border-radius:10px;padding:12px 20px}
+@media(max-width:800px){.mr-journal-toolbar{grid-template-columns:1fr 1fr}.mr-journal-toolbar label:first-child{grid-column:1/-1}.mr-journal{padding:18px}.mr-journal-summary{gap:20px}.mr-journal-summary strong{font-size:20px}.mr-trade-body dl{grid-template-columns:1fr 1fr}.mr-trade-detail summary span{font-size:10px;line-height:1.6}}
       `}</style>
 
       {toast&&<div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",zIndex:999,background:"#161b22",border:"1px solid "+G,color:G,padding:"10px 20px",borderRadius:10,fontWeight:600,fontSize:13,boxShadow:"0 8px 32px #0008",whiteSpace:"nowrap"}}>{toast}</div>}
@@ -1969,52 +2145,8 @@ const sendAiMessage=async()=>{
         </Card>
       </div>}
 
-      {/* HEADER */}
-      <div style={{background:dm?"linear-gradient(180deg,#0f1830 0%,#0b1422 100%)":"#ffffff",borderBottom:"1px solid "+(dm?"#2d3548":"#e0e4f0"),padding:isDesktop?"16px 32px 14px":"14px 18px 12px",width:"100%",boxSizing:"border-box"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-          <div style={{flex:1}}>
-            <div style={{fontWeight:900,fontSize:30,letterSpacing:"-1.5px",lineHeight:1}}><span style={{color:B}}>Mind</span><span style={{color:DK.text}}>Risk</span></div>
-            <div style={{color:DK.text,fontSize:12,fontWeight:700,marginTop:3}}>{acct.name||"Trader"} <span style={{color:DK.muted,fontSize:10,fontWeight:400}}>{acct.number?("· "+acct.number):""}</span></div>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{fontSize:10}}>
-              {(()=>{
-                const tokyoH=new Date(nowD.toLocaleString("en-US",{timeZone:"Asia/Tokyo"})).getHours();
-                const tokyoTime=nowD.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Tokyo"});
-                const tokyoOpen=tokyoH>=9&&tokyoH<15;
-                const myH=new Date().getHours();const myM=new Date().getMinutes();
-                const myWindow=(myH===16&&myM>=15)||(myH===17&&myM<=30);
-                return(
-                  <div style={{display:"flex",flexDirection:"column",gap:isDesktop?6:3,alignItems:"flex-end"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{color:DK.muted,fontSize:isDesktop?11:8,fontWeight:isDesktop?600:400}}>{isDesktop?"London":"LON"}</span>
-                      <span style={{color:lonOpen?G:DK.muted,fontWeight:700,fontSize:isDesktop?13:10}}>{lonTime}</span>
-                      <div style={{width:isDesktop?8:6,height:isDesktop?8:6,borderRadius:"50%",background:lonOpen?G:"#4a5568",boxShadow:lonOpen?"0 0 6px "+G:"none"}}/>
-                    </div>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{color:DK.muted,fontSize:isDesktop?11:8,fontWeight:isDesktop?600:400}}>{isDesktop?"Chicago":"CHI"}</span>
-                      <span style={{color:myWindow?G:chiOpen?Y:DK.muted,fontWeight:700,fontSize:isDesktop?13:10}}>{chiTime}</span>
-                      <div style={{width:isDesktop?8:6,height:isDesktop?8:6,borderRadius:"50%",background:myWindow?G:chiOpen?Y:"#4a5568",boxShadow:myWindow?"0 0 6px "+G:chiOpen?"0 0 6px "+Y:"none"}}/>
-                    </div>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{color:DK.muted,fontSize:isDesktop?11:8,fontWeight:isDesktop?600:400}}>{isDesktop?"Tokyo":"TYO"}</span>
-                      <span style={{color:tokyoOpen?G:DK.muted,fontWeight:700,fontSize:isDesktop?13:10}}>{tokyoTime}</span>
-                      <div style={{width:isDesktop?8:6,height:isDesktop?8:6,borderRadius:"50%",background:tokyoOpen?G:"#4a5568",boxShadow:tokyoOpen?"0 0 6px "+G:"none"}}/>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-            <button onClick={()=>saveDm(!dm)} style={{background:dm?dm?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.08)":"rgba(0,0,0,0.04)",border:"1px solid "+(dm?"#2d3548":"#e0e4f0"),borderRadius:10,width:36,height:36,padding:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,marginRight:4}}>{dm?"☀️":"🌙"}</button>
-            <button onClick={()=>setSettingsOpen(true)} style={{background:"linear-gradient(135deg,#6366f1,#a855f7)",borderRadius:12,width:40,height:40,padding:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:18,flexShrink:0}}>☰</button>
-          </div>
-        </div>
-        <div style={{display:"flex",gap:4,flexWrap:"nowrap",overflowX:"auto",paddingBottom:2}}>
-          <Pill bg={todPnl>=0?G+"22":R+"22"} color={pc(todPnl)}>P&L {fs(todPnl)}</Pill>
-          {inPause?<Pill bg={Y+"33"} color={Y}>⏸ {pStr}</Pill>:<Pill bg={tradesLeft>0&&!todayBlocked&&!atLimit?G+"22":R+"22"} color={tradesLeft>0&&!todayBlocked&&!atLimit?G:R}>{todayBlocked?"🚫 GESPERRT":overtradingToday?"🚫 OVERTRADE":atLimit?"🛑 LIMIT":tradesLeft+"T übrig"}</Pill>}
-          <Pill bg={sc(disc)+"22"} color={sc(disc)}>RQ {disc}%</Pill>
-        </div>
-      </div>
+      {authUser&&!showOnboarding&&<aside className="mr-sidebar" aria-label="Hauptnavigation"><div className="mr-sidebar-brand"><span style={{color:B}}>Mind</span><span style={{color:DK.text}}>Risk</span></div><div className="mr-sidebar-label">WORKSPACE</div><nav>{NAVS.map(nav=><button type="button" key={nav.k} aria-current={tab===nav.k?'page':undefined} onClick={()=>setTab(nav.k)}>{nav.svg}<span>{nav.k==='dash'?'Übersicht':nav.k==='mind'?'Routine & Review':nav.lb}</span></button>)}</nav><button type="button" className="mr-sidebar-settings" aria-label="Einstellungen" onClick={()=>setSettingsOpen(true)}>⚙ <span>Einstellungen</span></button><div className="mr-sidebar-account">{acct.name||'Trader'}<span>{acct.number||'Trading-Konto'} · Journal-Modus</span></div></aside>}
+      <TopBar name={acct.name} account={acct.number} view={tab==='dash'?'Übersicht':tab==='mind'?'Routine & Review':tab==='log'?'Trade erfassen':tab==='analyse'?'Analyse':tab==='hist'?'Journal':'Playbooks'} dark={dm} onTheme={()=>saveDm(!dm)} onSettings={()=>setSettingsOpen(true)} windowStart={settings.windowStart} windowEnd={settings.windowEnd}/>
 
       {inPause&&<div style={{position:"sticky",top:0,zIndex:90,background:"linear-gradient(135deg,#f59e0b,#ef4444)",padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
         <span style={{fontSize:18}}>⏸</span>
@@ -2024,13 +2156,85 @@ const sendAiMessage=async()=>{
         </div>
       </div>}
 
-      <div style={{padding:isDesktop?"20px 28px 30px":"16px 16px 20px",width:"100%",boxSizing:"border-box",maxWidth:"100%"}}>
+      <div className="mr-app-main" style={{padding:isDesktop?"20px 28px 30px":"16px 16px 20px",width:"100%",boxSizing:"border-box",maxWidth:"100%"}}>
 
+        {tab==='playbooks'&&<Playbooks books={playbooks} onChange={savePlaybooks} trades={t09}/>}
         {/* DASHBOARD */}
-        {tab==="dash"&&<div style={{display:"flex",flexDirection:"column",gap:0,width:"100%"}}>
+        {tab==="dash"&&<DesktopOverview trades={t09} name={acct.name} account={acct.number} tradeLimit={settings.maxTrades} onCreate={()=>setTab('log')} onJournal={()=>setTab('hist')} onRoutine={()=>setTab('mind')} onCoach={()=>{setAiOpen(true);setAiInput('Analysiere meine dokumentierten Trades und meine Regeln. Nenne die Datengrundlage und maximal drei konkrete Verbesserungen.');}} risk={<RiskBudgetCard dailyLossTotal={todGrossLoss} limit={effectiveDailyDD} tradeCount={todT.length} maxTrades={settings.maxTrades} dk={DK} onCoach={()=>{setAiOpen(true);setAiInput('Prüfe mein heutiges Risikobudget anhand der dokumentierten Trades.');}}/>}/>}
+        {tab==="dash"&&<details className="mr-legacy-tools"><summary>Kontofortschritt & weitere Werkzeuge <span>Bestehende Challenge- und Tagesauswertungen</span></summary><div className="mindrisk-dashboard-v3" style={{display:"flex",flexDirection:"column",gap:0,width:"100%"}}>
+          <div className="mindrisk-welcome">
+            <div><div className="mindrisk-eyebrow">MINDRISK · TRADING INTELLIGENCE</div>
+              <h1>Dein Trading. Deine Klarheit.</h1>
+              <p>Erkenne Muster. Schütze dein Risiko. Verbessere deinen Prozess.</p></div>
+            <button type="button" className="mindrisk-coach-cta" onClick={()=>setAiOpen(true)}>✦ AI Coach öffnen →</button>
+          </div>
+          <div className="mindrisk-metric-grid">
+            {[
+              {label:"NETTO P&L",value:fd(netPnl),hint:journalMetrics.tradeCount+" erfasste Trades",color:pc(netPnl),symbol:"↗"},
+              {label:"WIN RATE",value:journalMetrics.winRate===null?"—":journalMetrics.winRate.toFixed(1)+" %",hint:"Historische Trefferquote",color:"#60b7ff",symbol:"◎"},
+              {label:"PROFIT FACTOR",value:journalMetrics.profitFactor===null?"—":journalMetrics.profitFactor.toFixed(2),hint:"Gewinne / Verluste",color:"#4fe1b7",symbol:"◈"},
+              {label:"DISZIPLIN SCORE",value:journalMetrics.tradeCount?disc+" / 100":"—",hint:"Aus dokumentierten Regeln",color:"#f6bd60",symbol:"♛"}
+            ].map((metric,i)=><div className="mindrisk-metric" key={i}>
+              <div className="mindrisk-metric-top"><span className="mindrisk-metric-icon" style={{color:metric.color}}>{metric.symbol}</span><span>{metric.label}</span></div>
+              <div className="mindrisk-metric-value" style={{color:metric.color}}>{metric.value}</div>
+              <div className="mindrisk-metric-hint">{metric.hint}</div>
+            </div>)}
+          </div>
+          {/* V6: Datenbasierte Performance – keine Demo- oder KI-erfundenen Zahlen */}
+          <div className="mindrisk-insight-grid" style={{display:"grid",gridTemplateColumns:isDesktop?"minmax(0,1.65fr) minmax(280px,1fr)":"minmax(0,1fr)",gap:14,margin:"18px 0"}}>
+            <div style={{background:DK.card,border:"1px solid "+DK.miniBorder,borderRadius:16,padding:isDesktop?20:14,minWidth:0}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,gap:10}}>
+                <div><div style={{fontSize:15,fontWeight:800,color:DK.text}}>Equity-Verlauf</div><div style={{fontSize:11,color:DK.muted,marginTop:4}}>Kumuliertes Ergebnis · {t09.length} Trades</div></div>
+                <span style={{fontSize:12,fontWeight:800,color:pc(netPnl)}}>{fd(netPnl)}</span>
+              </div>
+              {equity.length? <div style={{width:"100%",height:isDesktop?235:190}}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={[{i:0,v:0},...equity]} margin={{top:10,right:8,left:0,bottom:0}}>
+                    <XAxis dataKey="i" tick={{fill:DK.muted,fontSize:10}} tickLine={false} axisLine={false}/>
+                    <YAxis tick={{fill:DK.muted,fontSize:10}} tickLine={false} axisLine={false} width={55} tickFormatter={v=>"$"+Math.round(v).toLocaleString("de-DE")}/>
+                    <Tooltip contentStyle={{background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:10,color:DK.text}} formatter={v=>[fd(v),"P&L"]} labelFormatter={i=>"Trade "+i}/>
+                    <ReferenceLine y={0} stroke={DK.muted} strokeDasharray="4 4" strokeOpacity={0.5}/>
+                    <Line type="monotone" dataKey="v" stroke={netPnl>=0?G:R} strokeWidth={2.5} dot={false} activeDot={{r:5}} isAnimationActive={false}/>
+                  </LineChart>
+                </ResponsiveContainer>
+              </div> : <div style={{height:190,display:"flex",alignItems:"center",justifyContent:"center",color:DK.muted,fontSize:12,textAlign:"center",padding:20}}>Noch keine Trades erfasst. Sobald du Trades einträgst, erscheint hier deine echte Equity-Kurve.</div>}
+            </div>
+            <div style={{background:DK.card,border:"1px solid "+DK.miniBorder,borderRadius:16,padding:isDesktop?20:14,display:"flex",flexDirection:"column",gap:12}}>
+              <div><div style={{fontSize:15,fontWeight:800,color:DK.text}}>MindRisk Insights</div><div style={{fontSize:11,color:DK.muted,marginTop:4}}>Aus deinen dokumentierten Trades</div></div>
+              {(()=>{
+                const ordered=[...t09].sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.time||"").localeCompare(b.time||""));
+                const winners=ordered.filter(t=>Number(t.pnl)>0),losers=ordered.filter(t=>Number(t.pnl)<0);
+                const avgWin=winners.length?winners.reduce((n,t)=>n+Number(t.pnl),0)/winners.length:0;
+                const avgLoss=losers.length?Math.abs(losers.reduce((n,t)=>n+Number(t.pnl),0)/losers.length):0;
+                let peak=0,running=0,maxDrawdown=0;
+                ordered.forEach(t=>{running+=Number(t.pnl)||0;peak=Math.max(peak,running);maxDrawdown=Math.max(maxDrawdown,peak-running);});
+                const bySetup={};ordered.forEach(t=>{const key=t.setup||"Ohne Setup";const o=bySetup[key]||(bySetup[key]={count:0,pnl:0});o.count++;o.pnl+=Number(t.pnl)||0;});
+                const qualified=Object.entries(bySetup).filter(([,v])=>v.count>=5).sort((a,b)=>b[1].pnl-a[1].pnl);
+                const insight=ordered.length<5?"Erfasse mindestens 5 Trades, damit erste Muster sichtbar werden.":qualified.length?"Stärkstes dokumentiertes Setup: "+qualified[0][0]+" ("+qualified[0][1].count+" Trades, "+fd(qualified[0][1].pnl)+").":"Erfasse pro Setup mindestens 5 Trades für einen aussagekräftigeren Vergleich.";
+                return <>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    {[{l:"Ø Gewinn",v:winners.length?fd(avgWin):"—",c:G},{l:"Ø Verlust",v:losers.length?fd(-avgLoss):"—",c:R},{l:"Max. Drawdown",v:ordered.length?"$"+maxDrawdown.toFixed(2):"—",c:Y},{l:"Datenbasis",v:ordered.length+" Trades",c:DK.text}].map((x,i)=><div key={i} style={{padding:"11px 12px",borderRadius:11,background:DK.mini,border:"1px solid "+DK.miniBorder}}><div style={{fontSize:10,color:DK.muted,marginBottom:6}}>{x.l}</div><div style={{fontSize:16,fontWeight:800,color:x.c}}>{x.v}</div></div>)}
+                  </div>
+                  <div style={{borderLeft:"3px solid "+B,background:"rgba(99,102,241,0.08)",padding:"12px",borderRadius:8,fontSize:12,lineHeight:1.6,color:DK.text}}>{insight}</div>
+                  <div style={{fontSize:10,color:DK.muted,lineHeight:1.5}}>Hinweis: Historische Muster sind keine Prognose. Der Drawdown bezieht sich auf dokumentierte Trade-P&L, nicht auf offene Positionen oder Broker-Kontostände.</div>
+                  <button type="button" onClick={()=>{setAiOpen(true);setAiInput("Analysiere meine dokumentierten Trading-Muster und zeige mir konkrete Verbesserungsmöglichkeiten.");}} style={{marginTop:"auto",padding:"11px 14px",borderRadius:10,background:"linear-gradient(135deg,"+B+","+P+")",color:"white",fontWeight:700,fontSize:12,border:"none",cursor:"pointer"}}>Mit AI Coach analysieren →</button>
+                </>;
+              })()}
+            </div>
+          </div>
+          {/* V10: only one calendar remains — the original interactive calendar below. */}
+          <div className="mindrisk-v10-focus" style={{marginBottom:16}}>
+            <RiskBudgetCard dailyLossTotal={todGrossLoss} limit={effectiveDailyDD} tradeCount={todT.length} maxTrades={settings.maxTrades} dk={DK} onCoach={()=>{setAiOpen(true);setAiInput('Analysiere mein heutiges Risikobudget und meine dokumentierten Trades. Zeige mir mögliche Regelverstöße und konkrete Maßnahmen zur Risikoreduktion.');}}/>
+            <div className="mindrisk-v10-next" style={{background:DK.card,border:'1px solid '+DK.miniBorder,borderRadius:16,padding:20}}>
+              <div style={{fontSize:10,fontWeight:800,letterSpacing:2,color:B,marginBottom:10}}>DEIN NÄCHSTER SCHRITT</div>
+              <div style={{fontSize:19,fontWeight:850,color:DK.text,marginBottom:8}}>Klarheit vor dem nächsten Trade.</div>
+              <div style={{fontSize:12,lineHeight:1.65,color:DK.muted,marginBottom:18}}>Halte dein Setup, deinen Ausstieg und deine Entscheidung fest. So wird aus jedem Trade verwertbares Feedback.</div>
+              <button type="button" onClick={()=>setTab('log')} style={{width:'100%',border:0,borderRadius:11,padding:'13px 16px',fontSize:13,fontWeight:800,color:'#fff',background:'linear-gradient(120deg,'+B+','+P+')'}}>Trade dokumentieren →</button>
+            </div>
+          </div>
           {dailyDDHit&&<div style={{background:"rgba(239,68,68,0.15)",border:"2px solid rgba(239,68,68,0.6)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M4.93 4.93l14.14 14.14"/></svg>
-            <div><div style={{color:"#fca5a5",fontWeight:800,fontSize:14}}>Daily DD erreicht! -${Math.round(dailyLoss)} / $1.000 Limit</div><div style={{color:"#fca5a5",fontSize:11}}>Für heute KEIN weiterer Trade. Rechner aus, Coach fragen.</div></div>
+            <div><div style={{color:"#fca5a5",fontWeight:800,fontSize:14}}>Daily DD erreicht! -${Math.round(todGrossLoss)} / ${effectiveDailyDD.toLocaleString("de-DE")} Limit</div><div style={{color:"#fca5a5",fontSize:11}}>Für heute KEIN weiterer Trade. Rechner aus, Coach fragen.</div></div>
           </div>}
           {!dailyDDHit&&todayBlocked&&<div style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.4)",borderRadius:14,padding:"14px 16px",display:"flex",gap:12,alignItems:"center",gridColumn:isDesktop?"1/-1":"auto"}}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
@@ -2183,7 +2387,7 @@ const sendAiMessage=async()=>{
           </div>{/* /BLOCK1 */}
           <div style={isDesktop?{background:DK.card,padding:"18px 20px"}:{display:"contents"}}>
           <Card dk={{dm}} style={{breakInside:"avoid",height:isDesktop?"auto":"auto"}}>
-            <div style={{fontWeight:isDesktop?800:700,marginBottom:isDesktop?14:10,fontSize:isDesktop?18:15}}>{now.toLocaleString("de-DE",{month:"long",year:"numeric"})}</div>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:isDesktop?14:10}}><div><div style={{fontWeight:800,fontSize:isDesktop?18:15}}>Trading-Kalender</div><div style={{fontSize:11,color:DK.muted,marginTop:4}}>{now.toLocaleString("de-DE",{month:"long",year:"numeric"})} · Deine Handelsübersicht</div></div><span style={{fontSize:10,fontWeight:700,color:B}}>JOURNAL</span></div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3,marginBottom:5}}>
               {["Mo","Di","Mi","Do","Fr","Sa","So"].map(d=><div key={d} style={{textAlign:"center",color:DK.muted,fontSize:isDesktop?13:10,fontWeight:700,marginBottom:isDesktop?4:0}}>{d}</div>)}
             </div>
@@ -2504,12 +2708,13 @@ const sendAiMessage=async()=>{
           </Card>
           </div>{/* /BLOCK4 */}
           </div>{/* /GRID */}
-        </div>}
+        </div></details>}
 
 
 
-        {tab==="mind"&&<div style={{display:"flex",flexDirection:"column",gap:12,width:"100%"}}>
-          <Card dk={{dm}} style={{borderColor:"rgba(99,102,241,0.4)",background:dm?"linear-gradient(145deg,#0f1428,#0d1020)":DK.card}}>
+        {tab==="mind"&&<div className={"mr-workspace mr-workspace-mind mr-phase-"+routinePhase} style={{display:"flex",flexDirection:"column",gap:12,width:"100%"}}>
+<PageIntro eyebrow="MINDRISK / ROUTINE" title="Dein Trading-Prozess" description="Vorbereiten. Bewusst handeln. Ehrlich reflektieren."/><div className="mr-routine-navigation"><div className="mr-segment" role="group" aria-label="Routine-Phase"><button type="button" aria-pressed={routinePhase==='prepare'} onClick={()=>setRoutinePhase('prepare')}>01 Vorbereitung</button><button type="button" aria-pressed={routinePhase==='review'} onClick={()=>setRoutinePhase('review')}>02 Review</button></div><p>{routinePhase==='prepare'?'Check-in und persönliche Leitlinien vor deiner Session.':'Reflexion, Verhaltensmuster und die Datengrundlage deiner Woche.'}</p></div><div className="mr-review-card"><WeeklyReview trades={t09} onJournal={()=>setTab('hist')} onCoach={()=>{setAiOpen(true);setAiInput('Prüfe die letzten sieben Kalendertage meiner dokumentierten Trades. Nenne die verwendeten Trades, unterscheide fehlende von verletzten Regeln und schlage maximal drei nächste Schritte vor.');}}/></div>
+          <Card className="mr-prepare-card" dk={{dm}} style={{borderColor:"rgba(99,102,241,0.4)",background:dm?"linear-gradient(145deg,#0f1428,#0d1020)":DK.card}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
               <div style={{width:12,height:12,borderRadius:"50%",background:mindLight==='green'?G:mindLight==='yellow'?Y:mindLight==='red'?R:"#6366f1",animation:"livingOrb 2s infinite",boxShadow:"0 0 8px "+(mindLight==='green'?G:mindLight==='yellow'?Y:mindLight==='red'?R:"#6366f1")}}/>
               <div>
@@ -2519,7 +2724,7 @@ const sendAiMessage=async()=>{
             </div>
             {!checkedIn?(
               <div>
-                {[{id:"mood",l:"🎯 Fokus & Klarheit"},{id:"energy",l:"⚡ Energie"},{id:"stress",l:"😤 Stress (1=kein, 5=viel)"}].map(item=>(
+                {[{id:"mood",l:"Fokus & Klarheit"},{id:"energy",l:"Energie"},{id:"stress",l:"Stress · 1 = niedrig, 5 = hoch"}].map(item=>(
                   <div key={item.id} style={{marginBottom:12}}>
                     <div style={{color:DK.muted,fontSize:11,marginBottom:6}}>{item.l}</div>
                     <div style={{display:"flex",gap:6}}>
@@ -2559,10 +2764,10 @@ const sendAiMessage=async()=>{
           </Card>
 
           {/* PRE-TRADE CHECKLIST - only show if checked in */}
-          {checkedIn&&mindLight!=='red'&&<Card dk={{dm}} style={{borderColor:"rgba(99,102,241,0.3)"}}>
-            <div style={{fontWeight:800,fontSize:15,color:DK.text,marginBottom:4}}>✅ Pre-Trade Checklist</div>
+          {checkedIn&&mindLight!=='red'&&<Card className="mr-prepare-card" dk={{dm}} style={{borderColor:"rgba(99,102,241,0.3)"}}>
+            <div style={{fontWeight:800,fontSize:15,color:DK.text,marginBottom:4}}>Pre-Trade-Check</div>
             <div style={{color:"#6366f1",fontSize:9,fontWeight:600,letterSpacing:"0.5px",marginBottom:10}}>VOR JEDEM TRADE</div>
-            {[{id:"r1",q:"Bin ich emotional ruhig und klar?",warn:"Wenn nicht → KEIN Trade"},{id:"r2",q:"Habe ich ein klares Setup?",warn:"Kein Impuls-Trade"},{id:"r3",q:"SL und TP definiert?",warn:"Immer vor Entry"},{id:"r4",q:"Ist es nach 16:15 Uhr?",warn:"Nur im Zeitfenster"},{id:"r5",q:"Max 2 Trades heute noch möglich?",warn:"Limit einhalten"}].map(r=>(
+            {[{id:"r1",q:"Bin ich emotional ruhig und klar?",warn:"Wenn nicht → KEIN Trade"},{id:"r2",q:"Habe ich ein klares Setup?",warn:"Kein Impuls-Trade"},{id:"r3",q:"SL und TP definiert?",warn:"Immer vor Entry"},{id:"r4",q:`Liegt der Trade in meinem Zeitfenster (${settings.windowStart}–${settings.windowEnd})?`,warn:"Deinen Handelsplan berücksichtigen"},{id:"r5",q:`Liege ich unter meinem Tageslimit (${settings.maxTrades} Trades)?`,warn:"Dein eingestelltes Limit berücksichtigen"}].map(r=>(
               <div key={r.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
                 <input type="checkbox" checked={!!form.rules?.[r.id]} onChange={e=>setForm(p=>({...p,rules:{...p.rules,[r.id]:e.target.checked}}))} style={{width:18,height:18,accentColor:"#6366f1",flexShrink:0}}/>
                 <div style={{flex:1}}>
@@ -2571,19 +2776,19 @@ const sendAiMessage=async()=>{
                 </div>
               </div>
             ))}
-            {Object.values(form.rules||{}).every(Boolean)&&<div style={{marginTop:10,background:"rgba(99,102,241,0.12)",borderRadius:8,padding:"8px 12px",color:"#a5b4fc",fontSize:12,fontWeight:700,textAlign:"center"}}>✅ Alle Punkte gecheckt – Bereit!</div>}
+            {['r1','r2','r3','r4','r5'].every(k=>form.rules?.[k])&&<div style={{marginTop:10,background:"rgba(99,102,241,0.12)",borderRadius:8,padding:"8px 12px",color:"#a5b4fc",fontSize:12,fontWeight:700,textAlign:"center"}}>✅ Alle Punkte gecheckt – Bereit!</div>}
           </Card>}
 
 
 
           {/* MEINE REGELN - Dynamic */}
-          <Card dk={{dm}} style={{borderColor:"rgba(245,158,11,0.3)"}}>
+          <Card className="mr-prepare-card" dk={{dm}} style={{borderColor:"rgba(245,158,11,0.3)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div>
-                <div style={{fontWeight:800,fontSize:15,color:DK.text}}>📋 Meine Regeln</div>
+                <div style={{fontWeight:800,fontSize:15,color:DK.text}}>Meine Leitlinien</div>
                 <div style={{color:"#f59e0b",fontSize:9,fontWeight:600}}>MEIN SYSTEM – {selectedRules.length} AKTIV</div>
               </div>
-              <button onClick={()=>setSettingsOpen(true)} style={{fontSize:10,color:"#6366f1",background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:6,padding:"3px 8px"}}>✏️ Bearbeiten</button>
+              <button onClick={()=>{setSettingsSection("rules");setSettingsOpen(true);}} style={{fontSize:10,color:"#6366f1",background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:6,padding:"3px 8px"}}>Bearbeiten</button>
             </div>
             {selectedRules.length===0?(
               <div style={{color:DK.muted,fontSize:12,textAlign:"center",padding:"12px 0"}}>Keine Regeln ausgewählt. ☰ → Regeln → auswählen</div>
@@ -2600,8 +2805,8 @@ const sendAiMessage=async()=>{
 
 
           {/* TAGES-REFLEXION */}
-          <Card dk={{dm}} style={{borderColor:"rgba(99,102,241,0.2)"}}>
-            <div style={{fontWeight:800,fontSize:15,color:DK.text,marginBottom:4}}>📝 Tages-Reflexion</div>
+          <Card className="mr-review-card" dk={{dm}} style={{borderColor:"rgba(99,102,241,0.2)"}}>
+            <div style={{fontWeight:800,fontSize:15,color:DK.text,marginBottom:4}}>Tagesreflexion</div>
             <div style={{color:"#6366f1",fontSize:9,fontWeight:600,letterSpacing:"0.5px",marginBottom:10}}>NACH DEM TRADING</div>
             {[{id:"good",label:"Was lief gut heute?",p:"Setup, Disziplin, Geduld..."},{id:"bad",label:"Was verbessern?",p:"Impuls, zu früh raus..."},{id:"emotion",label:"Wie war dein Zustand?",p:"Ruhig, fokussiert, gestresst..."}].map(q=>(
               <div key={q.id} style={{marginBottom:8}}>
@@ -2612,13 +2817,13 @@ const sendAiMessage=async()=>{
             <button onClick={()=>{const u={...journal,[todayISO()]:{...todayJ}};setJournal(u);localStorage.setItem("ttp_journal",JSON.stringify(u));showToast("✅ Reflexion gespeichert!");}} style={{background:B,color:"#fff",padding:10,width:"100%",fontWeight:700,borderRadius:10,fontSize:13}}>Speichern</button>
           </Card>
 
-          <Card dk={{dm}} style={{borderColor:"rgba(245,158,11,0.2)",background:dm?dm?"linear-gradient(145deg,#1a1508 0%,#0f1010 100%)":"#fffbeb":"#fffbeb"}}>
+          <Card className="mr-review-card" dk={{dm}} style={{borderColor:"rgba(245,158,11,0.2)",background:dm?dm?"linear-gradient(145deg,#1a1508 0%,#0f1010 100%)":"#fffbeb":"#fffbeb"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,cursor:"pointer"}} onClick={()=>setProbExp(p=>!p)}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{width:14,height:14,borderRadius:"50%",background:"radial-gradient(circle,#fcd34d,#f59e0b 60%,#92400e)",animation:"livingOrb 2s ease-in-out infinite",boxShadow:"0 0 10px rgba(245,158,11,0.6)",flexShrink:0}}/>
                 <div>
                   <div style={{fontWeight:800,fontSize:15,color:DK.text}}>Meine Trading-Probleme</div>
-                  <div style={{color:"#f59e0b",fontSize:9,fontWeight:600}}>PERSÖNLICHE KI-DIAGNOSE</div>
+                  <div style={{color:"#f59e0b",fontSize:9,fontWeight:600}}>VERHALTEN REFLEKTIEREN</div>
                 </div>
               </div>
               <span style={{color:"#f59e0b",fontSize:11,fontWeight:600}}>{probExp?"▲":"▼"}</span>
@@ -2647,7 +2852,7 @@ const sendAiMessage=async()=>{
                     style={{width:"100%",padding:"10px",borderRadius:10,fontWeight:700,fontSize:13,
                       background:"linear-gradient(135deg,rgba(245,158,11,0.2),rgba(239,68,68,0.1))",
                       border:"1px solid rgba(245,158,11,0.3)",color:probLoading?"#6b7280":"#fcd34d",marginBottom:8}}>
-                    {probLoading?"KI Analysiert...":"KI-Diagnose starten ("+selected.length+" Probleme)"}
+                    {probLoading?"KI Analysiert...":"Muster reflektieren ("+selected.length+" Probleme)"}
                   </button>}
                   {probAnalysis&&<div style={{background:"rgba(245,158,11,0.06)",borderRadius:10,padding:12,border:"1px solid rgba(245,158,11,0.15)"}}>
                     <div style={{color:"#f59e0b",fontSize:11,fontWeight:700,marginBottom:6}}>Dein persönlicher Plan:</div>
@@ -2662,7 +2867,7 @@ const sendAiMessage=async()=>{
 
 
         {/* LOGGEN TAB */}
-        {tab==="log"&&<div style={{maxWidth:isDesktop?"700px":"100%",margin:isDesktop?"0 auto":"0"}}>
+        {tab==="log"&&<div className="mr-workspace mr-workspace-log" style={{maxWidth:isDesktop?"700px":"100%",margin:isDesktop?"0 auto":"0"}}><PageIntro eyebrow="MINDRISK / ERFASSEN" title="Jeder Trade zählt." description="Dokumentiere Ergebnis, Setup und Entscheidung – für eine ehrliche Auswertung."/>
           {!allChecked&&!inPause&&!todayBlocked&&!atLimit&&<div style={{background:"linear-gradient(135deg,rgba(239,68,68,0.12),rgba(245,158,11,0.08))",border:"2px solid rgba(239,68,68,0.5)",borderRadius:14,padding:"18px",marginBottom:14,textAlign:"center"}}>
             <div style={{fontSize:40,marginBottom:8}}>🔒</div>
             <div style={{color:R,fontWeight:800,fontSize:16,marginBottom:6}}>Routine zuerst!</div>
@@ -2711,10 +2916,10 @@ const sendAiMessage=async()=>{
               </div>
               <Field dm={dm} label="SETUP">
                 <select value={form.setup} onChange={e=>setForm(f=>({...f,setup:e.target.value}))}>
-                  {SETUPS.map(s=><option key={s} value={s}>{s}</option>)}
+                  {[...new Set([...SETUPS,...playbooks.map(p=>p.name),form.setup].filter(Boolean))].map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
               </Field>
-              <Field dm={dm} label="NETTO P&L ($) *">
+              <Field dm={dm} label="NETTO P&L (USD) · Pflichtfeld">
                 <input type="number" step="0.01" value={form.pnl} onChange={e=>setForm(f=>({...f,pnl:e.target.value}))} placeholder="z.B. 40 oder -20" style={{borderColor:form.pnl?(parseFloat(form.pnl)>=0?G+"88":R+"88"):DK.miniBorder}}/>
               </Field>
               {(()=>{
@@ -2743,9 +2948,10 @@ const sendAiMessage=async()=>{
         </div>}
 
         {/* ANALYSE TAB */}
-        {tab==="analyse"&&<div style={{display:"flex",flexDirection:"column",gap:12,width:"100%"}}>
+        {tab==="analyse"&&<div className="mr-workspace mr-workspace-analyse" style={{display:"flex",flexDirection:"column",gap:12,width:"100%"}}>
+<PageIntro eyebrow="MINDRISK / ANALYSE" title="Verstehe deinen Vorteil." description="Ergebnisse, Setups und Verhalten im Zusammenhang betrachten."/>
 
-          {/* SCHNELL-STATS */}
+<AnalyticsWorkspace trades={t09}/><details className="mr-legacy-tools"><summary>Weitere Auswertungen <span>Bisherige Detailberichte, Serien und Haltedauer</span></summary><div className="mr-analysis-legacy">          {/* SCHNELL-STATS */}
           {(()=>{
             const wins=t09.filter(t=>t.pnl>0);
             const losses=t09.filter(t=>t.pnl<0);
@@ -2914,84 +3120,26 @@ const sendAiMessage=async()=>{
 
           {/* PSYCHOLOGIE JOURNAL */}
           
-        </div>}
+        </div></details></div>}
 
-        {tab==="hist"&&<div style={{display:"flex",flexDirection:"column",gap:10,width:"100%"}}>
-          <Card dk={{dm}} style={{borderColor:"rgba(99,102,241,0.3)"}}>
-            <div style={{fontWeight:700,fontSize:14,color:DK.text,marginBottom:8}}>📥 TTP Trade Import</div>
+        {tab==="hist"&&<div className="mr-workspace mr-workspace-hist" style={{display:"flex",flexDirection:"column",gap:10,width:"100%"}}>
+<PageIntro eyebrow="MINDRISK / JOURNAL" title="Dein Trading-Journal" description="Alle dokumentierten Trades. Eine nachvollziehbare Historie."/>
+<details className="mr-import"><summary>Trades importieren <span>TTP-Report einfügen +</span></summary>          <Card dk={{dm}} style={{borderColor:"rgba(99,102,241,0.3)"}}>
+            <div style={{fontWeight:700,fontSize:14,color:DK.text,marginBottom:8}}>TTP-Report importieren</div>
             <div style={{color:DK.muted,fontSize:11,marginBottom:8}}>TTP Report → Trades markieren → Kopieren → hier einfügen:</div>
             <textarea id="ttp_import_box" rows={4} placeholder="NQ-202606-CME&#9;18.5.2026, 16:54:51&#9;..." style={{width:"100%",fontSize:10,marginBottom:8,fontFamily:"monospace",resize:"vertical"}}/>
             <button onClick={()=>{const v=document.getElementById('ttp_import_box').value;importTTPTrades(v);document.getElementById('ttp_import_box').value='';}}
               style={{background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",padding:"10px",width:"100%",fontWeight:700,borderRadius:10,fontSize:13}}>
               📥 Trades importieren
             </button>
-          </Card>
-          <Card dk={{dm}}>
-            <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>🔍 Filter</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-              <Field dm={dm} label="VON"><input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:DK.text,width:"100%",outline:"none"}}/></Field>
-              <Field dm={dm} label="BIS"><input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} style={{background:"transparent",border:"none",padding:"2px 0",fontSize:13,color:DK.text,width:"100%",outline:"none"}}/></Field>
-            </div>
-            {(dateFrom||dateTo)&&<button onClick={()=>{setDateFrom("");setDateTo("");}} style={{background:"none",color:DK.muted,fontSize:11,padding:"4px 0",width:"100%"}}>Filter zurücksetzen ×</button>}
-          </Card>
-          {(dateFrom||dateTo)&&(()=>{
-            const filtered=t09.filter(t=>(!dateFrom||t.date>=dateFrom)&&(!dateTo||t.date<=dateTo));
-            const sum=filtered.reduce((s,t)=>s+t.pnl,0);
-            const wr=filtered.length?Math.round(filtered.filter(t=>t.pnl>0).length/filtered.length*100):0;
-            return(<>
-              <Card dk={{dm}} style={{borderColor:B+"44"}}>
-                <div style={{display:"flex",justifyContent:"space-between"}}>
-                  <div><div style={{color:DK.muted,fontSize:10}}>{filtered.length} Trades</div><div style={{color:pc(sum),fontWeight:800,fontSize:24}}>{sum>=0?"+":"-"}${Math.abs(sum).toFixed(2)}</div></div>
-                  <div style={{textAlign:"right"}}><div style={{color:DK.muted,fontSize:10}}>WR</div><div style={{color:wr>=50?G:R,fontWeight:800,fontSize:20}}>{wr}%</div></div>
-                </div>
-              </Card>
-              {[...filtered].reverse().map(t=>(
-                <div key={t.id} style={{background:DK.mini,borderRadius:10,padding:"10px 12px",borderLeft:"3px solid "+pc(t.pnl),display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div><div style={{display:"flex",gap:6,marginBottom:2}}><span style={{fontWeight:800,color:pc(t.pnl)}}>{fd(t.pnl)}</span><span style={{fontSize:10,color:DK.muted}}>{t.contract} · {t.dir}</span></div><div style={{color:DK.muted,fontSize:10}}>{t.date} {t.time}</div></div>
-                  <button onClick={()=>setDelId(t.id)} style={{background:"none",color:R,fontSize:16,padding:"2px 4px",opacity:0.5}}>×</button>
-                </div>
-              ))}
-            </>);
-          })()}
-          {!dateFrom&&!dateTo&&<Card dk={{dm}}>
-            <div style={{fontWeight:700,fontSize:15,marginBottom:10}}>📅 Jahresübersicht</div>
-            {monthlyStats.map(ms=>{
-              const isExp=expandedMonth===ms.mo;
-              return(
-                <div key={ms.mo} style={{marginBottom:8,background:DK.mini,borderRadius:10,padding:"10px 12px",border:isExp?"1px solid "+B+"55":"1px solid transparent"}}>
-                  <div onClick={()=>setExpandedMonth(isExp?null:ms.mo)} style={{cursor:"pointer"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
-                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                        <span style={{color:DK.muted,fontSize:11,display:"inline-block",transform:isExp?"rotate(90deg)":"none"}}>▶</span>
-                        <div style={{fontWeight:700,fontSize:13}}>{ms.mo}</div>
-                      </div>
-                      <div style={{color:pc(ms.pnl),fontWeight:800,fontSize:15}}>{ms.pnl>=0?"+":"-"}${Math.abs(ms.pnl).toFixed(0)}</div>
-                    </div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4,fontSize:10}}>
-                      <div style={{textAlign:"center"}}><div style={{color:DK.muted}}>Trades</div><div style={{fontWeight:700}}>{ms.trades}</div></div>
-                      <div style={{textAlign:"center"}}><div style={{color:DK.muted}}>WR</div><div style={{color:ms.wr>=50?G:R,fontWeight:700}}>{ms.wr}%</div></div>
-                      <div style={{textAlign:"center"}}><div style={{color:DK.muted}}>TP</div><div style={{color:G,fontWeight:700}}>{ms.wins}</div></div>
-                      <div style={{textAlign:"center"}}><div style={{color:DK.muted}}>SL</div><div style={{color:R,fontWeight:700}}>{ms.losses}</div></div>
-                    </div>
-                  </div>
-                  {isExp&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid "+DK.miniBorder,display:"flex",flexDirection:"column",gap:5}}>
-                    {[...t09.filter(t=>t.date.startsWith(ms.mo))].reverse().map(t=>(
-                      <div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 8px",background:DK.mini,borderRadius:6,borderLeft:"2px solid "+pc(t.pnl)}}>
-                        <div><div style={{fontSize:11,fontWeight:700,color:pc(t.pnl)}}>{fd(t.pnl)} <span style={{color:DK.muted,fontWeight:400}}>· {t.contract} · {t.dir}</span></div><div style={{color:DK.muted,fontSize:10}}>{t.date} {t.time}</div></div>
-                        <button onClick={e=>{e.stopPropagation();setDelId(t.id);}} style={{background:"none",color:R,fontSize:14,padding:"2px 4px",opacity:0.4}}>×</button>
-                      </div>
-                    ))}
-                  </div>}
-                </div>
-              );
-            })}
-          </Card>}
+          </Card></details>
+<JournalWorkspace trades={t09} onDelete={setDelId} onCreate={()=>setTab('log')}/>
         </div>}
 
       </div>
 
       {/* BOTTOM NAV */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:100,background:"rgba(15,10,30,0.97)",borderTop:"1px solid rgba(99,102,241,0.4)",boxShadow:"0 -4px 24px rgba(99,102,241,0.15)",display:"flex",paddingBottom:"env(safe-area-inset-bottom,8px)",WebkitTransform:"translate3d(0,0,0)",transform:"translate3d(0,0,0)"}}>        {NAVS.map(nav=>(
+      <div className="mr-bottom-nav" style={{position:"fixed",bottom:0,left:0,right:0,zIndex:100,background:"rgba(15,10,30,0.97)",borderTop:"1px solid rgba(99,102,241,0.4)",boxShadow:"0 -4px 24px rgba(99,102,241,0.15)",display:"flex",paddingBottom:"env(safe-area-inset-bottom,8px)",WebkitTransform:"translate3d(0,0,0)",transform:"translate3d(0,0,0)"}}>        {NAVS.map(nav=>(
           <button key={nav.k} onClick={()=>setTab(nav.k)} style={{background:tab===nav.k?"rgba(99,102,241,0.08)":"none",color:tab===nav.k?B:(dm?P+"aa":"#6b7280"),padding:isDesktop?"14px 8px 14px":"10px 2px 11px",fontSize:isDesktop?10:9,flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:isDesktop?6:4,borderBottom:tab===nav.k?"2px solid "+B:"2px solid transparent",borderRadius:0,position:"relative",fontWeight:700,letterSpacing:"0.5px",transition:"all 0.2s"}}>
             <div style={{width:isDesktop?28:22,height:isDesktop?28:22,display:"flex",alignItems:"center",justifyContent:"center",opacity:tab===nav.k?1:0.5,transform:tab===nav.k?"scale(1.15)":"scale(1)",transition:"all 0.2s",filter:tab===nav.k?"drop-shadow(0 0 6px "+B+") drop-shadow(0 0 14px "+B+") brightness(1.3)":"brightness(0.65)"}}>
               {nav.k==="log"&&!allChecked&&!todayBlocked&&!atLimit&&!inPause
@@ -3007,7 +3155,7 @@ const sendAiMessage=async()=>{
 
       {/* SETTINGS DRAWER */}
       {settingsOpen&&<div onClick={()=>setSettingsOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:300,backdropFilter:"blur(4px)"}}>
-        <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:0,right:0,bottom:0,width:"min(300px,82vw)",background:DK.nav,borderLeft:"1px solid #2d3548",overflowY:"auto",padding:"20px 18px",paddingBottom:"calc(20px + env(safe-area-inset-bottom,0px))"}}>
+        <div role="dialog" aria-modal="true" aria-label="Einstellungen" className="mr-settings" onClick={e=>e.stopPropagation()} style={{position:"absolute",top:0,right:0,bottom:0,width:"min(920px,96vw)",background:DK.nav,borderLeft:"1px solid #2d3548",overflowY:"auto",padding:"20px 18px",paddingBottom:"calc(20px + env(safe-area-inset-bottom,0px))"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
             <div>
               <div style={{fontWeight:800,fontSize:20,color:DK.text}}>Einstellungen</div>
@@ -3018,24 +3166,26 @@ const sendAiMessage=async()=>{
             </button>
           </div>
 
-          {/* SETTINGS – ACCORDION */}
+          <p className="mr-settings-help">Dein Konto, dein Risikorahmen und dein persönlicher Prozess.</p>
+          <div className="mr-settings-layout"><nav className="mr-settings-nav" aria-label="Einstellungskategorien">{[{id:'profile',l:'Profil'},{id:'konto',l:'Konto & Risiko'},{id:'setup',l:'Handelsplan'},{id:'coach',l:'KI-Coach'},{id:'goals',l:'Ziele'},{id:'rules',l:'Regeln'},{id:'data',l:'Datenverwaltung'}].map(x=><button key={x.id} type="button" aria-pressed={settingsSection===x.id} onClick={()=>setSettingsSection(x.id)}>{x.l}</button>)}</nav><div className="mr-settings-body">
+          {/* SETTINGS CONTENT */}
           {[
-            {id:"profile",label:"Profil",sub:"Name, Email, Konto-Nr",icon:<svg width="18" height="18" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="14" r="7" fill="#6366f1"/><path d="M6 34 C6 24 30 24 30 34" fill="#6366f1" opacity="0.7"/><circle cx="28" cy="8" r="4" fill="#00d395"/></svg>},
-            {id:"konto",label:"Firma & Konto",sub:"Prop Firm, DD, Gewinnziel",icon:<svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="8" y="18" width="20" height="14" rx="2" fill="#6366f1" opacity="0.15"/><rect x="8" y="18" width="20" height="14" rx="2" stroke="#6366f1" stroke-width="1.8"/><path d="M5 18 L18 8 L31 18" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round"/><rect x="14" y="24" width="8" height="8" rx="1" fill="#6366f1" opacity="0.6"/><circle cx="29" cy="10" r="4" fill="#00d395"/></svg>},
-            {id:"setup",label:"Trading Setup",sub:"Markt, Lots, SL/TP",icon:<svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="6" y="10" width="24" height="4" rx="2" fill="#6366f1" opacity="0.2"/><rect x="6" y="10" width="16" height="4" rx="2" fill="#6366f1"/><circle cx="22" cy="12" r="5" fill="white" stroke="#6366f1" stroke-width="1.8"/><circle cx="22" cy="12" r="2" fill="#6366f1"/><rect x="6" y="22" width="24" height="4" rx="2" fill="#00d395" opacity="0.2"/><rect x="6" y="22" width="10" height="4" rx="2" fill="#00d395"/><circle cx="16" cy="24" r="5" fill="white" stroke="#00d395" stroke-width="1.8"/><circle cx="16" cy="24" r="2" fill="#00d395"/></svg>},
+            {id:"profile",label:"Profil",sub:"Persönliche Angaben und Kontobezeichnung",icon:<svg width="18" height="18" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="14" r="7" fill="#6366f1"/><path d="M6 34 C6 24 30 24 30 34" fill="#6366f1" opacity="0.7"/><circle cx="28" cy="8" r="4" fill="#00d395"/></svg>},
+            {id:"konto",label:"Konto & Risikorahmen",sub:"Kontomodell, Verlustgrenzen und Gewinnziel",icon:<svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="8" y="18" width="20" height="14" rx="2" fill="#6366f1" opacity="0.15"/><rect x="8" y="18" width="20" height="14" rx="2" stroke="#6366f1" stroke-width="1.8"/><path d="M5 18 L18 8 L31 18" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round"/><rect x="14" y="24" width="8" height="8" rx="1" fill="#6366f1" opacity="0.6"/><circle cx="29" cy="10" r="4" fill="#00d395"/></svg>},
+            {id:"setup",label:"Dein Handelsplan",sub:"Märkte, Positionsgröße und Handelszeiten",icon:<svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="6" y="10" width="24" height="4" rx="2" fill="#6366f1" opacity="0.2"/><rect x="6" y="10" width="16" height="4" rx="2" fill="#6366f1"/><circle cx="22" cy="12" r="5" fill="white" stroke="#6366f1" stroke-width="1.8"/><circle cx="22" cy="12" r="2" fill="#6366f1"/><rect x="6" y="22" width="24" height="4" rx="2" fill="#00d395" opacity="0.2"/><rect x="6" y="22" width="10" height="4" rx="2" fill="#00d395"/><circle cx="16" cy="24" r="5" fill="white" stroke="#00d395" stroke-width="1.8"/><circle cx="16" cy="24" r="2" fill="#00d395"/></svg>},
             {id:"coach",label:"MindRisk Coach",sub:"KI-Profil & Gedächtnis",icon:<svg width="18" height="18" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="14" r="6" fill="#6366f1"/><circle cx="10" cy="20" r="4" fill="#6366f1" opacity="0.6"/><circle cx="26" cy="20" r="4" fill="#6366f1" opacity="0.6"/><circle cx="14" cy="28" r="3" fill="#6366f1" opacity="0.4"/><circle cx="22" cy="28" r="3" fill="#6366f1" opacity="0.4"/><line x1="18" y1="14" x2="10" y2="20" stroke="#6366f1" stroke-width="1.2" opacity="0.5"/><line x1="18" y1="14" x2="26" y2="20" stroke="#6366f1" stroke-width="1.2" opacity="0.5"/><circle cx="29" cy="8" r="4" fill="#00d395"/></svg>},
             {id:"goals",label:"Meine Ziele",sub:"Monatsziel, 3M, 6M",icon:<svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="8" y="24" width="5" height="8" rx="1" fill="#6366f1" opacity="0.3"/><rect x="16" y="18" width="5" height="14" rx="1" fill="#6366f1" opacity="0.6"/><rect x="24" y="12" width="5" height="20" rx="1" fill="#6366f1"/><path d="M10 22 L18 16 L26 10" stroke="#00d395" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 2"/><circle cx="30" cy="8" r="5" fill="#00d395" opacity="0.15"/><circle cx="30" cy="8" r="3" fill="#00d395"/><circle cx="30" cy="8" r="1.2" fill="white"/></svg>},
             {id:"rules",label:"Trading Regeln",sub:"Deine Regeln",icon:<svg width="18" height="18" viewBox="0 0 36 36" fill="none"><rect x="8" y="4" width="20" height="26" rx="4" fill="#6366f1" opacity="0.08"/><rect x="8" y="4" width="20" height="26" rx="4" stroke="#6366f1" stroke-width="1.8"/><line x1="14" y1="13" x2="22" y2="13" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/><line x1="14" y1="19" x2="22" y2="19" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/><circle cx="26" cy="26" r="7" fill="#00d395"/><polyline points="22,26 25,29 31,22" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>},
-            {id:"data",label:"Daten",sub:"Challenge, Reset",icon:<svg width="18" height="18" viewBox="0 0 36 36" fill="none"><ellipse cx="18" cy="10" rx="12" ry="5" fill="#6366f1" opacity="0.4"/><ellipse cx="18" cy="10" rx="12" ry="5" stroke="#6366f1" stroke-width="1.8"/><path d="M6 10 L6 20 C6 23 30 23 30 20 L30 10" stroke="#6366f1" stroke-width="1.8"/><path d="M6 16 C6 19 30 19 30 16" stroke="#6366f1" stroke-width="1.2" opacity="0.5"/><circle cx="28" cy="6" r="5" fill="#f59e0b"/><polygon points="30,3 27,8 29,8 27,13 32,7 30,7" fill="white"/></svg>},
-          ].map(sec=>(
+            {id:"data",label:"Datenverwaltung",sub:"Challenge-Verwaltung und Zurücksetzen",icon:<svg width="18" height="18" viewBox="0 0 36 36" fill="none"><ellipse cx="18" cy="10" rx="12" ry="5" fill="#6366f1" opacity="0.4"/><ellipse cx="18" cy="10" rx="12" ry="5" stroke="#6366f1" stroke-width="1.8"/><path d="M6 10 L6 20 C6 23 30 23 30 20 L30 10" stroke="#6366f1" stroke-width="1.8"/><path d="M6 16 C6 19 30 19 30 16" stroke="#6366f1" stroke-width="1.2" opacity="0.5"/><circle cx="28" cy="6" r="5" fill="#f59e0b"/><polygon points="30,3 27,8 29,8 27,13 32,7 30,7" fill="white"/></svg>},
+          ].filter(sec=>sec.id===settingsSection).map(sec=>(
             <div key={sec.id} style={{marginBottom:6,borderRadius:12,border:"1px solid "+DK.miniBorder,overflow:"hidden"}}>
-              <div onClick={()=>setSettingsSection(p=>p===sec.id?null:sec.id)}
+              <div className="mr-settings-section-title"
                 style={{padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",background:settingsSection===sec.id?"rgba(99,102,241,0.08)":"transparent"}}>
                 <div>
                   <div style={{fontWeight:700,fontSize:13,color:DK.text}}>{sec.label}</div>
                   <div style={{color:DK.muted,fontSize:10}}>{sec.sub}</div>
                 </div>
-                <div style={{color:settingsSection===sec.id?B:DK.muted,fontSize:12,fontWeight:700,transform:settingsSection===sec.id?"rotate(180deg)":"none",transition:"transform .2s"}}>▼</div>
+                <div style={{color:settingsSection===sec.id?B:DK.muted,fontSize:12,fontWeight:700,transform:settingsSection===sec.id?"rotate(180deg)":"none",transition:"transform .2s"}}></div>
               </div>
 
               {settingsSection==="profile"&&sec.id==="profile"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
@@ -3049,7 +3199,7 @@ const sendAiMessage=async()=>{
                   </div>
                 </div>
                 <Field dm={dm} label="DEIN NAME"><input defaultValue={acct.name||""} onBlur={e=>saveAcct({...acct,name:e.target.value})} placeholder="z.B. Jeronimo" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
-                <Field dm={dm} label="EMAIL ADRESSE"><input type="email" defaultValue={acct.email||""} onBlur={e=>saveAcct({...acct,email:e.target.value})} placeholder="du@beispiel.com" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
+                <Field dm={dm} label="KONTAKT-E-MAIL (ändert nicht deinen Login)"><input type="email" defaultValue={acct.email||""} onBlur={e=>saveAcct({...acct,email:e.target.value})} placeholder="du@beispiel.com" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
                 <Field dm={dm} label="KONTO NUMMER"><input defaultValue={acct.number||""} onBlur={e=>saveAcct({...acct,number:e.target.value})} placeholder="z.B. P-14" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
                 <Field dm={dm} label="BROKER / PROP FIRM (Freitext)"><input defaultValue={acct.broker||""} onBlur={e=>saveAcct({...acct,broker:e.target.value})} placeholder="z.B. The Trading Pit" style={{background:"transparent",border:"none",fontSize:14,fontWeight:700,color:DK.text,width:"100%",outline:"none"}}/></Field>
               </div>}
@@ -3147,7 +3297,7 @@ const sendAiMessage=async()=>{
                     showToast('✅ '+pfPreview.firmName+' $'+(pfPreview.size/1000)+'k geladen!');
                     setPfSelectedFirm(null);setPfPreview(null);
                   }} style={{width:"100%",padding:"15px",borderRadius:12,fontWeight:800,fontSize:15,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",border:"none",boxShadow:"0 4px 16px rgba(99,102,241,0.3)"}}>
-                    In ProfitMap laden →
+                    Kontomodell übernehmen →
                   </button>
                 </div>}
 
@@ -3289,7 +3439,7 @@ const sendAiMessage=async()=>{
                     {m.note}
                   </div>
                 ))}
-                {coachMemory.length>0&&<button onClick={()=>{if(window.confirm("KI Gedächtnis löschen?"))setCoachMemory([]);localStorage.setItem('ttp_coach_memory','[]');;}} style={{marginTop:4,fontSize:10,color:R,background:"none",border:"none",padding:0,cursor:"pointer",textDecoration:"underline"}}>Gedächtnis löschen</button>}
+                {coachMemory.length>0&&<button onClick={()=>{if(window.confirm("KI Gedächtnis löschen?")){setCoachMemory([]);localStorage.setItem('ttp_coach_memory','[]');}}} style={{marginTop:4,fontSize:10,color:R,background:"none",border:"none",padding:0,cursor:"pointer",textDecoration:"underline"}}>Gedächtnis löschen</button>}
               </div>}
               {settingsSection==="goals"&&sec.id==="goals"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8}}>🎯 ZIELE</div>
@@ -3301,14 +3451,13 @@ const sendAiMessage=async()=>{
               </div>}
               {settingsSection==="rules"&&sec.id==="rules"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini,display:"flex",flexDirection:"column",gap:10}}>
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px"}}>📋 DEINE TRADING REGELN</div>
-                {(settings.rules||["Max 2 Trades pro Tag","Nur 16:15–17:30 Uhr traden","SL immer vor Entry setzen","TP immer vor Entry setzen","Kein Trade nach 2 Verlusten"]).map((rule,i)=>(
-                  <div key={i} style={{display:"flex",gap:8,alignItems:"center"}}>
-                    <div style={{width:20,height:20,borderRadius:"50%",background:"rgba(99,102,241,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#a5b4fc",fontWeight:700,flexShrink:0}}>{i+1}</div>
-                    <input defaultValue={rule} onBlur={e=>{const r=[...(settings.rules||[])];r[i]=e.target.value;setSettings(s=>({...s,rules:r}));}} style={{flex:1,background:DK.mini,border:"1px solid "+DK.miniBorder,borderRadius:7,padding:"6px 8px",fontSize:11,color:DK.text,outline:"none"}}/>
-                  </div>
-                ))}
+<p style={{fontSize:13,color:DK.muted,lineHeight:1.6}}>Wähle bis zu fünf persönliche Leitlinien. Dieselbe Auswahl erscheint in deiner Routine. Kontolimits und Handelszeiten legst du im Handelsplan fest; diese Auswahl ist keine automatische Broker-Sperre.</p>
+                {ALL_RULES.map(rule=><label key={rule.k} style={{display:'flex',gap:12,alignItems:'center',padding:'14px 0',borderBottom:'1px solid '+DK.miniBorder,fontSize:14,color:DK.text}}><input type="checkbox" checked={selectedRules.includes(rule.k)} disabled={!selectedRules.includes(rule.k)&&selectedRules.length>=5} onChange={()=>toggleRule(rule.k)} style={{accentColor:B,width:19,minHeight:19}}/>{rule.l}</label>)}
+                {(settings.rules||[]).filter(Boolean).length>0&&<details><summary style={{fontSize:12,color:DK.muted,cursor:'pointer'}}>Bisherige persönliche Notizen</summary>{settings.rules.filter(Boolean).map((r,i)=><p key={i} style={{fontSize:12,color:DK.muted,marginTop:8}}>{r}</p>)}</details>}
+
               </div>}
               {settingsSection==="data"&&sec.id==="data"&&<div style={{padding:"14px 16px",borderTop:"1px solid "+DK.miniBorder,background:DK.mini}}>
+                <div style={{marginBottom:24,paddingBottom:24,borderBottom:'1px solid '+DK.miniBorder}}><h3 style={{fontSize:16,marginBottom:8}}>Deine Daten mitnehmen</h3><p style={{fontSize:12,color:DK.muted,lineHeight:1.7,marginBottom:14}}>Exportiert die aktuell geladenen Trades, Reflexionen und Einstellungen als JSON. Anmeldetoken und Passwörter sind nicht enthalten. Ein Wiederimport dieses Exports ist noch nicht verfügbar.</p><button type="button" onClick={()=>{const payload={format:'mindrisk-export',version:1,exportedAt:new Date().toISOString(),trades,journal,settings,selectedRules,playbooks};const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='mindrisk-export-'+todayISO()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}} style={{background:B,color:'white',border:0,borderRadius:10,padding:'12px 18px',fontWeight:650}}>Daten exportieren</button></div>
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:10}}>🚀 CHALLENGE</div>
                 <div style={{background:"rgba(99,102,241,0.06)",borderRadius:8,padding:"8px 10px",marginBottom:10,border:"1px solid rgba(99,102,241,0.15)"}}>
                   <div style={{fontSize:10,color:DK.muted}}>Status: <span style={{color:"#a5b4fc",fontWeight:700}}>{challengeStart==="2000-01-01"?"Nicht gestartet":"Läuft seit "+challengeStart}</span></div>
@@ -3316,18 +3465,18 @@ const sendAiMessage=async()=>{
                 </div>
                 <button onClick={()=>{if(window.confirm("Challenge starten?\nKonto: $"+acct.size.toLocaleString()+"\nZiel: $"+(acct.target||54000).toLocaleString()+"\nMax DD: $"+acct.maxDD+"\n\nChallenge-Timer startet neu."))startChallenge();}} style={{marginBottom:8,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",padding:"12px",width:"100%",fontWeight:800,fontSize:13,borderRadius:10}}>🚀 Challenge starten</button>
                 <div style={{fontSize:9,color:"#6366f1",fontWeight:700,letterSpacing:"0.8px",marginBottom:8,marginTop:12}}>⚙️ DATEN</div>
-                <button onClick={()=>{if(window.confirm("Alle Trades & Daten löschen?\nDas kann nicht rückgängig gemacht werden!")){localStorage.clear();window.location.reload();}}} style={{background:"rgba(239,68,68,0.06)",color:R,border:"1px solid rgba(239,68,68,0.2)",padding:"10px",width:"100%",fontWeight:600,fontSize:11,borderRadius:10}}>🗑 Alle Daten löschen</button>
+                <button onClick={()=>{if(window.confirm("Lokale App-Daten auf diesem Gerät zurücksetzen?\nDies löscht keine Daten aus deinem Supabase-Konto. Bitte exportiere vorher deine Daten.")){for(const key of Object.keys(localStorage)){if(key.startsWith('ttp_'))localStorage.removeItem(key);}window.location.reload();}}} style={{background:"rgba(239,68,68,0.06)",color:R,border:"1px solid rgba(239,68,68,0.2)",padding:"10px",width:"100%",fontWeight:600,fontSize:11,borderRadius:10}}>Lokale App-Daten zurücksetzen</button>
               </div>}
             </div>
           ))}
-          <div style={{paddingTop:12,color:DK.muted,fontSize:10,textAlign:"center"}}>MindRisk v2.0 · Claude AI ✅</div>
+          </div></div><div style={{paddingTop:12,color:DK.muted,fontSize:10,textAlign:"center"}}>MindRisk · KI-Coach</div>
         </div>
       </div>}
 
       {/* AI COACH – FUTURISTISCH */}
       <div style={{position:"fixed",bottom:isDesktop?24:88,right:isDesktop?24:16,zIndex:200}}>
         {!aiOpen&&(
-          <button onClick={()=>{setAiOpen(true);if(aiMessages.length===0){setAiMessages([{role:"assistant",content:smartCoach("","daily_motivation")}]);}}}
+          <button type="button" className="mr-coach-launch" aria-label="MindRisk Coach öffnen" onClick={()=>{setAiOpen(true);if(aiMessages.length===0){setAiMessages([{role:"assistant",content:smartCoach("","daily_motivation")}]);}}}
             style={{width:54,height:54,borderRadius:"50%",border:"none",padding:0,position:"relative",overflow:"visible",cursor:"pointer",background:"transparent",WebkitTapHighlightColor:"transparent"}}>
             {/* Pulsing rings – echter Herzschlag */}
             <div style={{position:"absolute",inset:0,borderRadius:"50%",background:"rgba(99,102,241,0.5)",animation:"orbRing1 1.4s ease-out infinite",pointerEvents:"none"}}/>
@@ -3342,7 +3491,7 @@ const sendAiMessage=async()=>{
           </button>
         )}
         {aiOpen&&(
-          <div style={{width:isDesktop?560:320,maxWidth:"calc(100vw - 32px)",background:DK.mini,border:"1px solid #6366f1",borderRadius:16,boxShadow:"0 8px 32px rgba(99,102,241,0.3)",display:"flex",flexDirection:"column",maxHeight:isDesktop?"88vh":"80vh",minHeight:360}}>
+          <div role="dialog" aria-label="MindRisk Coach" className="mr-coach-dialog" style={{width:isDesktop?560:320,maxWidth:"calc(100vw - 32px)",background:DK.mini,border:"1px solid #6366f1",borderRadius:16,boxShadow:"0 8px 32px rgba(99,102,241,0.3)",display:"flex",flexDirection:"column",maxHeight:isDesktop?"88vh":"80vh",minHeight:360}}>
             <div style={{padding:"12px 16px",borderBottom:"1px solid "+DK.miniBorder,display:"flex",justifyContent:"space-between",alignItems:"center",background:"linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.1))",borderRadius:"16px 16px 0 0"}}>
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
                 <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,#6366f1,#a855f7)",display:"flex",alignItems:"center",justifyContent:"center",animation:"orb 3s ease infinite",flexShrink:0}}>
@@ -3354,10 +3503,10 @@ const sendAiMessage=async()=>{
                 </div>
                 <div>
                   <div style={{fontWeight:700,fontSize:13,color:DK.text}}>MindRisk Coach</div>
-                  <div style={{color:B,fontSize:10,fontWeight:600}}>Claude AI ✦</div>
+                  <div style={{color:B,fontSize:10,fontWeight:600}}>KI-Coach ✦</div>
                 </div>
               </div>
-              <button onClick={()=>setAiOpen(false)} style={{background:"rgba(255,255,255,0.08)",color:DK.muted,fontSize:16,padding:"4px 8px",borderRadius:6}}>×</button>
+              <button type="button" aria-label="Coach schließen" onClick={()=>setAiOpen(false)} style={{background:"rgba(255,255,255,0.08)",color:DK.muted,fontSize:16,padding:"4px 8px",borderRadius:6}}>×</button>
             </div>
             <div ref={chatContainerRef} onScroll={e=>{const el=e.target;const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;userScrolledUp.current=!atBottom;}} style={{flex:1,overflowY:"scroll",WebkitOverflowScrolling:"touch",padding:12,display:"flex",flexDirection:"column",gap:8,minHeight:0,background:DK.bg}}>
               {checkedIn&&mindLight&&mindLight!=='green'&&(
@@ -3370,7 +3519,7 @@ const sendAiMessage=async()=>{
                 </div>
               )}
               {aiMessages.length===0&&!aiLoading&&(
-                <div style={{color:DK.muted,fontSize:12,textAlign:"center",padding:16}}>Tippe eine Frage – echte Claude KI antwortet!</div>
+                <div style={{color:DK.muted,fontSize:12,textAlign:"center",padding:16}}>Stelle eine Frage zu deinem Trading.</div>
               )}
               {aiMessages.map((m,i)=>(
                 <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
@@ -3439,3 +3588,5 @@ const sendAiMessage=async()=>{
     </div>
   );
 }
+
+/* MindRisk V10: focused hierarchy, same original indigo/navy identity. */
