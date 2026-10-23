@@ -1,7 +1,7 @@
 // MindRisk Trading Coach - Claude API Bridge
 // VERSION 10 - Vollständige Psychologie-Wissensdatenbank
 
-const FMP_KEY = 'jnJ8yz9FNsoe2uuZQ3A1eYPb1oKlIf3A';
+const FMP_KEY = process.env.FMP_API_KEY;
 let newsCache = { data: null, date: null };
 
 function sanitize(val) {
@@ -38,7 +38,7 @@ async function getWeeklyNews() {
         if (res.ok) allEvents = allEvents.concat(await res.json());
       } catch(e) {}
     }
-    if (allEvents.length === 0) {
+    if (allEvents.length === 0 && FMP_KEY) {
       const end = new Date(today); end.setDate(end.getDate() + 14);
       const url = `https://financialmodelingprep.com/api/v3/economic_calendar?from=${todayStr}&to=${end.toISOString().split('T')[0]}&apikey=${FMP_KEY}`;
       const res = await fetch(url);
@@ -58,12 +58,39 @@ async function getWeeklyNews() {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Same-origin endpoint: do not advertise unrestricted cross-origin access.
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY fehlt' });
+  // Verify the Supabase access token on the server before spending AI credits.
+  // A publishable/anon key is safe for this verification request; never use a service-role key here.
+  const auth = req.headers.authorization || '';
+  const match = /^Bearer ([A-Za-z0-9._~-]+)$/.exec(auth);
+  if (!match) return res.status(401).json({ error: 'Bitte anmelden' });
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://lznaqqjhmawvpvzzwgnc.supabase.co';
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'sb_publishable_a9rGWRoY6g99XC9nqSNc-g_XbhpxALh';
+  let verifiedUser;
+  try {
+    const verify = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${match[1]}` },
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!verify.ok) return res.status(401).json({ error: 'Sitzung abgelaufen – bitte erneut anmelden' });
+    verifiedUser = await verify.json();
+    if (!verifiedUser?.id) return res.status(401).json({ error: 'Ungültige Sitzung' });
+  } catch (error) {
+    console.error('Auth verification unavailable', error?.message);
+    return res.status(503).json({ error: 'Anmeldung kann derzeit nicht geprüft werden' });
+  }
+  // Atomic quota reservation in Supabase. Fail closed if quota storage is unavailable.
+  // This check also covers newsOnly, so free news polling cannot bypass the budget.
+  const quota = await reserveQuota(verifiedUser.id);
+  if (!quota.ok) return res.status(quota.status).json({ error: quota.error });
+  res.setHeader('X-MindRisk-Requests-Remaining', String(quota.remaining));
+  if (!process.env.ANTHROPIC_API_KEY && !req.body?.newsOnly) return res.status(503).json({ error: 'KI-Dienst nicht konfiguriert' });
+  const payloadSize = Buffer.byteLength(JSON.stringify(req.body || {}), 'utf8');
+  if (payloadSize > 250000) return res.status(413).json({ error: 'Anfrage zu groß' });
 
   if (req.body?.newsOnly) {
     const news = await getWeeklyNews();
@@ -72,10 +99,10 @@ export default async function handler(req, res) {
 
   try {
     const { messages, context } = req.body;
-    if (!messages || !Array.isArray(messages) || messages.length === 0)
+    if (!messages || !Array.isArray(messages) || messages.length === 0 || messages.length > 30)
       return res.status(400).json({ error: 'messages Array erforderlich' });
 
-    const cleanMessages = sanitize(messages).filter(hasContent);
+    const cleanMessages = sanitize(messages).filter(m => m && ['user', 'assistant'].includes(m.role) && hasContent(m));
     const cleanContext = sanitize(context || {});
     if (cleanMessages.length === 0) return res.status(400).json({ error: 'Keine gültigen Nachrichten' });
 
@@ -92,7 +119,8 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      return res.status(response.status).json({ error: 'Anthropic Error', details: errorText });
+      console.error('AI provider error', response.status, errorText.slice(0, 200));
+      return res.status(502).json({ error: 'KI-Dienst derzeit nicht verfügbar' });
     }
 
     const data = await response.json();
@@ -100,7 +128,36 @@ export default async function handler(req, res) {
     return res.status(200).json({ message: textContent || 'Keine Antwort.', usage: data.usage });
 
   } catch (error) {
-    return res.status(500).json({ error: 'Server error', message: error.message });
+    console.error('AI endpoint error', error);
+    return res.status(500).json({ error: 'Interner Serverfehler' });
+  }
+}
+
+// The service role key must exist only in server-side environment variables.
+// SQL migration: supabase/migrations/20261023_ai_usage.sql
+export async function reserveQuota(userId) {
+  const url = process.env.SUPABASE_URL || 'https://lznaqqjhmawvpvzzwgnc.supabase.co';
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return { ok: false, status: 503, error: 'KI-Nutzungslimits noch nicht konfiguriert' };
+  try {
+    const r = await fetch(`${url}/rest/v1/rpc/mindrisk_reserve_ai_request`, {
+      method: 'POST',
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_user_id: userId }),
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!r.ok) {
+      console.error('AI quota RPC failed', r.status);
+      return { ok: false, status: 503, error: 'KI-Limitprüfung momentan nicht verfügbar' };
+    }
+    const data = await r.json();
+    if (!data || typeof data.allowed !== 'boolean') throw new Error('Invalid quota response');
+    return data.allowed
+      ? { ok: true, remaining: Math.max(0, Number(data.remaining) || 0) }
+      : { ok: false, status: 429, error: 'Dein tägliches KI-Limit ist erreicht. Bitte morgen erneut versuchen.' };
+  } catch (err) {
+    console.error('AI quota unavailable', err?.message);
+    return { ok: false, status: 503, error: 'KI-Limitprüfung momentan nicht verfügbar' };
   }
 }
 
