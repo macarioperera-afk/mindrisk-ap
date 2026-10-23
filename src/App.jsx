@@ -1,10 +1,11 @@
 import TopBar from './components/TopBar.jsx';
 import AnalyticsWorkspace from './components/AnalyticsWorkspace.jsx';
-import './premium.css';
+
 import Playbooks from './components/Playbooks.jsx';
 import WeeklyReview from './components/WeeklyReview.jsx';
 import DesktopOverview from './components/DesktopOverview.jsx';
 import './desktop.css';
+import './premium.css';
 import JournalWorkspace from './components/JournalWorkspace.jsx';
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
